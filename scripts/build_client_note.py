@@ -3,6 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# Layman bullets come from the figure module so notebook text and deck exports
+# cannot drift apart (Block 4: one source of truth).
+from pipeline.viz import figures  # noqa: E402
 OUT = ROOT / "notebooks" / "01_client_note.ipynb"
 cells=[]
 md=lambda s: cells.append({"cell_type":"markdown","metadata":{},"source":s.strip().splitlines(True)})
@@ -119,10 +124,14 @@ from pipeline.viz import figures
 fig, ax = figures.g1_barrier_anatomy(sk.series, theme.events_for(markets=["US","KR"]))
 fig;
 ''')
+
+md(figures.layman_block('g1_barrier_anatomy'))
 code(r'''
 fig, ax = figures.g2_plumbing_map()
 fig;
 ''')
+
+md(figures.layman_block('g2_plumbing_map'))
 
 md(r"""
 ## 1.2 The comparator, and what it does not tell you
@@ -233,6 +242,8 @@ fig, ax = figures.g10_expression_readiness(sheets)
 fig;
 ''')
 
+md(figures.layman_block('g10_expression_readiness'))
+
 md(r"""
 Two of the four contingent expressions are a **single input** away. The volatility RV needs
 only listed option surfaces for SKHY and 000660; the execution overlay needs only landed ETF
@@ -256,6 +267,8 @@ from execution.costs import summary_table, margin_stress
 fig, axes = figures.g9_cost_and_skew(summary_table().to_dict("records"), margin_stress())
 fig;
 ''')
+
+md(figures.layman_block('g9_cost_and_skew'))
 md(r"""
 The documented segment is the conversion round trip: **US$0.05 per ADS each way, ~0.07% of
 price.** Every other segment — local borrow, ADR borrow, FX hedge points, funding
@@ -274,6 +287,8 @@ tsm = build_all_variants("tsmc")[0]
 fig, axes = figures.g4_asymmetry(tsm.series, sk.series)
 fig;
 ''')
+
+md(figures.layman_block('g4_asymmetry'))
 md(r"""
 **The skew is structural, not circumstantial.** Gain on a convergence expression is bounded
 by the conversion floor; loss is unbounded because there is no numeric ceiling on file. The

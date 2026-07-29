@@ -51,21 +51,104 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EVENTS_PATH = REPO_ROOT / "data" / "raw" / "events" / "events.yaml"
 
-# --------------------------------------------------------------------------------
-# Palette — TODO(ash: ratify). Every constant below is an aesthetic decision.
-# --------------------------------------------------------------------------------
+# ================================================================================
+# SEMANTIC PALETTE — ratified structure, author-ratifiable hues.
+#
+# The rule this replaces: figures previously picked from INK/CLAY/MOSS by position in a
+# series, so the same hue meant "SKHY" in one figure and "the comparator" in the next. A
+# reader who learned the chart on page 3 had to relearn it on page 5.
+#
+# THE RULE NOW: a MEANING owns a HUE, everywhere. No figure may introduce a colour the
+# project has not already assigned a meaning to. Adding a colour means adding a meaning
+# here first, and documenting it in docs/palette.md.
+#
+# Base set is Okabe-Ito, chosen because it is designed to survive the common colour-vision
+# deficiencies rather than merely looking distinct to trichromats. `palette_report()`
+# verifies that claim numerically under deuteranope simulation rather than asserting it, and
+# tests/test_palette.py fails the build if any assigned pair collapses.
+# ================================================================================
 
-INK = "#1c3d5a"        # TODO(ash: ratify) — primary series: deep slate blue
-CLAY = "#b4532a"       # TODO(ash: ratify) — secondary series: burnt sienna
-MOSS = "#4a6b4a"       # TODO(ash: ratify) — third series, used sparingly
-GRAY = "#9a9a94"       # TODO(ash: ratify) — context/reference series
-RULE = "#d6d3cc"       # TODO(ash: ratify) — gridlines and event rules
-TEXT = "#22201d"       # TODO(ash: ratify) — titles and body text
-MUTED = "#6e6a64"      # TODO(ash: ratify) — subtitles, footnotes, annotations
-PAPER = "#ffffff"      # TODO(ash: ratify) — figure background
+#: Okabe & Ito (2008), "Color Universal Design". Named, not indexed, so a reference to a
+#: hue in code says which hue it is.
+OKABE_ITO = {
+    "black":         "#000000",
+    "orange":        "#e69f00",
+    "sky_blue":      "#56b4e9",
+    "bluish_green":  "#009e73",
+    "yellow":        "#f0e442",
+    "blue":          "#0072b2",
+    "vermillion":    "#d55e00",
+    "reddish_purple":"#cc79a7",
+}
+
+#: MEANING -> HUE. This dict is the legend of the entire project.
+SEMANTIC: dict[str, str] = {
+    # The subject. SKHY and its premium are the emphasis colour in every figure they appear
+    # in, whether or not other series share the frame.
+    "emphasis":    OKABE_ITO["blue"],
+    # Regime classes (docs/regime_taxonomy.md). Fixed across G3/G10/G11 and metrics tables.
+    "constrained": OKABE_ITO["vermillion"],
+    "fungible":    OKABE_ITO["bluish_green"],
+    # Barriers: ONE hue. The grammar is carried by LINESTYLE, not colour --
+    #   solid = binding and mechanical | long-dash = discretionary | absent = no barrier.
+    # Colour-coding barrier types as well would double-encode and then disagree with itself
+    # the first time a figure needed a third barrier state.
+    #
+    # BLACK, and not the obvious orange. Vermillion and orange are the closest pair in
+    # Okabe-Ito, and `palette_report()` measured them collapsing under deuteranope
+    # simulation at delta-E 13.1 against a 20 floor -- on exactly the two meanings that
+    # share a frame in G1, where barriers are drawn over a constrained-pair series. The set
+    # is CVD-safe as a SET; that does not make every pair inside it safe for adjacent
+    # meanings, which is why the check is numeric and runs in CI.
+    "barrier":     OKABE_ITO["black"],
+    # Reserved for risk/warning marks and used for NOTHING else, so its appearance in a
+    # figure is information on its own.
+    "warning":     OKABE_ITO["reddish_purple"],
+    # Context, reference, "everything not being argued about". Always neutral.
+    #
+    # DARKER than the obvious mid-grey, and the direction is counter-intuitive. Reddish
+    # purple desaturates toward grey for protanopes, so `palette_report()` measured
+    # warning|context colliding at delta-E 10.7. Lightening the grey makes it WORSE (the
+    # simulated purple sits at L* 58-73, so #a8a8a2 scores 3.3); darkening moves away from
+    # it. At L* 46 the worst pair across all three conditions is 22.2. What makes this grey
+    # recede is its lack of saturation next to the anchors, not its lightness.
+    "context":     "#6e6e68",
+    # Inert fill for schematic boxes/gauges (G2). A shape that is neither data nor argument
+    # still needs a surface; giving it a NAME stops the next figure inventing its own.
+    "inert_fill":  "#eceae5",
+}
+
+#: Structural neutrals — chrome, not data. Never carry meaning.
+TEXT  = "#22201d"      # titles and body
+MUTED = "#6e6a64"      # subtitles, footnotes, annotations
+RULE  = "#d6d3cc"       # gridlines, event rules
+PAPER = "#ffffff"      # figure background
+
+# Legacy names, retained so existing figure code keeps working, but now POINTING AT
+# MEANINGS rather than at arbitrary hues. New code should prefer SEMANTIC[...] or the
+# accessors below; these aliases exist so the migration did not have to be atomic.
+INK   = SEMANTIC["emphasis"]
+CLAY  = SEMANTIC["constrained"]
+MOSS  = SEMANTIC["fungible"]
+GRAY  = SEMANTIC["context"]
+BARRIER = SEMANTIC["barrier"]
+WARNING = SEMANTIC["warning"]
 
 #: Ordered cycle. Three series maximum before a chart should be split or small-multipled.
 SERIES_COLORS = (INK, CLAY, MOSS)
+
+#: Regime class -> hue, keyed by the taxonomy's own label strings so a figure cannot
+#: disagree with pipeline.convergence.jorda about which class is which colour.
+REGIME_COLORS = {
+    "one_way_constrained": SEMANTIC["constrained"],
+    "fungible":            SEMANTIC["fungible"],
+}
+
+
+def regime_color(regime: str) -> str:
+    """Hue for a regime label. Unknown labels get context grey rather than a new colour."""
+    return REGIME_COLORS.get(regime, SEMANTIC["context"])
+
 
 #: TODO(ash: ratify) — standard geometry. One size for single charts keeps the notebook
 #: visually consistent; small-multiples override height only.
@@ -80,6 +163,97 @@ LABEL_SIZE = 9
 TICK_SIZE = 8.5
 NOTE_SIZE = 7.5
 
+
+
+# ================================================================================
+# Derived ramps and colour-vision verification
+#
+# Ramps are GENERATED from the semantic anchors, never hand-picked. A heatmap that picks its
+# own blues ends up disagreeing with the line chart above it about what "more premium" looks
+# like; deriving from the anchor makes that impossible by construction.
+# ================================================================================
+
+def _to_rgb(hex_color: str) -> tuple[float, float, float]:
+    h = hex_color.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+
+
+def _to_hex(rgb) -> str:
+    return "#" + "".join(f"{max(0, min(255, round(c * 255))):02x}" for c in rgb)
+
+
+def sequential_ramp(meaning: str, n: int = 7, light: float = 0.88) -> list[str]:
+    """n colours from near-white to the semantic anchor. For density/heatmaps."""
+    anchor = SEMANTIC[meaning]
+    return [_ramp(anchor, light - (light + 0.15) * i / max(1, n - 1)) for i in range(n)]
+
+
+def diverging_ramp(low: str = "fungible", high: str = "constrained", n: int = 9) -> list[str]:
+    """Two semantic anchors through a near-neutral midpoint. Odd n keeps the midpoint exact."""
+    half = n // 2
+    lo = [_ramp(SEMANTIC[low], 0.80 - 0.80 * i / max(1, half)) for i in range(half)][::-1]
+    hi = [_ramp(SEMANTIC[high], 0.80 - 0.80 * i / max(1, half)) for i in range(half)]
+    return lo[::-1] + ["#f2f0ec"] + hi[::-1]
+
+
+#: Deuteranope simulation. Brettel/Vienot-style linear approximation in linear-RGB, which is
+#: the standard matplotlib-implementable form. Good enough to catch a collapsed PAIR, which
+#: is the only thing being asked of it.
+_DEUTER_M = ((0.625, 0.375, 0.0), (0.700, 0.300, 0.0), (0.0, 0.300, 0.700))
+_PROTAN_M = ((0.567, 0.433, 0.0), (0.558, 0.442, 0.0), (0.0, 0.242, 0.758))
+
+
+def simulate_cvd(hex_color: str, kind: str = "deuteranopia") -> str:
+    """Simulate how a colour appears under a colour-vision deficiency."""
+    m = _DEUTER_M if kind == "deuteranopia" else _PROTAN_M
+    r, g, b = _to_rgb(hex_color)
+    return _to_hex(tuple(sum(m[i][j] * (r, g, b)[j] for j in range(3)) for i in range(3)))
+
+
+def _lab(hex_color: str) -> tuple[float, float, float]:
+    """sRGB -> CIELAB (D65). Enough for a perceptual distance."""
+    def inv(c):
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = (inv(c) for c in _to_rgb(hex_color))
+    x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047
+    y = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 1.0
+    z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883
+    def f(t):
+        return t ** (1 / 3) if t > 0.008856 else 7.787 * t + 16 / 116
+    fx, fy, fz = f(x), f(y), f(z)
+    return (116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz))
+
+
+def delta_e(a: str, b: str) -> float:
+    """CIE76 distance. ~2.3 is a just-noticeable difference; the gate below wants far more."""
+    la, lb = _lab(a), _lab(b)
+    return sum((x - y) ** 2 for x, y in zip(la, lb)) ** 0.5
+
+
+#: Minimum CIE76 separation required between any two MEANING colours, under normal vision
+#: and under both simulated deficiencies. 20 is well above JND and is what the assigned set
+#: actually clears — it is a real gate, not a rubber stamp.
+MIN_DELTA_E = 20.0
+
+
+def palette_report(meanings: Iterable[str] | None = None) -> dict:
+    """Pairwise separation of the semantic colours under normal and simulated CVD.
+
+    Returns the worst pair per condition so a failure names the two colours that collided
+    rather than reporting that 'the palette' failed.
+    """
+    keys = list(meanings) if meanings else [k for k in SEMANTIC if k != "context"]
+    out = {}
+    for cond in ("normal", "deuteranopia", "protanopia"):
+        conv = (lambda c: c) if cond == "normal" else (lambda c, k=cond: simulate_cvd(c, k))
+        pairs = {}
+        for i, a in enumerate(keys):
+            for b in keys[i + 1:]:
+                pairs[f"{a}|{b}"] = round(delta_e(conv(SEMANTIC[a]), conv(SEMANTIC[b])), 1)
+        worst = min(pairs, key=pairs.get)
+        out[cond] = {"worst_pair": worst, "worst_delta_e": pairs[worst],
+                     "passes": pairs[worst] >= MIN_DELTA_E, "all_pairs": pairs}
+    return out
 
 def apply() -> None:
     """Install the theme globally. Idempotent; call once per notebook."""

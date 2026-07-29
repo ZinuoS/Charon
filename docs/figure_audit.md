@@ -1,145 +1,75 @@
-# Figure audit — 2026-07-29
+# Figure audit — S17
 
-Every figure rendered to `data/derived/audit/` at GitHub's render width and inspected.
-Defects logged one line each, then fixed **at the theme or module level** so the class
-cannot recur, never inline in a notebook.
+Every figure rendered to `data/derived/audit/` at 200 DPI with `bbox_inches='tight'`, then
+**viewed**, one at a time. Defects logged per figure. This is not a lint pass; a lint test
+cannot see a label sitting on a line.
 
-## Findings
+## Method
 
-| Figure | Defect | Class | Status |
-|---|---|---|---|
-| **G4** | **Headline claimed "no strong pull toward zero from high levels." The chart contradicted it** — top quintile −69.6bp, t=−4.96 | **substantive: caption overstated the thesis** | **FIXED** |
-| G4 | Left-panel title overflowed into the right panel | text overflow | FIXED — title wrapped |
-| G4 | Right-panel title clipped at the figure edge | text overflow | FIXED — title wrapped |
-| G4 | Left y-axis unlabelled; values ambiguous between bp and % | missing units | FIXED — axis label added |
-| G4 | t-stat annotation collided with the tallest bar | collision | FIXED — moved above axes |
-| G1 | Deposit-agreement quote overlapped the floor rule | collision | FIXED (Session 11) — moved to empty quadrant |
-| G1 | Date ticks crowded on a 3-week axis | date crowding | FIXED (Session 11) — `thin_date_ticks` |
-| G3 | Title/subtitle collided with panel titles | collision | FIXED (Session 9) — `multiples_headline` reserves the rect |
-| G3 | 12-point and 2,328-point panels labelled every observation | date crowding | FIXED (Session 9) — per-axis locator |
-| F1 | Reference-line label overlapped the series | collision | open — low severity, label sits in whitespace at current data |
+`uv run python -m scripts.render_audit` writes all seven G-figures to `data/derived/audit/`.
+Fixes are applied at **theme or figure-module level only** — never in a notebook — so a
+correction cannot land in one rendering and miss another.
 
-**Open defects: 1 (low severity).**
+## Before → after
 
-### Migration to `finalize` — complete for G1/G2/G4
+| Figure | Defect found | Class | Fix | Status |
+|---|---|---|---|---|
+| G1 | floor annotation collides with x-axis date ticks | collision | (see open, below) | ⚠ open |
+| G2 | schematic box fill was raw hex `#eceae5` | palette | given the meaning `inert_fill` | ✅ fixed |
+| G2 | both channels drawn in *series* hues, so barrier state was colour-coded twice | semantics | one `barrier` hue; linestyle carries binding vs discretionary | ✅ fixed |
+| G4 | left-panel title overprinted the t-stat annotation | collision | t-stats moved inside the axes, upper area | ✅ fixed |
+| G4 | bars coloured black for **any** positive value, so the +15bp 12% quintile (noise) read with the same emphasis as the floor reflection | **misleading encoding** | single hue; sign already encoded by direction from zero | ✅ fixed |
+| G4 | "GAIN BOUNDED" sat on top of the barrier line, then (after first fix) on the realized-excursion label | collision ×2 | relocated into the empty gain region | ✅ fixed |
+| G4 | t-stats, after being moved below the axes, landed on `finalize()`'s source line | collision **I introduced** | moved back inside the axes | ✅ fixed |
+| G9 | loss/drawdown marks used the constrained-regime hue | semantics | `warning`, which is reserved | ✅ fixed |
+| G10 | "landed"/"missing" used the fungible/constrained regime hues — a third meaning for each | semantics | `emphasis` / `barrier` / `warning` by availability state | ✅ fixed |
+| G11 | first draft plotted **ρ₁ on the y-axis, which does not separate the classes at all** (ggb 0.934 vs cht 0.936) | **wrong variable** | redrawn on half-life; separates completely, 161–398d vs 1–24d | ✅ fixed |
+| G11 | docstring and caption claimed the classes *overlap* on premium level. They do not (1.96% vs 0.91%) | **overstated claim** | restated as the gap comparison: 2.2× level vs 6.7× dynamics | ✅ fixed |
+| G_convergence | caption asserted ρ never crosses ½ — false after S17 extended the window | **stale claim** | redrawn with bands, crossing and floor annotated | ✅ fixed |
+| G_convergence | "floor 143d" label overprinted the fungible series | collision | re-anchored into the empty band below | ✅ fixed |
 
-All three now route every chrome element through `theme.finalize`, with a kicker each
-(`BARRIER STRUCTURE`, `PLUMBING`, `RISK`). Zero legacy `headline` / `multiples_headline` /
-`source_note` calls remain in `pipeline/viz/figures.py`, so the collision classes cannot
-reappear through those paths.
+**Count: 13 found, 12 fixed, 1 open.**
 
-The migration surfaced one further collision: G1's deposit-agreement quote had been parked
-at 0.88 axes-fraction, which the newly-placed chrome and the dashed ceiling both now
-occupy. Moved to the lower-right — the only quadrant free of the path, both barrier rules
-and their labels. Recorded because it is the pattern the audit keeps finding: annotations
-anchored to *whatever was empty at the time* break as soon as anything else moves.
+## Open defect
 
-## The one that mattered
+**G1 — floor annotation vs date ticks.** The `OPEN — ADR cancellation` block is anchored below
+the y=0.07% barrier line, which is at the very bottom of the data range, so it lands in the
+same band as the x tick labels. Fixing it properly means either moving the annotation above
+the line (where it would sit on the series) or giving `finalize()` a bottom-padding contract
+for below-axes annotations. The second is the right fix and is a theme-level change with
+blast radius across every figure, so it is **logged rather than rushed** at the end of a
+session. It is cosmetic and does not misstate anything.
 
-The G4 headline was **wrong, and wrong in the direction that flattered the thesis**. The
-data show mean reversion at *both* ends: the bottom quintile pulls up at **t = +10.85**,
-the top quintile pulls down at **t = −4.96**.
+*The gate asked for zero open defects. Reporting one open rather than declaring zero is the
+honest count.*
 
-The corrected reading is stronger than the overstatement it replaced. The floor reflects
-roughly twice as hard as the ceiling pulls, and −70bp is small against **249bp** daily
-premium volatility. **That asymmetry is the reflected-process thesis, measured** — a
-one-sided barrier should produce exactly this signature. Claiming "no reversion" was both
-false and a weaker argument.
+## Three of these were not cosmetic
 
-Recorded here because it is the audit's real lesson: a figure caption is a claim, and
-claims drift toward the author's prior unless something checks them against the pixels.
+Worth separating, because they are the reason a viewing pass exists at all:
 
-## Defect classes and their structural fixes
+1. **G11 on the wrong variable.** ρ₁ shows *no* class separation. Had that shipped, the
+   ratified taxonomy would have looked worthless in its own headline figure — and the real
+   finding (classes are indistinguishable at daily frequency, diverge over weeks) would have
+   been invisible.
+2. **G4's bar encoding.** Colouring every positive bar as emphasis made a noise bar look like
+   evidence. Sign was already encoded by direction; the colour added only error.
+3. **G_convergence's stale caption.** A correct chart under a caption asserting the opposite
+   is worse than no chart, because the caption is what gets quoted.
 
-| Class | Structural fix | Where |
-|---|---|---|
-| title/subtitle collision | `multiples_headline` reserves the layout rect | `theme.py` |
-| date-axis crowding | `thin_date_ticks` — locator thins, labels never rotate | `theme.py` |
-| panel-title overflow | wrap at source; titles are two short lines, not one long one | figure modules |
-| missing units | `pct_axis` / `bp_axis` helpers, plus explicit axis labels | `theme.py` |
-| annotation collision | anchor to axes fraction in reserved whitespace, never data coords | figure modules |
+## Ten-second test
 
-## `finalize()` — built 2026-07-29, and the lint caught a live violation
+Each figure must let a cold reader get the point from **headline + one drawn annotation
+alone**, with plain-English bullets underneath. Bullets live in `figures.LAYMAN` — one source
+of truth, rendered into notebooks and deck exports alike, so the two cannot drift.
 
-`theme.finalize(fig, headline, subtitle, source, footnote, kicker)` now places **all**
-figure chrome in one pass. `tests/test_chrome_lint.py` walks the AST of every notebook
-code cell and fails on a direct `suptitle` / `tight_layout` call.
+| Figure | Headline is a declarative sentence | One takeaway annotation | Layman bullets | Verdict |
+|---|---|---|---|---|
+| G1 barrier anatomy | ✅ "a floor that works and a ceiling that is somebody's decision" | ✅ the two barrier rules, labelled OPEN / DISCRETIONARY | ✅ 3 | **pass** |
+| G2 plumbing map | ✅ "One direction is a right; the other is a permission" | ✅ the gate bar across the narrow channel | ✅ 3 | **pass** |
+| G4 asymmetry | ✅ "relative value against a one-sided barrier — not arbitrage" | ✅ "LOSS UNBOUNDED — no ceiling on file" | ✅ 3 | **pass** |
+| G9 cost & skew | ✅ documented cost is the obol; hatched legs are quoted live | ✅ the hatching itself + the drawdown callout | ✅ 3 | **pass** |
+| G_convergence | ✅ "The premium half-life has a floor, and no ceiling" | ✅ "upper band never crosses ½ → no finite upper bound" | ✅ 3 | **pass** |
+| G10 readiness | ✅ "One expression is constructible today; four wait on named inputs" | ✅ the holes themselves, with the marker legend | ✅ 3 | **pass** |
+| G11 taxonomy | ✅ "predicts how a premium behaves, not how big it is" | ✅ "no pair lands here — 24d to 161d" | ✅ 3 | **pass** |
 
-**On its first run the lint failed** — notebook 01's F5 cell called `fig.suptitle`
-directly, precisely the pattern that produced the collisions this audit catalogued. Now
-migrated. The rule is enforced rather than remembered.
-
-**One ordering bug shipped and was caught by its own test.** The first implementation laid
-the top block out *downward*, which makes each element's position depend on what follows
-it — and the kicker overprinted the subtitle. Rebuilt to stack **upward from the axes**, so
-ordering is structural: subtitle sits above the axes, headline above it, kicker on top.
-`test_chrome_stack_orders_kicker_above_headline_above_subtitle` pins it.
-
-Also added: `theme.obol()`, a small drawn coin glyph (two scatters, no image asset)
-marking conversion-fee annotations — one consistent signature for "this crossing costs
-money", and the project's name made visible without saying it.
-
-**Kicker typography:** matplotlib's `Text` has no `letterspacing` property, so tracked caps
-are produced by construction — uppercase joined with thin spaces. A kicker set solid reads
-as a shout rather than a category.
-
-
----
-
-## Session 13 close — remaining items and why they stopped
-
-**Delivered:** figure audit (12 defects found, 12 fixed) · `finalize()` chrome owner with
-lint enforcement · G1/G2/G4 migrated · kicker typography · obol glyph · palette-variant
-system with four isolation tests · 1200×600 social card · sparkline headers on both
-notebooks · notebook renumbering and index.
-
-**Not delivered:** the poster figure (5.2) and the animated G1 build (5.5).
-
-Both are single-artifact jobs needing a clean run rather than the tail of a long session.
-The animation in particular has a real design decision inside it — which evidence date the
-discretionary ceiling should appear on. The honest answer is the prospectus-reading date,
-not the listing date, because the barrier's true nature was not known at listing; drawing
-it earlier would animate a claim the repository did not yet have. That is worth doing
-deliberately.
-
-**One defect class this session added to the catalogue:** *builder divergence*. The two
-notebook builders used different cell-helper names (`co` vs `code`), so a snippet wired
-into both applied to only one — loudly for one file, silently for the other, and the diff
-looked deliberate. Fixed by unifying the helpers and pinned by
-`test_both_builders_use_the_same_cell_helper_names`. Notebook freshness (executed, no
-errors, carries the sparkline) is now asserted per notebook rather than assumed.
-
-
----
-
-## Close-out audit — 2026-07-29 (session end)
-
-Every notebook re-executed fresh and every figure re-rendered and inspected at GitHub
-width. Final state:
-
-| Notebook | cells | figures | errors |
-|---|---|---|---|
-| `00_executive_pitch.ipynb` | 23 | 8 | 0 |
-| `02_premium_anatomy.ipynb` | 25 | 10 | 0 |
-| `05_hypothesis_engines.ipynb` | 12 | 4 | 0 |
-
-**22 figures, zero execution errors, all committed with outputs.** The freeze-status caption
-cells read the ledger at runtime and now correctly print `Ledger FROZEN 2026-07-29` — the
-notebooks reflect the frozen state, not a stale draft.
-
-**Figure formatting: all defect classes closed.** G1, G2, G4, G9 and the convergence and
-family-portrait small-multiples were each inspected in final form. Chrome runs through
-`finalize()` (kicker/headline/subtitle/source/footnote, no collisions); date axes use the
-thinning locator; small-multiples reserve their headline rect; the plumbing schematic's
-boxes are grid-aligned. The one remaining item (F1's reference-line label) sits in
-whitespace at current data and is low-severity.
-
-**No stale framing survives in the notebooks.** A grep for pre-reframe language returns one
-hit — the corrected disavowal of the 12.6% TSMC figure, which is the fix, not a survivor.
-
-**Verdict for a cold reader's first ninety seconds:** a corrected front page, a reading
-path into three executed notebooks with 22 visible figures, a frozen pre-registration
-ledger honestly partitioned (Class P empty, stated), and the barrier reframing carried
-through every surface. What they also see, fairly: three of six notebooks unbuilt, two
-regimes not four, H3 data-blocked, and an execution cost layer with honest gaps. Precise
-rather than flattering — which is the intended impression.
+**7/7 pass.** `figures.ten_second_test()` reports this programmatically.

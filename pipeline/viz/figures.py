@@ -48,22 +48,22 @@ def g1_barrier_anatomy(pi: pd.Series, events: list[dict] | None = None, fee_pct:
     ax.axhspan(fee_pct, top, color=theme.INK, alpha=0.045, zorder=0)
 
     # Lower barrier — solid: it operates mechanically.
-    ax.axhline(fee_pct, color=theme.INK, linewidth=1.8, zorder=2)
+    ax.axhline(fee_pct, color=theme.BARRIER, linewidth=1.8, zorder=2)
     ax.annotate(
         f"OPEN — ADR cancellation, uncapped\nround trip ≈ ${FEE_PER_ADS * 2:.2f}/ADS ≈ {fee_pct:.2%} of price",
         xy=(0.012, fee_pct), xycoords=("axes fraction", "data"), xytext=(0, -6),
-        textcoords="offset points", fontsize=theme.NOTE_SIZE, color=theme.INK,
+        textcoords="offset points", fontsize=theme.NOTE_SIZE, color=theme.BARRIER,
         va="top", ha="left", fontfamily=theme.SERIF_STACK,
     )
 
     # Upper barrier — long-dashed: discretionary, and with no number on file it has no
     # determinate height. Drawn above the realized max to say "not observed to bind here".
-    ax.axhline(top, color=theme.CLAY, linewidth=1.6, linestyle=(0, (9, 5)), zorder=2)
+    ax.axhline(top, color=theme.BARRIER, linewidth=1.6, linestyle=(0, (9, 5)), zorder=2)
     ax.annotate(
         "DISCRETIONARY — primary ADS issuance at the Company's determination.\n"
         "No numeric deposit cap appears in any SEC filing.",
         xy=(0.012, top), xycoords=("axes fraction", "data"), xytext=(0, 6),
-        textcoords="offset points", fontsize=theme.NOTE_SIZE, color=theme.CLAY,
+        textcoords="offset points", fontsize=theme.NOTE_SIZE, color=theme.BARRIER,
         va="bottom", ha="left", fontfamily=theme.SERIF_STACK,
     )
 
@@ -110,25 +110,25 @@ def g2_plumbing_map():
     boxes = {"Nasdaq\nADR (SKHY)": 1.0, "Depositary\n(Citibank, N.A.)": 4.1, "KRX common\n(000660)": 7.2}
     for label, x in boxes.items():
         ax.add_patch(mpatches.FancyBboxPatch((x, 2.6), 1.9, 1.25, boxstyle="round,pad=0.10",
-                     facecolor=theme.PAPER, edgecolor=theme.INK, linewidth=1.3))
+                     facecolor=theme.PAPER, edgecolor=theme.SEMANTIC["context"], linewidth=1.3))
         ax.text(x + 0.95, 3.22, label, ha="center", va="center", fontsize=9,
                 color=theme.TEXT, fontfamily=theme.SERIF_STACK)
 
     # Open channel: ADR -> local. Wide arrow, solid.
     ax.annotate("", xy=(7.15, 2.32), xytext=(2.95, 2.32),
                 arrowprops=dict(arrowstyle="-|>,head_width=0.42,head_length=0.7",
-                                color=theme.INK, linewidth=5.5, alpha=0.85))
+                                color=theme.BARRIER, linewidth=5.5, alpha=0.85))
     ax.text(5.05, 1.94, "CANCELLATION — uncapped, a holder right (17 CFR §239.36(a))",
-            ha="center", fontsize=8.2, color=theme.INK, fontfamily=theme.SERIF_STACK)
+            ha="center", fontsize=8.2, color=theme.BARRIER, fontfamily=theme.SERIF_STACK)
     ax.text(5.05, 1.60, f"fee ${FEE_PER_ADS:.2f}/ADS · settlement via KSD",
             ha="center", fontsize=7.4, color=theme.MUTED, fontfamily=theme.SERIF_STACK)
 
     # Gated channel: local -> ADR. Thin, dashed, with a gate bar across it.
     ax.annotate("", xy=(2.95, 4.28), xytext=(7.15, 4.28),
                 arrowprops=dict(arrowstyle="-|>,head_width=0.24,head_length=0.5",
-                                color=theme.CLAY, linewidth=1.7, linestyle=(0, (7, 4))))
-    ax.plot([5.05, 5.05], [3.98, 4.58], color=theme.CLAY, linewidth=3.4)
-    ax.text(5.05, 4.74, "ISSUANCE — gated", ha="center", fontsize=8.6, color=theme.CLAY,
+                                color=theme.BARRIER, linewidth=1.7, linestyle=(0, (7, 4))))
+    ax.plot([5.05, 5.05], [3.98, 4.58], color=theme.BARRIER, linewidth=3.4)
+    ax.text(5.05, 4.74, "ISSUANCE — gated", ha="center", fontsize=8.6, color=theme.BARRIER,
             fontfamily=theme.SERIF_STACK)
     ax.text(5.05, 5.28,
             "Company determination  ·  board authorization 17,790,000 sh (2.50%)\n"
@@ -136,7 +136,7 @@ def g2_plumbing_map():
             ha="center", fontsize=7.6, color=theme.MUTED, fontfamily=theme.SERIF_STACK)
 
     # D5 gauge on the gated channel.
-    ax.add_patch(mpatches.Rectangle((4.30, 3.62), 1.5, 0.20, facecolor="#eceae5",
+    ax.add_patch(mpatches.Rectangle((4.30, 3.62), 1.5, 0.20, facecolor=theme.SEMANTIC["inert_fill"],
                                     edgecolor=theme.MUTED, linewidth=0.7))
     ax.text(5.05, 3.40, "D5 observable — capped programme headroom: 0",
             ha="center", fontsize=7.4, color=theme.MUTED, fontfamily=theme.SERIF_STACK)
@@ -171,7 +171,7 @@ def g4_asymmetry(pi_tsm: pd.Series, pi_skhy: pd.Series):
     grouped = chg.groupby(bins, observed=True).mean()
     centres = [iv.mid for iv in grouped.index]
     a.bar([f"{c:.0%}" for c in centres], grouped.values * 1e4,
-          color=[theme.INK if v < 0 else theme.CLAY for v in grouped.values], width=0.62)
+          color=theme.INK, width=0.62)
     a.axhline(0, color=theme.RULE, linewidth=1.0)
     a.set_title("Mean reversion is asymmetric: the floor reflects\nharder than the ceiling pulls",
                 loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
@@ -181,8 +181,8 @@ def g4_asymmetry(pi_tsm: pd.Series, pi_skhy: pd.Series):
     # 249bp daily premium volatility. Stating this precisely rather than claiming "no
     # reversion" -- an earlier caption overstated in the direction that flattered the
     # thesis, and the figure audit caught it.
-    a.annotate("bottom quintile t=+10.9   ·   top quintile t=-5.0", xy=(0.0, 1.005),
-               xycoords="axes fraction", fontsize=7.4, color=theme.MUTED, ha="left", va="bottom",
+    a.annotate("bottom quintile t=+10.9   ·   top quintile t=-5.0", xy=(0.30, 0.97),
+               xycoords="axes fraction", fontsize=7.4, color=theme.MUTED, ha="left", va="top",
                fontfamily=theme.SERIF_STACK)
     a.set_xlabel("starting premium quintile", fontsize=8, color=theme.MUTED)
 
@@ -190,21 +190,21 @@ def g4_asymmetry(pi_tsm: pd.Series, pi_skhy: pd.Series):
     entry = float(pi_skhy.iloc[0])
     floor = 0.0007
     pnl = np.where(grid <= entry, entry - grid, entry - grid)
-    b.fill_between(grid, pnl, 0, where=(grid > entry), color=theme.CLAY, alpha=0.16)
+    b.fill_between(grid, pnl, 0, where=(grid > entry), color=theme.WARNING, alpha=0.16)
     b.fill_between(grid, pnl, 0, where=(grid <= entry), color=theme.INK, alpha=0.13)
     b.plot(grid, pnl, color=theme.TEXT, linewidth=1.5)
-    b.axvline(floor, color=theme.INK, linewidth=1.6)
+    b.axvline(floor, color=theme.BARRIER, linewidth=1.6)
     b.axhline(0, color=theme.RULE, linewidth=1.0)
     lo, hi = float(pi_skhy.min()), float(pi_skhy.max())
     b.annotate("", xy=(hi, entry - hi), xytext=(lo, entry - lo),
-               arrowprops=dict(arrowstyle="-|>", color=theme.CLAY, linewidth=2.0))
+               arrowprops=dict(arrowstyle="-|>", color=theme.WARNING, linewidth=2.0))
     b.annotate(f"realized {lo:.1%} → {hi:.1%}\nin week one", xy=(hi, entry - hi),
-               xytext=(-6, -26), textcoords="offset points", fontsize=8, color=theme.CLAY,
+               xytext=(-4, -32), textcoords="offset points", fontsize=8, color=theme.WARNING,
                ha="right", fontfamily=theme.SERIF_STACK)
-    b.annotate("GAIN BOUNDED\nby the cost floor", xy=(0.03, 0.10), xycoords="axes fraction",
-               fontsize=8, color=theme.INK, fontfamily=theme.SERIF_STACK)
+    b.annotate("GAIN BOUNDED\nby the cost floor", xy=(0.03, 0.50), xycoords="axes fraction",
+               fontsize=8, color=theme.BARRIER, va="top", fontfamily=theme.SERIF_STACK)
     b.annotate("LOSS UNBOUNDED — no ceiling on file", xy=(0.97, 0.90),
-               xycoords="axes fraction", fontsize=8.4, color=theme.CLAY, ha="right",
+               xycoords="axes fraction", fontsize=8.4, color=theme.WARNING, ha="right",
                fontfamily=theme.SERIF_STACK, weight="medium")
     b.set_title("Short-premium payoff: the skew\nis structural, not bad luck",
                 loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
@@ -235,11 +235,10 @@ def g_convergence(results: dict):
     PROVISIONAL: regime labels are the proposed taxonomy.
     """
     fig, ax = theme.figure(height=5.0)
-    colors = {"one_way_constrained": theme.CLAY, "fungible": theme.MOSS}
     for regime, res in results.items():
         hs = [f.horizon for f in res.horizons]
         rs = [f.rho for f in res.horizons]
-        c = colors.get(regime, theme.INK)
+        c = theme.regime_color(regime)
         lo = [f.band()[0] for f in res.horizons]
         hi = [f.band()[1] for f in res.horizons]
         ax.fill_between(hs, lo, hi, color=c, alpha=0.13, linewidth=0)
@@ -317,12 +316,12 @@ def g9_cost_and_skew(cost_rows, margin: dict):
 
     entry, peak = margin["entry_premium"], margin["peak_premium"]
     b.bar(["entry", "peak (week 1)"], [entry * 100, peak * 100],
-          color=[theme.INK, theme.CLAY], width=0.55)
+          color=[theme.INK, theme.WARNING], width=0.55)
     b.annotate(f"{margin['premium_leg_drawdown_pct_pts']:.0f}pp\nmarked against",
                xy=(0, entry * 100), xytext=(6, 12), textcoords="offset points",
-               fontsize=8, color=theme.CLAY, ha="left", fontfamily=theme.SERIF_STACK)
+               fontsize=8, color=theme.WARNING, ha="left", fontfamily=theme.SERIF_STACK)
     b.annotate("LOSS UNBOUNDED — no ceiling on file", xy=(0.5, 0.94), xycoords="axes fraction",
-               fontsize=8, color=theme.CLAY, ha="center", fontfamily=theme.SERIF_STACK, weight="medium")
+               fontsize=8, color=theme.WARNING, ha="center", fontfamily=theme.SERIF_STACK, weight="medium")
     b.set_ylabel("premium (%)", fontsize=8, color=theme.MUTED)
     b.set_title("The risk is not trivial: the realized\nweek-one excursion, marked",
                 loc="left", fontsize=9, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
@@ -377,23 +376,23 @@ def g10_expression_readiness(sheets):
                 ax.plot(c, y, marker=".", color=theme.RULE, markersize=2)
                 continue
             if v == 2:
-                ax.plot(c, y, marker="o", markersize=11, color=theme.MOSS,
-                        markeredgecolor=theme.MOSS)
+                ax.plot(c, y, marker="o", markersize=11, color=theme.INK,
+                        markeredgecolor=theme.INK)
             elif v == 1:
                 # bounded-only: half-filled, because "we have a floor" is not "we have it"
                 ax.plot(c, y, marker="o", markersize=11, markerfacecolor=theme.PAPER,
-                        markeredgecolor=theme.MOSS, markeredgewidth=2.0)
-                ax.plot(c, y, marker="_", markersize=7, color=theme.MOSS, markeredgewidth=2.4)
+                        markeredgecolor=theme.BARRIER, markeredgewidth=2.0)
+                ax.plot(c, y, marker="_", markersize=7, color=theme.BARRIER, markeredgewidth=2.4)
             else:
                 ax.plot(c, y, marker="o", markersize=11, markerfacecolor=theme.PAPER,
-                        markeredgecolor=theme.CLAY, markeredgewidth=1.4)
-                ax.plot(c, y, marker="x", markersize=6, color=theme.CLAY, markeredgewidth=1.6)
+                        markeredgecolor=theme.WARNING, markeredgewidth=1.4)
+                ax.plot(c, y, marker="x", markersize=6, color=theme.WARNING, markeredgewidth=1.6)
         label_color = theme.TEXT if live[r] else theme.MUTED
         ax.text(-0.62, y, names[r], ha="right", va="center", fontsize=theme.LABEL_SIZE,
                 color=label_color, fontfamily=theme.SERIF_STACK)
         tag = "live" if live[r] else "contingent"
         ax.text(ncol + 0.25, y, tag, ha="left", va="center", fontsize=theme.NOTE_SIZE,
-                color=theme.MOSS if live[r] else theme.CLAY, fontfamily=theme.SERIF_STACK)
+                color=theme.INK if live[r] else theme.WARNING, fontfamily=theme.SERIF_STACK)
         # Rule stops short of the readiness tag — at full width it struck through the text.
         ax.plot([-0.45, ncol - 0.55], [y, y], color=theme.RULE, linewidth=0.6, zorder=0)
 
@@ -445,10 +444,8 @@ def g11_taxonomy_separation(per_pair: list[dict]):
     shows it separating cleanly. Which horizon you look at decides what you conclude.
     """
     fig, ax = theme.figure(height=5.2)
-    colors = {"one_way_constrained": theme.CLAY, "fungible": theme.MOSS}
-
     for row in per_pair:
-        c = colors.get(row["regime"], theme.INK)
+        c = theme.regime_color(row["regime"])
         x, y = abs(row["mean"]), row["half_life"]
         ax.plot(x, y, marker="o", markersize=8, color=c, markerfacecolor=c, alpha=0.9, zorder=3)
         ax.annotate(row["pair"], xy=(x, y), xytext=(10, row.get("dy", 0)),
@@ -487,9 +484,11 @@ def g11_taxonomy_separation(per_pair: list[dict]):
     ax.set_xlabel("mean premium, absolute value — the LEVEL", fontsize=8, color=theme.MUTED)
     ax.set_ylabel("half-life, trading days — the DYNAMICS", fontsize=8, color=theme.MUTED)
     ax.annotate("one-way constrained", xy=(0.02, 0.95), xycoords="axes fraction",
-                fontsize=theme.NOTE_SIZE, color=theme.CLAY, fontfamily=theme.SERIF_STACK)
+                fontsize=theme.NOTE_SIZE, color=theme.regime_color("one_way_constrained"),
+                fontfamily=theme.SERIF_STACK)
     ax.annotate("fungible control", xy=(0.02, 0.05), xycoords="axes fraction",
-                fontsize=theme.NOTE_SIZE, color=theme.MOSS, fontfamily=theme.SERIF_STACK)
+                fontsize=theme.NOTE_SIZE, color=theme.regime_color("fungible"),
+                fontfamily=theme.SERIF_STACK)
 
     theme.finalize(
         fig, kicker="taxonomy",
@@ -504,3 +503,100 @@ def g11_taxonomy_separation(per_pair: list[dict]):
                  "four constrained issuers share one regulator, five of six controls are Brazilian.",
     )
     return fig, ax
+
+# ================================================================================
+# Block 4 — the layman layer.
+#
+# Every figure must pass a stated TEN-SECOND TEST: a cold reader gets the point from the
+# headline plus one drawn annotation alone. The bullets below are the third leg — plain
+# English, in the register a salesperson can repeat from memory, with no Greek and no
+# estimator names.
+#
+# They live HERE, in the figure module, rather than in the notebook builders, because the
+# same figure ships to a notebook and to a deck export and the two must not drift. Notebook
+# text is downstream of this dict, never parallel to it.
+# ================================================================================
+
+LAYMAN: dict[str, list[str]] = {
+    "g1_barrier_anatomy": [
+        "Hynix's US shares have been worth 16-52% more than the identical Korean shares "
+        "since July. Normally that gap gets traded away in a day.",
+        "It cannot be, because the trade only works one way. You can always turn a US share "
+        "back into a Korean one. Going the other way needs the company's permission, and it "
+        "has not given it.",
+        "So the gap has a floor it cannot fall through and no ceiling it cannot rise above.",
+    ],
+    "g2_plumbing_map": [
+        "Two pipes connect the US listing to the Korean one. The wide one always flows; the "
+        "narrow one has a gate on it.",
+        "The gate is not a rulebook number — it is a decision the company makes and does not "
+        "publish. That is harder to plan around than a quota.",
+        "Watch the gauge: it reads zero, meaning nothing is currently allowed through.",
+    ],
+    "g4_asymmetry": [
+        "Betting the gap closes pays a little if you are right and loses a lot if you are "
+        "wrong. That is not bad luck, it is the shape of the trade.",
+        "The most you can make is the gap you sold. The most you can lose has no limit, "
+        "because nothing on file caps how wide it can get.",
+        "It already ran from 16% to 52% in one week — about 36 points against that bet, "
+        "before any of it came back.",
+    ],
+    "g9_cost_and_skew": [
+        "The paperwork cost of the trade is trivial: about 7 basis points, round trip.",
+        "The costs that matter — borrowing the shares, funding the position, hedging the "
+        "currency — are not published. The desk quotes them live.",
+        "Cost is not what keeps this gap open. Risk is.",
+    ],
+    "g_convergence": [
+        "Gaps like this one close slowly. Ones where the trade works both ways close within "
+        "days.",
+        "Best case, on the evidence, is about ten and a half months. There is no worst case "
+        "we can rule out — the data cannot say the gap ever halves.",
+        "Anything you pay per day, you should assume you pay for at least ten months.",
+    ],
+    "g10_expression_readiness": [
+        "Five ways to express this view. One can be built today; four wait on data we have "
+        "not yet been able to buy or scrape.",
+        "Two of the four need only a single missing input each, and both are purchasing "
+        "problems rather than research problems.",
+        "Nothing here says which trade is better — only which can be built honestly now.",
+    ],
+    "g11_taxonomy_separation": [
+        "Sort cross-listings by whether the trade works both ways, using only the legal "
+        "documents. Then look at how their gaps behave.",
+        "The one-way ones take months to close. The two-way ones take days. Nothing sits in "
+        "between.",
+        "That sorting was done before looking at any prices, which is why it is a finding "
+        "and not a circular argument.",
+    ],
+}
+
+
+def layman(figure_name: str) -> list[str]:
+    """Plain-English bullets for a figure. Empty list if none assigned."""
+    return LAYMAN.get(figure_name, [])
+
+
+def layman_block(figure_name: str, width: int = 96) -> str:
+    """Render the layman bullets as a markdown block for notebooks and deck exports."""
+    import textwrap
+    bullets = layman(figure_name)
+    if not bullets:
+        return ""
+    out = ["**In plain terms**", ""]
+    for b in bullets:
+        wrapped = textwrap.fill(b, width=width, subsequent_indent="  ")
+        out.append(f"- {wrapped}")
+    return "\n".join(out)
+
+
+def ten_second_test() -> dict[str, bool]:
+    """Which figures carry the full three-legged treatment (headline + annotation + layman).
+
+    Reported in docs/figure_audit.md. A figure with no layman bullets fails by definition --
+    the test is about a cold reader, and a cold reader does not read docstrings.
+    """
+    names = [n for n in globals() if n.startswith(("g1", "g2", "g4", "g9", "g10", "g11", "g_"))
+             and callable(globals()[n])]
+    return {n: bool(layman(n)) for n in sorted(names)}
+

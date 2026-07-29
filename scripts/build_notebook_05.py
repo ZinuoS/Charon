@@ -3,6 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# Layman bullets come from the figure module so notebook text and deck exports
+# cannot drift apart (Block 4: one source of truth).
+from pipeline.viz import figures  # noqa: E402
 OUT = ROOT / "notebooks" / "05_hypothesis_engines.ipynb"
 cells=[]
 md=lambda s: cells.append({"cell_type":"markdown","metadata":{},"source":s.strip().splitlines(True)})
@@ -78,6 +83,8 @@ from pipeline.viz import figures
 fig, ax = figures.g_convergence(res)
 fig;
 ''')
+
+md(figures.layman_block('g_convergence'))
 md(r"""
 **Read as the reflected-process thesis in a convergence estimate.** `one_way_constrained`
 (TSM): ρ ≈ 0.94 one day out, still 0.88 at twenty days, t-HAC 129 — persistence on a scale
@@ -178,6 +185,8 @@ code(r'''
 fig, ax = figures.g11_taxonomy_separation(_rows)
 fig;
 ''')
+
+md(figures.layman_block('g11_taxonomy_separation'))
 
 md(r"""
 The classes separate **completely on half-life** — constrained 161–398 trading days, controls

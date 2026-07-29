@@ -418,8 +418,9 @@ theme.pct_axis(ax)
 theme.headline(
     ax,
     "The premium peaked above 51% in week one and has not closed since",
-    "SKHY vs 000660.KS, close-to-close. The local-to-ADR conversion quota was exhausted "
-    "at the offering, so nothing structurally caps this from above.",
+    "SKHY vs 000660.KS, close-to-close. Local-to-ADR issuance requires the Company's "
+    "consent against a level it does not disclose, and no numeric deposit cap appears in "
+    "any SEC filing — so nothing on the record caps this from above.",
 )
 theme.reference_line(ax, 0.0, "parity -- the uncapped ADR-to-local floor", color=theme.RULE)
 theme.label_line_end(ax, sk.series.index[-1], sk.series.values[-1], "SKHY / 000660", theme.INK)
