@@ -280,7 +280,7 @@ decisions whose magnitude sits on the order of the daily phenomena being studied
 """)
 
 code(r'''
-import matplotlib; matplotlib.use("Agg")
+%matplotlib inline
 import numpy as np, pandas as pd
 from pipeline.viz import theme
 from pipeline.measurement.premium import _load_close
