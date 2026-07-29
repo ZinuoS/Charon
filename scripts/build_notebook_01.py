@@ -114,7 +114,7 @@ from pipeline.measurement.premium import build_all_variants
 theme.apply()
 _pi = build_all_variants("skhy")[0].series
 theme.sparkline_header(_pi, highlight=("2026-07-27", "2026-07-28"),
-                       label="SKHY premium since listing  ·  this notebook: measurement of the latest marks")
+                       label="SKHY premium since listing  ·  this notebook: measurement of the latest marks");
 ''')
 
 md(r"""
@@ -316,8 +316,14 @@ theme.headline(
     "USD/KRW, ECB reference (~16:00 CET) minus FRED H.10 (noon New York). "
     f"{len(shared):,} overlapping days.",
 )
-theme.label_line_end(ax, lvl.index[-1], lvl.values[-1], "level gap", theme.GRAY)
-theme.label_line_end(ax, chg.index[-1], chg.values[-1], "day-over-day change gap", theme.CLAY)
+# Both series end near 0bp, so anchor the labels at separated fixed heights rather than
+# at the (colliding) endpoints.
+ax.annotate("day-over-day change gap", xy=(1.0, 0.66), xycoords="axes fraction",
+            xytext=(4, 0), textcoords="offset points", color=theme.CLAY,
+            fontsize=theme.LABEL_SIZE, va="center", ha="left", fontfamily=theme.SERIF_STACK)
+ax.annotate("level gap", xy=(1.0, 0.42), xycoords="axes fraction",
+            xytext=(4, 0), textcoords="offset points", color=theme.GRAY,
+            fontsize=theme.LABEL_SIZE, va="center", ha="left", fontfamily=theme.SERIF_STACK)
 theme.source_note(
     fig, "frankfurter.dev (ECB reference rates); FRED H.10 DEXKOUS.",
     "Both fixes are correct; they are struck ~2h apart. Differencing two independently "
@@ -325,7 +331,7 @@ theme.source_note(
 )
 print(f"LEVEL   mean {lvl.abs().mean()*1e4:6.2f}bp   p95 {lvl.abs().quantile(.95)*1e4:6.2f}bp")
 print(f"CHANGE  mean {chg.abs().mean()*1e4:6.2f}bp   p95 {chg.abs().quantile(.95)*1e4:6.2f}bp")
-fig
+fig;
 ''')
 
 md(r"""
@@ -387,7 +393,7 @@ theme.source_note(
     "so the joint series ends 2026-07-24 and loses 37 rows to the inner join.",
 )
 print(v.describe())
-fig
+fig;
 ''')
 
 md(r"""
@@ -426,7 +432,7 @@ theme.source_note(
     "Nasdaq 16:00 ET -- 13.5h apart, so each point pairs non-contemporaneous legs.",
 )
 print(sk.describe())
-fig
+fig;
 """)
 
 md(r"""
@@ -470,7 +476,7 @@ theme.finalize(
     source="Nasdaq; EODHD; TWSE; frankfurter/ECB; FRED H.10.",
     footnote="DESCRIPTIVE ONLY -- no claim that SKHY will follow TSM's path.",
 )
-fig
+fig;
 """)
 
 md(r"""

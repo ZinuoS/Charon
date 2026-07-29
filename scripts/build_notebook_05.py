@@ -27,7 +27,7 @@ for h in ("h1_term_structure","h2_index_access","h3_letf_loop","h4_vol_decomposi
 print("\\nClass C = registered (H5). Class X = exploratory (H1-H4). Class P = empty (no prior commit).")
 from pipeline.viz import theme; theme.apply()
 _pi = __import__("pipeline.measurement.premium", fromlist=["build_all_variants"]).build_all_variants("skhy")[0].series
-theme.sparkline_header(_pi, highlight=("2026-07-15","2026-07-28"), label="SKHY premium  ·  this notebook: the engines that watch it")
+theme.sparkline_header(_pi, highlight=("2026-07-15","2026-07-28"), label="SKHY premium  ·  this notebook: the engines that watch it");
 ''')
 
 md(r"""
@@ -76,7 +76,7 @@ metrics_table(res)
 code(r'''
 from pipeline.viz import figures
 fig, ax = figures.g_convergence(res)
-fig
+fig;
 ''')
 md(r"""
 **Read as the reflected-process thesis in a convergence estimate.** `one_way_constrained`

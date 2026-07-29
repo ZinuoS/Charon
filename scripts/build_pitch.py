@@ -91,7 +91,7 @@ from pipeline.measurement.premium import build_all_variants
 theme.apply()
 _pi = build_all_variants("skhy")[0].series
 theme.sparkline_header(_pi, highlight=("2026-07-10", "2026-07-28"),
-                       label="SKHY premium since listing  ·  this document: the whole path")
+                       label="SKHY premium since listing  ·  this document: the whole path");
 ''')
 
 md(r"""
@@ -153,14 +153,14 @@ fig, ax = figures.g1_barrier_anatomy(sk.series, theme.events_for(markets=["US","
 theme.source_note(fig, "Nasdaq (SKHY); EODHD (000660.KO); frankfurter/ECB. Barrier language: SEC 424B4 and Deposit Agreement Ex. 99(a).",
                   "pi = P_ADR * FX / (0.1 * P_local) - 1, raw closes. STALE: KRX closes 15:30 KST, Nasdaq 16:00 ET.", y=-0.06)
 print(sk.describe())
-fig
+fig;
 ''')
 
 code(r'''
 fig, ax = figures.g2_plumbing_map()
 theme.source_note(fig, "SEC 424B4; Deposit Agreement F-6 Ex. 99(a); 17 CFR 239.36(a); 6-K 2026-07-15.",
                   "Solid = barrier that operates mechanically. Long-dash = discretionary.", y=-0.02)
-fig
+fig;
 ''')
 
 md(r"""
@@ -264,7 +264,7 @@ fig, axes = figures.g4_asymmetry(tsm.series, sk.series)
 theme.source_note(fig, "Nasdaq; TWSE; EODHD; FRED H.10; frankfurter/ECB. Repo-computed.",
                   "Left: conditional mean next-day change by starting-level quintile, TSM, 2,328 days. "
                   "Right: payoff schematic; the excursion is realized, not hypothetical.", y=-0.06)
-fig
+fig;
 ''')
 
 md(r"""
