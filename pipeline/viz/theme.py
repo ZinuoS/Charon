@@ -386,3 +386,78 @@ def obol(ax, x, y, size: float = 42.0, color: str | None = None) -> None:
                linewidths=1.0, zorder=5, clip_on=False)
     ax.scatter([x], [y], s=size * 0.18, facecolors=c, edgecolors="none",
                zorder=5, clip_on=False)
+
+
+# --------------------------------------------------------------------------------
+# Palette variants — public by default, brand colours only where the env supplies them
+# --------------------------------------------------------------------------------
+#
+# The public repository has no `PRESENTATION_PALETTE` value and therefore *cannot* render
+# brand colours — not by convention but by construction. `presentation` derives its whole
+# family from a single anchor hex via lightness ramps, so one value yields emphasis,
+# secondary and muted tones without anyone hand-picking a set that drifts from the source.
+#
+# Design constraint for the presentation variant: the anchor family is for EMPHASIS — the
+# SKHY series, barrier rules, warnings — against a neutral field. Never full-chart colour.
+
+PALETTES: dict[str, dict[str, str]] = {
+    "public": {"ink": INK, "clay": CLAY, "moss": MOSS, "gray": GRAY,
+               "rule": RULE, "text": TEXT, "muted": MUTED, "paper": PAPER},
+}
+
+
+def _ramp(hex_color: str, lightness: float) -> str:
+    """Mix ``hex_color`` toward white (lightness>0) or black (lightness<0)."""
+    h = hex_color.lstrip("#")
+    r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    if lightness >= 0:
+        r, g, b = (int(c + (255 - c) * lightness) for c in (r, g, b))
+    else:
+        r, g, b = (int(c * (1 + lightness)) for c in (r, g, b))
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+def _presentation_palette() -> dict[str, str] | None:
+    """Build the presentation family from the env anchor, or None if absent."""
+    import os
+    anchor = os.environ.get("PRESENTATION_PALETTE", "").strip()
+    if not anchor:
+        env = REPO_ROOT / ".env"
+        if env.is_file():
+            for line in env.read_text().splitlines():
+                if line.strip().startswith("PRESENTATION_PALETTE="):
+                    anchor = line.split("=", 1)[1].strip()
+                    break
+    if not anchor or not anchor.startswith("#") or len(anchor) != 7:
+        return None
+    return {
+        "ink": TEXT,                      # neutral field: body/structure stays dark neutral
+        "clay": anchor,                   # emphasis: SKHY series, barrier rules, warnings
+        "moss": _ramp(anchor, -0.35),     # deeper anchor for a third series
+        "gray": GRAY, "rule": RULE, "text": TEXT, "muted": MUTED, "paper": PAPER,
+    }
+
+
+def active_palette() -> tuple[str, dict[str, str]]:
+    """(name, palette). `CHARON_PALETTE=presentation` selects it *if* an anchor exists."""
+    import os
+    want = os.environ.get("CHARON_PALETTE", "public").strip().lower()
+    if want == "presentation":
+        pres = _presentation_palette()
+        if pres:
+            return "presentation", pres
+    return "public", PALETTES["public"]
+
+
+def apply_palette(name: str | None = None) -> str:
+    """Install a palette into the module globals and rcParams. Returns the name used."""
+    global INK, CLAY, MOSS, GRAY, RULE, TEXT, MUTED, PAPER, SERIES_COLORS
+    import os
+    if name:
+        os.environ["CHARON_PALETTE"] = name
+    used, p = active_palette()
+    INK, CLAY, MOSS = p["ink"], p["clay"], p["moss"]
+    GRAY, RULE, TEXT, MUTED, PAPER = p["gray"], p["rule"], p["text"], p["muted"], p["paper"]
+    SERIES_COLORS = (INK, CLAY, MOSS)
+    mpl.rcParams["axes.prop_cycle"] = mpl.cycler(color=list(SERIES_COLORS))
+    return used

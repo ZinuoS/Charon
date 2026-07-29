@@ -90,3 +90,48 @@ def test_obol_is_drawn_not_an_image_asset():
     before = len(ax.collections)
     theme.obol(ax, 0.5, 0.5)
     assert len(ax.collections) == before + 2, "coin glyph is two drawn scatters, no asset"
+
+
+class TestPaletteIsolation:
+    """The public repo must be structurally incapable of rendering brand colours."""
+
+    def test_public_palette_contains_no_env_derived_values(self, monkeypatch):
+        from pipeline.viz import theme
+        monkeypatch.delenv("PRESENTATION_PALETTE", raising=False)
+        monkeypatch.delenv("CHARON_PALETTE", raising=False)
+        name, pal = theme.active_palette()
+        assert name == "public"
+        assert pal == theme.PALETTES["public"]
+
+    def test_requesting_presentation_without_an_anchor_falls_back(self, monkeypatch):
+        """Not an error — a silent, safe fallback. A public checkout has no anchor."""
+        from pipeline.viz import theme
+        monkeypatch.delenv("PRESENTATION_PALETTE", raising=False)
+        monkeypatch.setenv("CHARON_PALETTE", "presentation")
+        assert theme.active_palette()[0] == "public"
+
+    def test_anchor_yields_a_derived_family_not_a_hand_picked_set(self, monkeypatch):
+        from pipeline.viz import theme
+        monkeypatch.setenv("PRESENTATION_PALETTE", "#a4243b")
+        monkeypatch.setenv("CHARON_PALETTE", "presentation")
+        name, pal = theme.active_palette()
+        assert name == "presentation"
+        assert pal["clay"] == "#a4243b"
+        assert pal["moss"] != pal["clay"], "third series derives from the anchor"
+        assert pal["ink"] == theme.PALETTES["public"]["text"], \
+            "the field stays neutral — emphasis only, never full-chart colour"
+
+    def test_no_brand_hex_is_committed_anywhere(self):
+        """A committed anchor would defeat the whole mechanism."""
+        import subprocess, re
+        from pathlib import Path
+        root = Path(__file__).resolve().parents[1]
+        out = subprocess.run(["git", "ls-files"], cwd=root, capture_output=True, text=True).stdout
+        for f in out.splitlines():
+            p = root / f
+            if p.suffix in {".py", ".md", ".toml"} and p.is_file():
+                for line in p.read_text(errors="replace").splitlines():
+                    if "PRESENTATION_PALETTE=" in line:
+                        val = line.split("PRESENTATION_PALETTE=", 1)[1].strip()
+                        assert not re.match(r"^#?[0-9a-fA-F]{6}", val), \
+                            f"{f}: a brand hex is committed"
