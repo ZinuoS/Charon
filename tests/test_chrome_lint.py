@@ -135,3 +135,51 @@ class TestPaletteIsolation:
                         val = line.split("PRESENTATION_PALETTE=", 1)[1].strip()
                         assert not re.match(r"^#?[0-9a-fA-F]{6}", val), \
                             f"{f}: a brand hex is committed"
+
+
+class TestNotebookFreshness:
+    """Notebooks must actually reflect the pipeline, not a stale build.
+
+    Motivated by a real miss: the two notebook builders used different cell-helper names
+    (`co` vs `code`), so a pipeline addition wired into both silently applied to only one.
+    The build failed loudly for one file and the other kept its old form — and the diff
+    looked like a deliberate choice rather than a break.
+    """
+
+    NOTEBOOKS = ["00_executive_pitch", "02_premium_anatomy"]
+
+    @pytest.mark.parametrize("name", NOTEBOOKS)
+    def test_notebook_is_executed_with_outputs(self, name):
+        nb = json.loads((ROOT / "notebooks" / f"{name}.ipynb").read_text())
+        code = [c for c in nb["cells"] if c["cell_type"] == "code"]
+        assert code, f"{name} has no code cells"
+        assert any(c.get("outputs") for c in code), (
+            f"{name} is committed with cleared outputs. The repo is the display medium "
+            "(docs/deviations.md, 2026-07-29) — a reader must see results without running."
+        )
+
+    @pytest.mark.parametrize("name", NOTEBOOKS)
+    def test_notebook_has_no_execution_errors(self, name):
+        nb = json.loads((ROOT / "notebooks" / f"{name}.ipynb").read_text())
+        errs = [o for c in nb["cells"] if c["cell_type"] == "code"
+                for o in c.get("outputs", []) if o.get("output_type") == "error"]
+        assert not errs, f"{name} committed with {len(errs)} execution error(s)"
+
+    @pytest.mark.parametrize("name", NOTEBOOKS)
+    def test_notebook_carries_the_series_sparkline(self, name):
+        """The recurring signature. Absent means a builder edit reached one file only."""
+        nb = json.loads((ROOT / "notebooks" / f"{name}.ipynb").read_text())
+        src = " ".join("".join(c["source"]) for c in nb["cells"])
+        assert "sparkline_header" in src, f"{name} missing the sparkline header"
+
+    def test_both_builders_use_the_same_cell_helper_names(self):
+        """The exact defect above: divergent helper names let an edit apply to one file."""
+        import re
+        helpers = []
+        for f in ("build_pitch.py", "build_notebook_01.py"):
+            src = (ROOT / "scripts" / f).read_text()
+            helpers.append({m for m in re.findall(r"^(co|code|md)\(r?'''", src, re.M)})
+        assert helpers[0] & helpers[1], (
+            f"builders share no cell-helper names: {helpers}. A snippet written for one "
+            "will NameError or silently skip in the other."
+        )

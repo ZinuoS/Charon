@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "notebooks" / "00_executive_pitch.ipynb"
 cells: list[dict] = []
 md = lambda s: cells.append({"cell_type":"markdown","metadata":{},"source":s.strip().splitlines(True)})
-co = lambda s: cells.append({"cell_type":"code","execution_count":None,"metadata":{},"outputs":[],"source":s.strip().splitlines(True)})
+code = lambda s: cells.append({"cell_type":"code","execution_count":None,"metadata":{},"outputs":[],"source":s.strip().splitlines(True)})
 
 md(r"""
 # The SK Hynix ADR premium: a barrier that is a decision, not a mechanism
@@ -66,7 +66,7 @@ The cell below reads the pre-registration ledger's real state and prints the cap
 governs every forward-looking sentence in this document.
 """)
 
-co(r'''
+code(r'''
 import subprocess, yaml, pathlib, sys
 ROOT = pathlib.Path.cwd().parent if pathlib.Path.cwd().name == "notebooks" else pathlib.Path.cwd()
 if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
@@ -80,6 +80,18 @@ else:
     print("  Every hypothesis below is EXPLORATORY. Nothing here is a pre-registered")
     print("  forward test. Class P is empty: no call predates the 2026-07-29 earnings")
     print("  release on the record. Stated plainly rather than elided.")
+''')
+
+code(r'''
+%matplotlib inline
+import sys, pathlib
+if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
+from pipeline.viz import theme
+from pipeline.measurement.premium import build_all_variants
+theme.apply()
+_pi = build_all_variants("skhy")[0].series
+theme.sparkline_header(_pi, highlight=("2026-07-10", "2026-07-28"),
+                       label="SKHY premium since listing  ·  this document: the whole path")
 ''')
 
 md(r"""
@@ -129,7 +141,7 @@ that one direction is capped; the capped direction's capacity is manufactured on
 uncapped direction being used, and the premium itself removes the incentive to use it.**
 """)
 
-co(r'''
+code(r'''
 %matplotlib inline
 import pandas as pd
 from pipeline.viz import theme, figures
@@ -144,7 +156,7 @@ print(sk.describe())
 fig
 ''')
 
-co(r'''
+code(r'''
 fig, ax = figures.g2_plumbing_map()
 theme.source_note(fig, "SEC 424B4; Deposit Agreement F-6 Ex. 99(a); 17 CFR 239.36(a); 6-K 2026-07-15.",
                   "Solid = barrier that operates mechanically. Long-dash = discretionary.", y=-0.02)
@@ -182,7 +194,7 @@ equally consistent with two-way flow netting to zero. **Public data cannot disti
 them.**
 """)
 
-co(r'''
+code(r'''
 tsm = build_all_variants("tsmc")[0]
 baba = build_all_variants("baba")[0]
 rows = [{"pair": v.pair_id.upper(), "regime (proposed)": r, "n": v.n_obs,
@@ -247,7 +259,7 @@ The relative-value expression exists. It is also **short a barrier that exists o
 side**, which makes it negatively skewed *by construction* rather than by bad luck.
 """)
 
-co(r'''
+code(r'''
 fig, axes = figures.g4_asymmetry(tsm.series, sk.series)
 theme.source_note(fig, "Nasdaq; TWSE; EODHD; FRED H.10; frankfurter/ECB. Repo-computed.",
                   "Left: conditional mean next-day change by starting-level quintile, TSM, 2,328 days. "
@@ -313,7 +325,7 @@ $$r_{\pi} = r_{ADR} + r_{FX} - r_{local} \quad\Longrightarrow\quad r_{ADR} = r_{
 with a residual of zero to floating point. Every term below is measured, none estimated.
 """)
 
-co(r'''
+code(r'''
 from hypotheses.h4_vol_decomposition.realized import compare_pairs
 vd = compare_pairs()
 vd[["pair","n","ann_vol_adr_pct","share_local","share_fx","share_pi","share_cov_local_pi","residual"]]
@@ -352,7 +364,7 @@ H5's registered observable is maintained as a monitor rather than a signal. Its 
 state, with the scope limit printed as it is on every output:
 """)
 
-co(r'''
+code(r'''
 from hypotheses.h5_quota_ledger.monitor import status_report
 print(status_report())
 ''')
@@ -460,7 +472,7 @@ Only the filing did.
 ## Provenance and reproducibility
 """)
 
-co(r'''
+code(r'''
 import json
 rows = []
 for meta in sorted((ROOT/"data"/"raw").rglob("*.csv.meta.json")):
@@ -470,7 +482,7 @@ for meta in sorted((ROOT/"data"/"raw").rglob("*.csv.meta.json")):
 pd.DataFrame(rows)
 ''')
 
-co(r'''
+code(r'''
 import sys, platform, matplotlib, numpy
 print(f"python {sys.version.split()[0]} ({platform.platform()})")
 for m in (numpy, pd, matplotlib): print(f"  {m.__name__:12s}{m.__version__}")

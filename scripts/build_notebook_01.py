@@ -105,6 +105,18 @@ else:
 ''')
 
 # ==============================================================================
+code(r'''
+%matplotlib inline
+import sys
+if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
+from pipeline.viz import theme
+from pipeline.measurement.premium import build_all_variants
+theme.apply()
+_pi = build_all_variants("skhy")[0].series
+theme.sparkline_header(_pi, highlight=("2026-07-27", "2026-07-28"),
+                       label="SKHY premium since listing  ·  this notebook: measurement of the latest marks")
+''')
+
 md(r"""
 ---
 

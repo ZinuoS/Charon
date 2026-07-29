@@ -461,3 +461,38 @@ def apply_palette(name: str | None = None) -> str:
     SERIES_COLORS = (INK, CLAY, MOSS)
     mpl.rcParams["axes.prop_cycle"] = mpl.cycler(color=list(SERIES_COLORS))
     return used
+
+
+def sparkline_header(pi, highlight: tuple[str, str] | None = None,
+                     label: str = "", width: float = 12.0):
+    """A thin full-width strip of the premium path — the recurring signature on each notebook.
+
+    Deliberately minimal: no axes, no ticks, no gridlines. It is a *mark*, not a chart —
+    a reader should register the shape and the highlighted span in under a second and move
+    on. Anything more competes with the notebook's actual first figure.
+
+    ``highlight`` is an (start, end) ISO date pair shading the span that notebook is about,
+    so the set reads as a series rather than as unrelated documents.
+    """
+    import pandas as pd
+    fig = plt.figure(figsize=(width, 0.62), dpi=DPI)
+    ax = fig.add_axes([0.0, 0.20, 1.0, 0.62])
+    ax.plot(pi.index, pi.values, color=INK, linewidth=1.3, solid_capstyle="round")
+    ax.fill_between(pi.index, pi.values, pi.min(), color=INK, alpha=0.07)
+
+    if highlight:
+        lo, hi = (pd.Timestamp(h) for h in highlight)
+        ax.axvspan(lo, hi, color=CLAY, alpha=0.16, zorder=0)
+
+    ax.scatter([pi.index[-1]], [pi.values[-1]], s=16, color=CLAY, zorder=3)
+    ax.annotate(f"{pi.iloc[-1]:.1%}", xy=(pi.index[-1], pi.values[-1]),
+                xytext=(6, 0), textcoords="offset points", fontsize=8,
+                color=CLAY, va="center", fontfamily=SERIF_STACK)
+    if label:
+        ax.annotate(label, xy=(0.0, 1.0), xycoords="axes fraction", xytext=(0, 4),
+                    textcoords="offset points", fontsize=7.5, color=MUTED,
+                    va="bottom", fontfamily=SERIF_STACK)
+
+    ax.set_ylim(float(pi.min()) * 0.9, float(pi.max()) * 1.12)
+    ax.axis("off")
+    return fig

@@ -82,3 +82,29 @@ money", and the project's name made visible without saying it.
 **Kicker typography:** matplotlib's `Text` has no `letterspacing` property, so tracked caps
 are produced by construction — uppercase joined with thin spaces. A kicker set solid reads
 as a shout rather than a category.
+
+
+---
+
+## Session 13 close — remaining items and why they stopped
+
+**Delivered:** figure audit (12 defects found, 12 fixed) · `finalize()` chrome owner with
+lint enforcement · G1/G2/G4 migrated · kicker typography · obol glyph · palette-variant
+system with four isolation tests · 1200×600 social card · sparkline headers on both
+notebooks · notebook renumbering and index.
+
+**Not delivered:** the poster figure (5.2) and the animated G1 build (5.5).
+
+Both are single-artifact jobs needing a clean run rather than the tail of a long session.
+The animation in particular has a real design decision inside it — which evidence date the
+discretionary ceiling should appear on. The honest answer is the prospectus-reading date,
+not the listing date, because the barrier's true nature was not known at listing; drawing
+it earlier would animate a claim the repository did not yet have. That is worth doing
+deliberately.
+
+**One defect class this session added to the catalogue:** *builder divergence*. The two
+notebook builders used different cell-helper names (`co` vs `code`), so a snippet wired
+into both applied to only one — loudly for one file, silently for the other, and the diff
+looked deliberate. Fixed by unifying the helpers and pinned by
+`test_both_builders_use_the_same_cell_helper_names`. Notebook freshness (executed, no
+errors, carries the sparkline) is now asserted per notebook rather than assumed.
