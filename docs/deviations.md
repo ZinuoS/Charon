@@ -65,3 +65,48 @@ checksums, or any analysis result.
 **Note.** Being rate-limited is recorded in the pull log with `status: "failed"` rather
 than being retried into silence, so a partial panel is always visible as a partial
 panel.
+
+---
+
+## 2026-07-29 — README edited by an analysis session, on explicit author instruction
+
+**Doctrine.** README §11 reserves README edits to the author; analysis sessions propose,
+never ratify.
+
+**What was done.** An analysis session applied eight corrections to README §0, §1, §2, §3,
+§4 and §5, on the author's explicit instruction ("proceed, override the flags") after the
+corrections had been staged as proposals in `docs/proposed_readme_patch.md` and flagged
+twice as blocking a public-facing contradiction.
+
+**Why.** The repository had been made public while the front page still asserted three
+facts the repository's own research had corrected: the 2.5% as a conversion quota, TSMC's
+12.6% five-year average, and the Eurex night session. §0 also still read "repo stays
+private." A public page contradicting its own cited research is a worse defect than any
+formatting issue, and the author's instruction was unambiguous.
+
+**Blast radius.** README only. No `calls.yaml`, amendment, freeze class or `approved:` mark
+was touched. The prior text is recoverable from git history.
+
+**Author review still owed.** The eight corrections were *proposed* by a session and
+*applied* by a session. The author should read the current §0–§5 and confirm the wording is
+theirs, since the doctrine's normal safeguard — author authorship of the constitution — was
+bypassed here by instruction rather than by process.
+
+---
+
+## 2026-07-29 — Notebook output policy reversed: outputs are now committed
+
+**Prior rule.** Notebooks committed with outputs cleared.
+
+**New rule.** Executed notebooks are committed **with outputs**.
+
+**Why.** The repository is now public and is itself the display medium. A reader landing on
+GitHub sees the rendered document; a cleared notebook shows prose and code but no figures
+and no results, which defeats the purpose of publishing it.
+
+**Retained guarantee.** `make notebook` still verifies clean offline re-execution, and the
+analysis tree still imports no networking library (enforced by test). Committed outputs
+must correspond to a fresh run.
+
+**Cost accepted.** Notebook diffs become large and noisy, and repository weight grows
+(~1MB per executed notebook). Judged worth it for a public research artifact.

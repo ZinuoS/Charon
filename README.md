@@ -12,7 +12,7 @@ Built as a standing research program in constrained cross-listing relative value
 
 - **Status:** Stage 0 (pre-registration freeze). See §9 stage gates.
 - **Data policy:** public data only, personal hardware only, deterministic runtime. No firm data, firm code, client information, or internal communications enter this repository under any circumstances. The internal pitch deliverable (memo + deck) lives on firm systems and is out of scope here; this repo contains only the public-data research layer.
-- **Visibility:** repo stays **private** until (a) the internship concludes or (b) compliance clears publication, whichever is later. Desk names are excluded from all committed files.
+- **Visibility:** **public.** This repository is the public-data research layer only. No firm data, firm code, client information or internal communications enter it under any circumstances; desk and firm names are excluded from all committed files. Any internal deliverable lives on firm systems and is out of scope here.
 - **No LLM calls in pipeline code.** Feature extraction is deterministic end to end (doctrine rule; see §8).
 
 ---
@@ -23,8 +23,8 @@ The desk prompt has three parts. This project answers each with a quantitative a
 
 | Desk ask | This repo's answer |
 |---|---|
-| **Part 1 — Background:** why the IPO opened above offer and trades at a premium to the underlying | The reflected-process framework (§3): US liquidity preference + AI scarcity demand + supply sealed by the exhausted cap ⇒ premium bounded below, unbounded above. Comparator evidence from TSMC's structurally identical regime. |
-| **Part 2 — Trading insights:** can it be arbitraged; long/short convergence trades; limits on size and frequency | Classic create-to-arb is dead (quota exhausted). Five testable relative-value channels replace it (§5, H1–H5), each with a pre-registered direction and validation design. Honest framing: these are RV trades against a one-sided barrier, never "arbitrage." |
+| **Part 1 — Background:** why the IPO opened above offer and trades at a premium to the underlying | The reflected-process framework (§3): US liquidity preference + AI scarcity demand + supply gated by a *discretionary* issuance decision (§2) ⇒ premium bounded below, unbounded above. Comparator evidence from TSMC's structurally identical regime. |
+| **Part 2 — Trading insights:** can it be arbitraged; long/short convergence trades; limits on size and frequency | Classic create-to-arb is unavailable — the deposit side requires the Company's consent against an undisclosed level (§2). Five testable relative-value channels replace it (§5, H1–H5), each with a pre-registered direction and validation design. Honest framing: these are RV trades against a one-sided barrier, never "arbitrage." |
 | **Part 3 — Execution:** long/short exposure mechanics, borrow and financing, margin, risk factors | Execution module (§7): borrow/financing cost table, margin stress under the 22%→51%→22% premium round trip, FX hedge mechanics, conversion plumbing timeline. |
 
 ---
@@ -34,10 +34,10 @@ The desk prompt has three parts. This project answers each with a quantitative a
 Recorded here so later analysis is checked against what was knowable at freeze time, not hindsight.
 
 - SK Hynix listed ADRs on Nasdaq (ticker **SKHY**) on **2026-07-10**: 177.9M ADRs priced at **$149**, raising ~**$26.5B** — the largest US listing by a foreign company on record. Ratio: **10 ADRs = 1 Korean common share (000660.KS)**. Priced at a ~3% markup to the Seoul close; opened ~$170, closed day one at $168.01 (+13%).
-- **Conversion cap:** local→ADR conversion capped at **2.5% of shares outstanding**, fully exhausted at the offering. The 25% depositary limit registered with the SEC is a technical reserve; expanding usable capacity would require board/regulatory procedures akin to a secondary offering (TSMC precedent). **ADR→local conversion is uncapped.**
+- **The barrier — corrected 2026-07-29 from the primary documents.** The widely-quoted "2.5% conversion quota" is **not** a conversion cap. The 424B4 states the board resolved a maximum *primary issuance* of 17,790,000 shares (2.50%), sized so that SK square remains above the **20% floor required by the Monopoly Regulation and Fair Trade Act** (post-issuance: 20.0008%). Separately, **no numeric deposit cap appears in any SEC filing**: the deposit agreement refuses deposits that would exceed "a level from time to time determined by the Company," subject to the Company's prior consent. The 1.78bn-ADS Form F-6 registration is ~90% unused and is not the binding constraint. **So the upper barrier is a corporate decision entangled with a controlling shareholder's regulatory position — harder to lift than a quota, since expanding by primary issuance dilutes SK square below a statutory floor. ADR→local cancellation is uncapped and is a holder right (17 CFR §239.36(a)).** See `docs/research_notes.md`.
 - **Two-way conversion opens 2026-07-29** — the same day as Q2 earnings (confounded event; treated as such, §5 H-notes). Depositary: Citibank; issuance/cancellation overseen by the Korea Securities Depository (KSD).
 - **Premium path to date:** peak ~51–52% post-offering → ~19% on 07-16 (front-running of conversion expectations) → ~33% around 07-23 → **~22% on 07-28** (ADR −8.76% to $130.49 amid broad Korea weakness).
-- **Structural comparator:** TSMC ADR/2330.TW operates the same asymmetric regime; five-year average ADR premium ≈ **12.6%**.
+- **Structural comparator:** TSMC ADR/2330.TW operates an asymmetric regime, but a *revolving* one — its 20-F states issuance is "permitted to the extent that previously issued depositary receipts have been cancelled." The widely-quoted **12.6% five-year average is untraceable at origin** and is contradicted by ~10% from the same provider in Feb 2025; it is a rolling-window artifact, not an equilibrium anchor, and is **not used**. This repo measures its own: **mean +8.88% over 2,328 days**. That TSMC's ceiling is *exhausted* is unsourced. Note the analogy cuts both ways: a working refill valve makes TSMC a weaker analogue for a discretionary barrier, yet its premium persists anyway — which strengthens the persistence prior.
 
 ---
 
@@ -50,7 +50,7 @@ Define the premium
 The conversion asymmetry implies:
 
 - **Lower barrier (active):** if π < ~0 (net of costs), buy ADR → cancel → sell local. Uncapped, fast. The premium is *reflected* near conversion cost from below.
-- **Upper barrier (absent/partial):** local → ADR creation is quota-bound. With headroom = 0, nothing structurally caps π from above; compression can only come from (a) demand rotation into the local line, (b) local-share appreciation closing the gap from below (the Shinhan/TSMC observation), or (c) quota recycling (§5 H5).
+- **Upper barrier (discretionary):** local → ADR creation requires issuer consent against a level the Company sets and does not disclose. With the board authorization consumed and headroom = 0, nothing structurally caps π from above; compression can only come from (a) demand rotation into the local line, (b) local-share appreciation closing the gap from below (the Shinhan/TSMC observation), or (c) quota recycling (§5 H5).
 
 Consequences the whole project hangs on:
 
@@ -66,7 +66,7 @@ All series versioned as pulled, with pull timestamps; raw immutable under `data/
 
 | ID | Dataset | Source | Construction rules / notes |
 |---|---|---|---|
-| **D1** | Premium/basis series | SKHY (Nasdaq) daily + intraday; 000660.KS daily + intraday; USDKRW spot | Two variants, kept separate: (a) **close-to-close** π (stale: 13.5h gap between closes — a measurement artifact, labeled as such); (b) **synthetic contemporaneous** π using KRW NDF and the Eurex–KRX night-session KOSPI200 futures overlap to proxy the local leg during US hours. Decompose measured π into true premium + asynchronicity artifact. |
+| **D1** | Premium/basis series | SKHY (Nasdaq) daily + intraday; 000660.KS daily + intraday; USDKRW spot | Two variants, kept separate: (a) **close-to-close** π (stale: 13.5h gap between closes — a measurement artifact, labeled as such); (b) **synthetic contemporaneous** π using a USD/KRW forward proxy and the **KRX night-session** KOSPI200 futures overlap to proxy the local leg during US hours. The Eurex–KRX Link was terminated 2025-06-06; KRX has run its own night session (18:00–06:00 KST) since 2025-06-09, which fully covers the US cash session. History begins 2025-06-09, and day/night bar separability is unverified. Decompose measured π into true premium + asynchronicity artifact. |
 | **D2** | FX | USDKRW spot, forwards/NDF curve | Forward points feed carry legs in H1 and the hedge-cost table in §7. |
 | **D3** | Borrow/financing | KRX daily short-sale balance and securities-lending data (public); indicative ADR borrow where publicly observable | Korean short-sale regime notes maintained alongside (regulatory state is a feature, not a footnote). |
 | **D4** | LETF flow proxies | AUM + daily NAV for Korean 2× single-stock ETFs on SK Hynix; US 2× SKHY products | Estimated close rebalance notional ≈ 2 × AUM × daily return, per market, per close. **Hard gate:** missing AUM ⇒ observation weight 0, never imputed. |
@@ -90,7 +90,7 @@ Each hypothesis is frozen with a direction, a validation design, and a resolutio
 
 ### H2 — Synthetic local access via the index
 
-- **Construction:** SK Hynix is the largest KOSPI weight; offshore "cheap local Hynix" demand can only express through KOSPI200 futures (incl. Eurex night session) or long-KOSPI200 / short ex-Hynix baskets.
+- **Construction:** SK Hynix is the largest KOSPI weight; offshore "cheap local Hynix" demand can only express through KOSPI200 futures (incl. the KRX night session, 18:00–06:00 KST since 2025-06-09) or long-KOSPI200 / short ex-Hynix baskets.
 - **Direction:** KOSPI200 futures basis rich to fair value (and implied index correlation elevated) on premium-widening days.
 - **Validation:** regress basis innovations on π innovations controlling for standard carry determinants (dividends, funding, FX); the pre-listing period is the natural own-control. Dual use: the night-session futures leg also powers D1(b).
 
