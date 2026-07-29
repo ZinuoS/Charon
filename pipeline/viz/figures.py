@@ -256,3 +256,50 @@ def g_convergence(results: dict):
                  "SKHY excluded from all fits (forward test).",
     )
     return fig, ax
+
+
+def g9_cost_and_skew(cost_rows, margin: dict):
+    """G9 — the cost stack and the margin-stress excursion, with undocumented legs hatched.
+
+    Two truths on one frame: the documented cost is trivial (the conversion 'obol'), and
+    the risk is not (the realized week-one drawdown, with the unbounded-loss note drawn).
+    A cost figure that hid the skew would flatter the trade.
+    """
+    fig, axes = theme.small_multiples(2, height=4.4, sharey=False)
+    a, b = axes
+
+    names = [r["segment"] for r in cost_rows]
+    docs = [r["documented"] for r in cost_rows]
+    vals = [float(r["cost"].rstrip("%")) if d else 0.0 for r, d in zip(cost_rows, docs)]
+    y = range(len(names))
+    for i, (v, d) in enumerate(zip(vals, docs)):
+        a.barh(i, v if d else 0.10, color=theme.INK if d else theme.PAPER,
+               edgecolor=theme.MUTED, hatch=None if d else "////", height=0.6)
+    a.set_yticks(list(y)); a.set_yticklabels([n[:22] for n in names], fontsize=7.5)
+    a.invert_yaxis()
+    a.set_xlabel("% of notional", fontsize=8, color=theme.MUTED)
+    theme.obol(a, vals[0], 0)
+    a.set_title("Documented cost is the 'obol' — trivial.\nHatched legs are quoted live, not zero.",
+                loc="left", fontsize=9, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+
+    entry, peak = margin["entry_premium"], margin["peak_premium"]
+    b.bar(["entry", "peak (week 1)"], [entry * 100, peak * 100],
+          color=[theme.INK, theme.CLAY], width=0.55)
+    b.annotate(f"{margin['premium_leg_drawdown_pct_pts']:.0f}pp\nmarked against",
+               xy=(0, entry * 100), xytext=(6, 12), textcoords="offset points",
+               fontsize=8, color=theme.CLAY, ha="left", fontfamily=theme.SERIF_STACK)
+    b.annotate("LOSS UNBOUNDED — no ceiling on file", xy=(0.5, 0.94), xycoords="axes fraction",
+               fontsize=8, color=theme.CLAY, ha="center", fontfamily=theme.SERIF_STACK, weight="medium")
+    b.set_ylabel("premium (%)", fontsize=8, color=theme.MUTED)
+    b.set_title("The risk is not trivial: the realized\nweek-one excursion, marked",
+                loc="left", fontsize=9, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+
+    theme.finalize(
+        fig, kicker="financing",
+        headline="Cheap to cross, dangerous to fade: the two facts a convergence expression must hold together",
+        subtitle="Left: cost stack, documented vs quoted-live. Right: the short-premium stress case, realized.",
+        source="SK Hynix 424B4 [P]; repo data. Non-advisory — costs and risks, not a recommendation.",
+        footnote="Undocumented legs are shown hatched at a placeholder width; a desk quotes them live. "
+                 "The negative skew is structural (G4).",
+    )
+    return fig, axes
