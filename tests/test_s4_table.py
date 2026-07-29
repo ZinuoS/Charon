@@ -43,3 +43,23 @@ def test_skhy_never_enters_a_fit():
         for s in series:
             assert len(s) > 100, "a 12-point series would be SKHY leaking into the panel"
     assert "skhy" in FORWARD_TEST_PAIRS
+
+
+def test_m5_and_m6_ablations_both_run_on_identical_folds():
+    """Every arm must score one sample. Alignment includes the family in both arms; only its
+    use as features is toggled."""
+    for fams in (("m5",), ("m6",), ("m5", "m6")):
+        b = s4_metrics_table(horizons=(1,), families=fams, use_features=False)
+        x = s4_metrics_table(horizons=(1,), families=fams, use_features=True)
+        j = b.merge(x, on=["regime", "horizon"], suffixes=("_b", "_x"))
+        assert (j.n_b == j.n_x).all(), f"{fams} arms differ"
+
+
+def test_m5_features_are_per_pair_local_not_000660():
+    """M5 as specified ("000660 deep history") could never enter a panel fit: 000660 is
+    SKHY's leg and SKHY is never fitted. Built per-pair instead."""
+    from pipeline.convergence.jorda import _m5_features
+    f = _m5_features("tsmc")
+    assert list(f.columns) == ["rv20", "dd60"]
+    assert f.rv20.dropna().gt(0).all(), "realized vol must be positive"
+    assert f.dd60.dropna().le(1e-9).all(), "drawdown vs rolling max cannot be positive"

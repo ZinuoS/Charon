@@ -86,23 +86,34 @@ fig;
 md(figures.layman_block("g_convergence"))
 
 md(r"""
-## Ablation — M6 is cut
+## Ablations — both feature families are cut
 
-One landed macro feature: each pair's **own** FX 20-day trend. In and out under identical
-folds, which is asserted rather than assumed — the first version of this ablation dropped rows
-when the feature was added, so the two arms scored different samples and RMSE appeared to
-improve while R² fell. That is only possible when the sample moves underneath you.
+**M5** is each pair's own local-leg context (20-day realized vol, 60-day drawdown). **M6** is
+each pair's own FX 20-day trend. In and out under identical folds — asserted, not assumed: the
+first version of the M6 ablation dropped rows when the feature was added, so the two arms
+scored different samples and RMSE appeared to improve while R² fell. That is only possible
+when the sample moves underneath you.
+
+*M5 is specified as "000660 deep history" and cannot be: 000660 is SKHY's local leg and SKHY
+is never fitted. It is built per-pair on each pair's own local leg instead — the only form in
+which the feature is both testable and inside the quarantine.*
 """)
 
 code(r'''
-base, macro = s4_metrics_table(), s4_metrics_table(with_macro=True)
-j = base.merge(macro, on=["regime", "horizon"], suffixes=("_b", "_m"))
-assert (j.n_b == j.n_m).all(), "ablation arms scored different samples"
-j["d_rmse"] = j.rmse_m - j.rmse_b
-j["d_r2"] = j.r2_m - j.r2_b
-j["d_hit"] = j.hit_rate_m - j.hit_rate_b
-print("identical folds CONFIRMED — n matches on every row\n")
-j[["regime", "horizon", "n_b", "d_rmse", "d_r2", "d_hit"]].round(5)
+def ablate(fams, label):
+    b = s4_metrics_table(families=fams, use_features=False)
+    x = s4_metrics_table(families=fams, use_features=True)
+    j = b.merge(x, on=["regime", "horizon"], suffixes=("_b", "_x"))
+    assert (j.n_b == j.n_x).all(), f"{label}: arms scored different samples"
+    j["d_rmse"] = j.rmse_x - j.rmse_b
+    j["d_r2"] = j.r2_x - j.r2_b
+    j.insert(0, "family", label)
+    return j[["family", "regime", "horizon", "n_b", "d_rmse", "d_r2"]]
+
+abl = pd.concat([ablate(("m5",), "M5"), ablate(("m6",), "M6"),
+                 ablate(("m5", "m6"), "M5+M6")], ignore_index=True)
+print("identical folds CONFIRMED in every arm\n")
+abl.round(5)
 ''')
 
 md(r"""
@@ -111,14 +122,18 @@ marginally, not enough to offset either. A near-zero-to-negative delta cuts the 
 **that is a finding, not a failure** — it says the premium's dynamics are its own rather than
 an FX overlay, consistent with FX explaining ~1.2% of daily premium variance.
 
-**Degenerate-regime check.** No degenerate case here: the feature hurts *both* classes, so the
-pooled row is not concealing an offsetting split. Had the signs been opposite by class with a
-negative pooled net, it would be stated here in those words rather than left for a reader to
-reconstruct from the deltas.
+**Verdict: cut both.** M5 is the worse of the two — it costs the control 0.41 of R² at h=60.
+Together they are no better than either alone, so no interaction is being missed.
 
-M5 was not built. `docs/features_m5.md` gives the reason instead of a stub: the table needed no
-features to exist, this ablation is the prior, and the strongest remaining candidate
-(utilization states) is gated on unlanded D3.
+### The degenerate-regime case, which M5 actually produced
+
+At h=60 M5 **helps the minority class and hurts the dominant one**: constrained (n≈13,210)
+gains Δr² +0.0039 while fungible (n≈23,207) loses 0.41, and the pooled row nets **−0.053**.
+
+Reading only the improved cell — *"M5 helps the constrained regime at the horizon we care
+about"* — would justify keeping a family that makes the panel measurably worse. That is why the
+pooled row exists, why it is labelled, and why the detector that finds this pattern is computed
+in `scripts/s4_table.py` rather than left to a reader comparing columns.
 
 ## Variance shares — and why they do not separate the classes
 """)

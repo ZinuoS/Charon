@@ -508,12 +508,17 @@ def _oof_predictions(pi_series: list[pd.Series], h: int, n_splits: int = 5,
     acts, preds, levels = [], [], []
     for idx, pi in enumerate(pi_series):
         cols = {"x": pi, "y": pi.shift(-h)}
-        if extra:
-            cols["z"] = extra[idx]           # aligned even when NOT used as a feature
+        zcols = []
+        if extra is not None:
+            e = extra[idx]
+            e = e.to_frame() if isinstance(e, pd.Series) else e
+            for c in e.columns:
+                cols[f"z_{c}"] = e[c]        # aligned even when NOT used as features
+                zcols.append(f"z_{c}")
         df = pd.concat(cols, axis=1).dropna()
         if len(df) < 60:
             continue
-        feats = ["x"] + (["z"] if (extra and use_extra) else [])
+        feats = ["x"] + (zcols if use_extra else [])
         X = df[feats].to_numpy(float)
         y = df["y"].to_numpy(float)
         for split in expanding_walk_forward(len(df), n_splits=n_splits, embargo=h):
@@ -554,6 +559,33 @@ def _score(actual: np.ndarray, predicted: np.ndarray, level: np.ndarray) -> dict
     }
 
 
+def _m5_features(pair: str) -> pd.DataFrame:
+    """M5 — local-leg context, per pair.
+
+    THE SPEC SAYS "000660 deep history". It cannot be that. 000660 is SKHY's local leg and
+    SKHY is forward-test-only (README section 8), so a feature computed on it could never
+    enter a panel fit -- there would be exactly one pair carrying it, and that pair is
+    excluded. So M5 is built as the same idea generalised: each pair's OWN local leg. SKHY's
+    version exists for scoring and is never fitted, which is the only form in which the
+    feature is both testable and inside the quarantine.
+
+    Two features, not a family. The listing-era dummy from the feature dictionary is dropped:
+    within a pair it is constant over the sample, so the train-only centring in
+    `_oof_predictions` absorbs it entirely and it contributes nothing.
+    """
+    from pipeline.ingest.registry import PAIRS
+    from pipeline.measurement.premium import DEFAULT_SOURCE, PAIR_SOURCE, _load_close
+    spec = next(p for p in PAIRS if p.pair_id == pair)
+    loc = _load_close(PAIR_SOURCE.get(pair, DEFAULT_SOURCE), spec.local)
+    ret = np.log(loc).diff()
+    return pd.DataFrame({
+        # realized-vol state: 20d realized vol of the local leg, annualised
+        "rv20": ret.rolling(20).std() * np.sqrt(252),
+        # trend/drawdown state: how far the local leg sits below its 60d high
+        "dd60": loc / loc.rolling(60).max() - 1.0,
+    })
+
+
 def _fx_trend(pair: str, window: int = 20) -> pd.Series:
     """M6, minimal: the pair's OWN FX trend. One feature, not a family."""
     from pipeline.ingest.registry import PAIRS
@@ -579,13 +611,32 @@ def _regime_series() -> dict[str, list[pd.Series]]:
     return out
 
 
-def s4_metrics_table(horizons=TABLE_HORIZONS, with_macro: bool = False) -> pd.DataFrame:
-    """The S4 deliverable. Per regime class x horizon, out of fold, pooled row last."""
+def _features_for(pair: str, families: tuple[str, ...]) -> pd.DataFrame:
+    """Concatenate the requested feature families for one pair. Empty frame if none."""
+    parts = []
+    if "m5" in families:
+        parts.append(_m5_features(pair))
+    if "m6" in families:
+        parts.append(_fx_trend(pair).rename("fx_trend20").to_frame())
+    return pd.concat(parts, axis=1) if parts else pd.DataFrame()
+
+
+def s4_metrics_table(horizons=TABLE_HORIZONS, with_macro: bool = False,
+                     families: tuple[str, ...] = ("m5", "m6"),
+                     use_features: bool | None = None) -> pd.DataFrame:
+    """The S4 deliverable. Per regime class x horizon, out of fold, pooled row last.
+
+    `families` fixes which columns are ALIGNED -- always both, so every arm of an ablation
+    scores one sample. `use_features` decides whether they enter X. `with_macro` is the old
+    two-arm switch, kept because callers and the notebook use it.
+    """
+    if use_features is None:
+        use_features = with_macro
     _PAIR_OF_SERIES.clear()
     by_regime = _regime_series()
     # Alignment is ALWAYS on the macro column so both arms of the ablation see one sample;
     # `use_extra` alone decides whether it is a feature.
-    fx_of = {p: _fx_trend(p) for p in _PAIR_OF_SERIES}
+    feat_of = {p: _features_for(p, families) for p in _PAIR_OF_SERIES}
     pairs_by_regime, i = {}, 0
     for regime in sorted(by_regime, key=lambda r: list(by_regime).index(r)):
         pairs_by_regime[regime] = _PAIR_OF_SERIES[i:i + len(by_regime[regime])]
@@ -595,18 +646,18 @@ def s4_metrics_table(horizons=TABLE_HORIZONS, with_macro: bool = False) -> pd.Da
     for regime in sorted(by_regime):
         for h in horizons:
             series = by_regime[regime]
-            extra = [fx_of[p].reindex(s.index) for p, s in zip(pairs_by_regime[regime], series)]
+            extra = [feat_of[p].reindex(s.index) for p, s in zip(pairs_by_regime[regime], series)]
             rows.append({"regime": regime, "horizon": h,
                          **_score(*_oof_predictions(series, h, extra=extra,
-                                                    use_extra=with_macro))})
+                                                    use_extra=use_features))})
     # Pooled LAST and labelled, because a pooled row read as a regime row is the single
     # easiest way to misreport a per-regime result.
     allser = [s for v in by_regime.values() for s in v]
-    allfx = [fx_of[p].reindex(s.index) for p, s in zip(_PAIR_OF_SERIES, allser)]
+    allfx = [feat_of[p].reindex(s.index) for p, s in zip(_PAIR_OF_SERIES, allser)]
     for h in horizons:
         rows.append({"regime": "POOLED (all classes)", "horizon": h,
                      **_score(*_oof_predictions(allser, h, extra=allfx,
-                                                use_extra=with_macro))})
+                                                use_extra=use_features))})
     df = pd.DataFrame(rows)
     df["PROVISIONAL"] = "panel: one regulator (constrained), one country (control)"
     return df

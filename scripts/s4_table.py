@@ -21,15 +21,50 @@ def _md(df) -> str:
 
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
-    base = s4_metrics_table()
-    macro = s4_metrics_table(with_macro=True)
+    FAMS = ("m5", "m6")
+    base = s4_metrics_table(families=FAMS, use_features=False)
     base.to_csv(OUT / "metrics_table.csv", index=False)
 
-    j = base.merge(macro, on=["regime", "horizon"], suffixes=("_b", "_m"))
-    assert (j.n_b == j.n_m).all(), "ablation arms scored different samples"
-    j["d_rmse"] = j.rmse_m - j.rmse_b
-    j["d_r2"] = j.r2_m - j.r2_b
-    keep = (j.d_rmse < 0).any() and (j.d_r2 > 0).any()
+    def ablate(fams, label):
+        """One family in/out. Alignment is on `fams` in BOTH arms, so folds are identical."""
+        b = s4_metrics_table(families=fams, use_features=False)
+        x = s4_metrics_table(families=fams, use_features=True)
+        j = b.merge(x, on=["regime", "horizon"], suffixes=("_b", "_x"))
+        assert (j.n_b == j.n_x).all(), f"{label}: ablation arms scored different samples"
+        j["d_rmse"] = j.rmse_x - j.rmse_b
+        j["d_r2"] = j.r2_x - j.r2_b
+        j["family"] = label
+        return j
+
+    abl = {"M5 (rv20 + dd60)": ablate(("m5",), "M5"),
+           "M6 (fx_trend20)": ablate(("m6",), "M6"),
+           "M5+M6": ablate(FAMS, "M5+M6")}
+
+    # Degenerate-regime detector: a family that helps the MINORITY class while hurting the
+    # DOMINANT one, netting negative pooled. The spec asked for this drawn explicitly rather
+    # than left for a reader to derive from the deltas -- so it is computed, not asserted.
+    sizes = base.groupby("regime").n.max().drop(index="POOLED (all classes)", errors="ignore")
+    dominant, minority = sizes.idxmax(), sizes.idxmin()
+    degenerate = []
+    for label, j in abl.items():
+        for h in sorted(j.horizon.unique()):
+            r = j[j.horizon == h].set_index("regime")
+            dm, mn = r.loc[dominant, "d_r2"], r.loc[minority, "d_r2"]
+            pooled = r.loc["POOLED (all classes)", "d_r2"]
+            if mn > 0 and dm < 0 and pooled < 0:
+                degenerate.append((label, h, mn, dm, pooled))
+
+    def abl_table(j):
+        return "\n".join(f"| {r.regime} | {r.horizon} | {r.d_rmse:+.5f} | {r.d_r2:+.4f} |"
+                         for _, r in j.iterrows())
+
+    keep = any((j.d_rmse < 0).all() for j in abl.values())
+
+    deg_block = "\n".join(
+        f"- **{lab}, h={h}:** helps `{minority}` (Δr² {mn:+.4f}) while hurting `{dominant}` "
+        f"(Δr² {dm:+.4f}). Pooled nets **{pooled:+.4f}** — negative."
+        for lab, h, mn, dm, pooled in degenerate) or \
+        "None fired: no family helps the minority class while hurting the dominant one."
 
     doc = f"""# S4 — per-regime metrics table
 
@@ -62,35 +97,48 @@ two-way arbitrage should leave behind.
 questions: the constrained premium's *level* is highly predictable while its next move is
 close to a coin flip, which is exactly the profile of a slow-moving series near a barrier.
 
-## M6 ablation — CUT
+## Ablations — both families CUT
 
-One landed macro feature, each pair's **own** FX 20-day trend, in and out under identical
-folds (`n` matches on every row — asserted, not assumed).
+Each family in and out under **identical folds**: alignment always includes the family's
+columns, and only their use as features is toggled. `n` is asserted equal on every row.
 
-| regime | h | Δrmse | Δr² |
-|---|---|---|---|
-{chr(10).join(f"| {r.regime} | {r.horizon} | {r.d_rmse:+.5f} | {r.d_r2:+.4f} |" for _, r in j.iterrows())}
+### M5 — local-leg context (`rv20`, `dd60`)
 
-**Verdict: cut.** RMSE worsens and R² falls at every horizon in every class. Hit rate moves
-up marginally (+0.04 to +1.5pp) but not enough to offset either. **A near-zero delta cuts the
-family, and that is a finding, not a failure** — it says the premium's dynamics are its own,
-not an FX overlay, which is consistent with FX explaining ~1.2% of daily premium variance
-(S16).
+{abl_table(abl["M5 (rv20 + dd60)"])}
 
-### Degenerate-regime check
+### M6 — macro overlay (`fx_trend20`, each pair's own FX)
 
-No degenerate case here: the macro feature does not help one class while hurting the other —
-it hurts both, so the pooled row is not hiding an offsetting split. Had the signs been
-opposite by class with a negative pooled net, that would be stated here in these words rather
-than left for a reader to derive from the deltas.
+{abl_table(abl["M6 (fx_trend20)"])}
 
-*Regenerate: `just s4`. One config flip — `TABLE_HORIZONS` or `REGIME_OF_PAIR` — and this
-file rebuilds clean.*
+### M5 + M6 together
+
+{abl_table(abl["M5+M6"])}
+
+**Verdict: cut both.** RMSE worsens and R² falls in almost every cell. M5 is the worse of the
+two — it costs the control 0.41 of R² at h=60. Adding both together is no better than either
+alone, so there is no interaction being missed. **A near-zero-or-negative delta cuts the
+family, and that is a finding**: the premium's dynamics are its own, not a local-vol overlay
+and not an FX overlay.
+
+### Degenerate-regime warning
+
+Class sizes: `{dominant}` n≈{int(sizes.max()):,} (dominant), `{minority}` n≈{int(sizes.min()):,} (minority).
+
+{deg_block}
+
+This is the case the design is required to surface rather than bury: a feature that improves
+the minority class can still be net-negative, and reading only the improved cell would justify
+keeping a family that makes the panel worse. It is why the pooled row exists and why it is
+labelled.
+
+*Regenerate: `just s4`. One config flip — `TABLE_HORIZONS`, `REGIME_OF_PAIR` or `families` —
+and this file rebuilds clean.*
 """
     (OUT / "metrics_table.md").write_text(doc)
     print(f"  {OUT / 'metrics_table.csv'}")
     print(f"  {OUT / 'metrics_table.md'}")
-    print(f"  M6 ablation verdict: {'KEEP' if keep else 'CUT'}")
+    print(f"  ablation verdict: {'KEEP' if keep else 'CUT (both families)'}")
+    print(f"  degenerate-regime cases: {len(degenerate)}")
     return 0
 
 
