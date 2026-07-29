@@ -56,14 +56,30 @@ class TestFxSensitivity:
 
 
 class TestGatedQuantities:
-    def test_horizon_dependent_fields_are_pending_not_invented(self):
+    def test_horizon_is_quoted_as_a_floor_and_never_as_a_point(self):
+        """S17 replaced PENDING_M3 here with a floor. The invariant that matters is not
+        'a number appears' but 'the number is a lower bound and the tail is declared open'
+        — cost is linear in horizon, so a point estimate errs in the direction that
+        flatters the trade."""
         sz = R.sizing_horizon()
-        assert sz["expected_holding_period"] == R.PENDING_M3
-        assert sz["financed_cost_over_horizon"] == R.PENDING_M3
-        assert "extrapolation" in sz["why_not_yet"].lower()
+        assert sz["holding_period_ceiling_days"] is None, "the 95% tail is open — no ceiling"
+        assert sz["holding_period_floor_days"] > 0
+        assert sz["holding_period_floor_days"] < sz["holding_period_point_days"]
+        for field in ("expected_holding_period", "financed_cost_over_horizon"):
+            text = sz[field].lower()
+            assert "at least" in text or "floor" in text, f"{field} must read as a bound"
+            assert "no upper bound" in text or "no finite upper bound" in text, \
+                f"{field} must declare the open tail"
+
+    def test_no_point_cost_is_derived_from_the_unidentified_crossing(self):
+        """First passage sits at ~331d on ~6 independent spans. Multiplying a financing
+        rate by that would be the exact fabrication S16 refused to commit."""
+        sz = R.sizing_horizon()
+        assert str(round(sz["holding_period_point_days"])) not in sz["financed_cost_over_horizon"]
+        assert "underpowered" in sz["support"] or "interpolated" in sz["support"]
 
     def test_pending_fields_name_the_cell_that_fills_them(self):
-        assert "half_life_days" in R.sizing_horizon()["fills_from"]
+        assert "run_panel" in R.sizing_horizon()["fills_from"]
 
     def test_what_is_usable_now_is_stated_alongside(self):
         """A gate report that only says 'blocked' is less useful than one that says what
@@ -131,13 +147,19 @@ class TestTradeSheets:
         for s in self._sheets():
             assert "not investment advice" in s.render().lower()
 
-    def test_horizon_fields_render_as_pending_never_as_numbers(self):
-        from pipeline.hedging.ratios import PENDING_M3
+    def test_cost_stack_declares_its_accrual_basis_as_a_floor(self):
+        """A cost stack without a horizon is unreadable: every line accrues. S17 added the
+        basis row, and it must carry both the floor and the open tail."""
         live = self._sheets()[0]
         costs = dict(live.cost_stack)
-        assert PENDING_M3 in costs["FX hedge (forward points)"]
-        assert any("half_life_days" in p for p in live.pending), \
-            "a pending field must name the table cell that fills it"
+        basis = costs["ACCRUAL BASIS"].lower()
+        assert "floor" in basis and "no upper bound" in basis
+
+    def test_remaining_pending_field_is_the_ceiling_and_says_none_exists(self):
+        live = self._sheets()[0]
+        assert any("upper bound" in p.lower() for p in live.pending), \
+            "the open tail must survive as an explicit pending line, not vanish"
+        assert any("m5" in p.lower() for p in live.pending)
 
     def test_undocumented_costs_say_quoted_live_never_zero(self):
         live = self._sheets()[0]

@@ -84,14 +84,27 @@ md(r"""
 of **months**. `fungible` (BABA): ρ ≈ 0.04, statistically insignificant — same-week noise
 around parity. The identical estimator produces both.
 
-**⚠️ The half-life for the constrained regime is an extrapolation** — ρ never crosses ½ in
-the 20-day window. It says *slow* reliably; the exact figure (~227d) it does not. A
-convergence trade against this regime bets against a months-long half-life.
+**The half-life is an interval with an open end, and that is the S17 result.** Through S15
+the window stopped at h=20, ρ never approached ½ inside it, and the reported ~227d came from
+extrapolating an exponential fit. Extending to h=400 was meant to make the crossing
+observable. It did — and the observation contradicted the extrapolation in the direction that
+matters:
+
+- First passage of ρ below ½ is at **h ≈ 331**, roughly **46% slower** than the extrapolation
+  claimed. The extrapolation was optimistic.
+- The 95% band's **upper edge never crosses ½ at any estimable horizon**, so there is **no
+  finite upper bound** — these data do not reject a premium that never halves.
+- The band's lower edge crosses at **h ≈ 143**, where coefficients are still identified. That
+  floor is the defensible number.
+
+So extending the horizon did not turn an extrapolation into an estimate. It turned a false
+point into a **floor with an open tail** — which is what any quantity linear in holding
+horizon, financing cost above all, has to be quoted against.
 """)
 code(r'''
 for regime, r in res.items():
-    hl = f"{r.half_life:.0f}d" if r.half_life else "none"
-    print(f"{regime:22s} half-life {hl} ({r.half_life_method})")
+    print(f"{regime:22s} half-life {r.hl.describe()}")
+    print(f"{'':22s} {r.hl.method}")
     for n in r.notes: print("   !", n)
 sk = score_skhy()
 print(f"\\nSKHY: {sk['n_obs']} obs — {sk['out_of_support']}")

@@ -188,24 +188,51 @@ def beta_hedge(*_args, **_kwargs) -> dict:
 
 
 def sizing_horizon() -> dict:
-    """Holding period and financed cost — gated on a usable half-life."""
+    """Holding period and financed cost, as a floor with an open tail (S17).
+
+    This function used to return PENDING_M3 for both fields, because the half-life was an
+    extrapolation and financing cost is linear in horizon. Extending the local-projection
+    window to h=400 (S17) did not produce the point estimate that was expected — it produced
+    something more useful and less flattering: rho's 95% upper band never crosses 0.5 at any
+    estimable horizon, so the holding period has NO FINITE UPPER BOUND, while its lower bound
+    is identified.
+
+    So the honest output is a FLOOR, not a point, and it is quotable. A client can be told
+    the minimum financed cost and told plainly that it is unbounded above. That is a real
+    number where there was previously a blank.
+    """
+    from pipeline.convergence.jorda import run_panel
+
+    hl = run_panel()["one_way_constrained"].hl
+    floor_days = hl.lower
     return {
-        "expected_holding_period": PENDING_M3,
-        "financed_cost_over_horizon": PENDING_M3,
-        "fills_from": (
-            "docs/gate_reports/S4.md, per-regime metrics table, `half_life_days` for the "
-            "one_way_constrained row."
+        "expected_holding_period": (
+            f"AT LEAST {floor_days:.0f} trading days (~{floor_days / 21:.0f} months); "
+            "NO FINITE UPPER BOUND at 95%"
         ),
-        "why_not_yet": (
-            "The current figure (~227d) is an EXTRAPOLATION: rho does not cross 0.5 inside "
-            "the 20-day fitting window, the regime holds a single pair, and the taxonomy is "
-            "unratified. Financing cost scales linearly with horizon, so using it would "
-            "convert an extrapolation into a fabricated cost."
+        "holding_period_floor_days": floor_days,
+        "holding_period_point_days": hl.point,
+        "holding_period_ceiling_days": None,           # None means unbounded, not missing
+        "financed_cost_over_horizon": (
+            "Quote as a FLOOR: (borrow + funding + hedge points) accrued over at least "
+            f"{floor_days:.0f} trading days, with no upper bound. Cost is linear in horizon "
+            "and the horizon's upper tail is open, so a point cost would misstate the risk "
+            "in the direction that flatters the trade."
+        ),
+        "fills_from": (
+            "pipeline.convergence.jorda.run_panel()['one_way_constrained'].hl — first passage "
+            "of rho below 0.5 with a 95% Newey-West band, h to 400."
+        ),
+        "support": hl.support,
+        "why_no_point_estimate": (
+            f"First passage sits at {hl.point:.0f}d but only ~{hl.n_eff_at_point:.0f} "
+            "independent spans support it, and the band's upper edge never crosses 0.5. The "
+            "data locate a floor precisely and the tail not at all."
         ),
         "what_is_usable_now": (
             "The qualitative result is robust: persistence rho_1 = 0.94 (t-HAC 129) versus "
-            "0.04 for the fungible control. The premium mean-reverts SLOWLY. Any expression "
-            "must be financeable over a long, and currently unquantified, horizon."
+            "0.04 for the fungible control. The premium mean-reverts SLOWLY, and the floor "
+            "on how slowly is now measured rather than assumed."
         ),
     }
 

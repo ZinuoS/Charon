@@ -11,8 +11,24 @@ For each horizon h, one regression of the level h steps ahead on the level now:
     π_{t+h} = α_h + ρ_h · π_t + ε_{t,h}
 
 ρ_h is the persistence of the premium at horizon h. Under mean reversion it decays with h,
-and the half-life is the h at which ρ_h = ½. Fitting ρ_h ≈ exp(−h/τ) gives a smooth
-estimate, and half-life = τ·ln 2.
+and the half-life is the h at which ρ_h = ½.
+
+**The half-life is reported as an interval, not a point** (S17). Through S15 the window
+stopped at h=20, ρ_h never approached ½ inside it, and the half-life came from extrapolating
+ρ_h ≈ exp(−h/τ) — a number with no support under it. Extending the window to h=400 was
+expected to fix that by making the crossing observable. It did, and the observable crossing
+said something the extrapolation had hidden:
+
+*   The extrapolated figure (227d) was **too fast**. First passage of ρ below ½ happens at
+    h ≈ 331, about 46% later.
+*   The 95% HAC band's **upper edge never crosses ½ at any estimable horizon.** So there is
+    no finite upper bound: the data do not reject a premium that never halves.
+*   The band's lower edge crosses at h ≈ 143, where coefficients are still identified. That
+    is the defensible number — the fastest convergence consistent with the evidence.
+
+Extending the horizon therefore did not convert an extrapolation into a point estimate. It
+converted a false point estimate into a **floor with an open tail**, which is what the data
+actually support and what anything linear in holding horizon must be quoted against.
 
 **HAC errors are not optional here.** The h-step windows overlap — π_{t+h} and π_{t+1+h}
 share h−1 periods — so ε is serially correlated by construction and plain OLS standard
@@ -45,7 +61,39 @@ REGIME_OF_PAIR = {
 FORWARD_TEST_PAIRS = {"skhy"}
 
 RIDGE_LAMBDA = 1e-4     # ridge penalty; near-OLS, stabilises small-sample folds. TODO(ash: ratify)
-MAX_HORIZON = 20        # trading days
+
+# ---------------------------------------------------------------- horizon window
+#
+# MAX_HORIZON was 20 through S15, which put the half-life OUTSIDE the fitting window and
+# forced an exponential extrapolation. S17 extends it, and the extension is what makes the
+# half-life honest rather than what makes it precise — see `_half_life_interval`.
+#
+# The binding constraint on H is NOT the row count. Local projections at horizon h use
+# overlapping windows, so 2,328 daily observations at h=300 are 2,028 rows carrying roughly
+# 2028/300 ≈ 7 independent spans. That ratio, not n, is what the standard error should be
+# read against, so it is computed and reported as `n_eff` on every fit.
+#
+# H is capped where n_eff falls below MIN_EFF_SPANS. Past that the ρ_h path stops being
+# monotone (it wanders and even turns back up — an artefact of a handful of overlapping
+# spans, not a sign the premium re-diverges), so fits beyond the cap would be noise wearing
+# a coefficient's clothes.
+MAX_HORIZON = 400        # trading days ≈ 19 months
+MIN_EFF_SPANS = 5.0      # cap H where n/h drops below this
+IDENTIFIED_EFF_SPANS = 12.0   # below this a crossing is in-window but statistically unidentified
+
+
+def horizon_grid(max_h: int = MAX_HORIZON) -> list[int]:
+    """Dense at the short end, sparse at the long end.
+
+    Fitting every integer h to 400 costs O(n·h) per HAC estimate for no resolution gain: the
+    crossing interval is hundreds of days wide, so 10-day steps out there are far finer than
+    anything the data can distinguish. The short end stays dense because that is where the
+    coefficients are actually identified.
+    """
+    grid = list(range(1, min(21, max_h + 1)))
+    grid += [h for h in range(25, min(101, max_h + 1), 5)]
+    grid += [h for h in range(110, max_h + 1, 10)]
+    return sorted(set(h for h in grid if h <= max_h))
 
 
 def _newey_west_se(x: np.ndarray, resid: np.ndarray, bandwidth: int) -> float:
@@ -79,6 +127,53 @@ class HorizonFit:
     def t_hac(self) -> float:
         return self.rho / self.se_hac if self.se_hac and not np.isnan(self.se_hac) else float("nan")
 
+    @property
+    def n_eff(self) -> float:
+        """Independent spans, not rows. n rows at horizon h overlap into about n/h of them."""
+        return self.n / self.horizon if self.horizon else float("nan")
+
+    @property
+    def identified(self) -> bool:
+        return self.n_eff >= IDENTIFIED_EFF_SPANS
+
+    def band(self, z: float = 1.96) -> tuple[float, float]:
+        if np.isnan(self.se_hac):
+            return (float("nan"), float("nan"))
+        return (self.rho - z * self.se_hac, self.rho + z * self.se_hac)
+
+
+@dataclass
+class HalfLife:
+    """A half-life as an interval with a support classification, not a point.
+
+    The point estimate is the first h at which ρ_h falls below ½. The bounds come from the
+    same first-passage rule applied to the 95% HAC band: the LOWER bound is where the lower
+    edge of the band crosses (the fastest convergence the data are consistent with) and the
+    UPPER bound is where the upper edge crosses (the slowest). If the upper edge never
+    crosses inside the estimable window, there is no finite upper bound — the data do not
+    reject a premium that never halves.
+    """
+
+    point: float | None
+    lower: float | None
+    upper: float | None          # None means UNBOUNDED, not missing
+    method: str
+    support: str                 # interpolated | interpolated_underpowered | extrapolated | none
+    n_eff_at_point: float | None = None
+
+    @property
+    def unbounded_above(self) -> bool:
+        return self.upper is None and self.point is not None
+
+    def describe(self) -> str:
+        if self.point is None:
+            return f"no half-life ({self.method})"
+        # Asymmetric on purpose: a missing UPPER bound means the slow tail is unbounded,
+        # a missing LOWER bound means the fast end is simply below what daily data resolve.
+        hi = "unbounded" if self.upper is None else f"{self.upper:.0f}d"
+        lo = "unresolved" if self.lower is None else f"{self.lower:.0f}d"
+        return f"{self.point:.0f}d  [95% {lo} .. {hi}]  {self.support}"
+
 
 @dataclass
 class ConvergenceResult:
@@ -90,14 +185,19 @@ class ConvergenceResult:
     half_life_method: str
     provisional: bool = True
     notes: list[str] = field(default_factory=list)
+    hl: HalfLife | None = None          # the interval form; `half_life` is its point
 
     def metrics_at(self, h: int = 1) -> dict:
         hf = next((x for x in self.horizons if x.horizon == h), None)
         return {} if hf is None else {
             "regime": self.regime, "n_pairs": self.n_pairs, "n_obs": self.n_obs,
             "horizon": h, "rho": round(hf.rho, 4), "t_HAC": round(hf.t_hac, 2),
-            "r2": round(hf.r2, 4), "half_life_days": (round(self.half_life, 1)
-                                                      if self.half_life else None),
+            "r2": round(hf.r2, 4), "n_eff": round(hf.n_eff, 1),
+            "half_life_days": (round(self.half_life, 1) if self.half_life else None),
+            "half_life_lo": (round(self.hl.lower, 1) if self.hl and self.hl.lower else None),
+            "half_life_hi": ("unbounded" if self.hl and self.hl.unbounded_above
+                             else (round(self.hl.upper, 1) if self.hl and self.hl.upper else None)),
+            "half_life_support": self.hl.support if self.hl else None,
         }
 
 
@@ -126,7 +226,7 @@ def estimate_regime(pi_series: list[pd.Series], regime: str, max_h: int = MAX_HO
     """
     fits: list[HorizonFit] = []
     total_obs = sum(len(s) for s in pi_series)
-    for h in range(1, max_h + 1):
+    for h in horizon_grid(max_h):
         xs, ys = [], []
         for pi in pi_series:
             yb = pi.shift(-h)
@@ -141,36 +241,103 @@ def estimate_regime(pi_series: list[pd.Series], regime: str, max_h: int = MAX_HO
         resid = yv - (alpha + rho * x)
         ss = ((yv - yv.mean()) ** 2).sum()
         r2 = 1.0 - (resid ** 2).sum() / ss if ss else float("nan")
-        fits.append(HorizonFit(h, rho, _newey_west_se(x, resid, h), len(x), r2))
+        fit = HorizonFit(h, rho, _newey_west_se(x, resid, h), len(x), r2)
+        if fit.n_eff < MIN_EFF_SPANS:
+            break                      # past here the ρ path is overlap artefact, not decay
+        fits.append(fit)
 
-    hl, method = _half_life(fits)
-    notes = []
-    if hl is not None and fits and hl > fits[-1].horizon:
-        notes.append(
-            f"HALF-LIFE ({hl:.0f}d) EXCEEDS THE FITTING WINDOW (h={fits[-1].horizon}). ρ does "
-            "not cross 0.5 in range, so this is an EXTRAPOLATION from the exponential fit, "
-            "not an observed half-life. It says 'slow' reliably; the exact figure does not.")
-    return ConvergenceResult(regime, len(pi_series), total_obs, fits, hl, method, notes=notes)
+    hl = _half_life_interval(fits)
+    notes = _half_life_notes(hl, fits)
+    return ConvergenceResult(regime, len(pi_series), total_obs, fits,
+                             hl.point, hl.method, notes=notes, hl=hl)
 
 
-def _half_life(fits: list[HorizonFit]) -> tuple[float | None, str]:
-    """Half-life two ways: direct crossing of ρ=0.5, and an exponential fit as backup."""
-    if not fits:
-        return None, "no fits"
-    for a, b in zip(fits, fits[1:]):
-        if a.rho >= 0.5 >= b.rho:
-            frac = (a.rho - 0.5) / (a.rho - b.rho) if a.rho != b.rho else 0
-            return a.horizon + frac, "direct ρ=0.5 crossing"
-    # exponential fit rho ≈ exp(-h/tau) on positive rhos
+def _first_crossing(hs: np.ndarray, vals: np.ndarray, level: float = 0.5) -> float | None:
+    """First h at which `vals` falls below `level`, linearly interpolated within the step.
+
+    FIRST passage, deliberately. The ρ_h path is not monotone at long horizons — with a
+    handful of independent spans it wanders — so "the crossing" is not well defined and the
+    first one is the only rule that does not require choosing among several.
+    """
+    for (h0, v0), (h1, v1) in zip(zip(hs, vals), zip(hs[1:], vals[1:])):
+        if v0 >= level > v1:
+            frac = (v0 - level) / (v0 - v1) if v0 != v1 else 0.0
+            return float(h0 + frac * (h1 - h0))
+    return None
+
+
+def _half_life_interval(fits: list[HorizonFit]) -> HalfLife:
+    """First-passage half-life with a 95% band, classified by whether it is in support."""
+    if len(fits) < 3:
+        return HalfLife(None, None, None, "insufficient fits", "none")
+
     hs = np.array([f.horizon for f in fits], float)
-    rs = np.array([f.rho for f in fits], float)
-    m = rs > 1e-6
+    rho = np.array([f.rho for f in fits], float)
+    lo = np.array([f.band()[0] for f in fits], float)
+    hi = np.array([f.band()[1] for f in fits], float)
+
+    # Already below ½ at the shortest horizon: the premium halves faster than we can resolve.
+    # This is the fungible-control case, and it must NOT fall through to the "does not decay"
+    # branch below — that phrase means "never converges", which is the exact opposite.
+    if rho[0] < 0.5:
+        h0 = float(hs[0])
+        return HalfLife(h0, 0.0, (h0 if hi[0] < 0.5 else None),
+                        f"ρ is below ½ at the shortest horizon (h={h0:.0f}) — half-life is under "
+                        "one step and is not resolvable at daily frequency",
+                        "sub_resolution", fits[0].n_eff)
+
+    point = _first_crossing(hs, rho)
+    # Lower band crossing first => the FASTEST convergence consistent with the data.
+    hl_lower = _first_crossing(hs, lo)
+    hl_upper = _first_crossing(hs, hi)
+    h_max = float(hs[-1])
+
+    if point is not None:
+        n_eff_at = float(np.interp(point, hs, [f.n_eff for f in fits]))
+        support = "interpolated" if n_eff_at >= IDENTIFIED_EFF_SPANS else "interpolated_underpowered"
+        return HalfLife(point, hl_lower, hl_upper, "first passage of ρ below ½ (in window)",
+                        support, n_eff_at)
+
+    # ρ never falls below ½ inside the estimable window. Fall back to the exponential fit,
+    # but say plainly that it is an extrapolation.
+    m = rho > 1e-6
     if m.sum() < 3:
-        return None, "insufficient positive ρ for exp fit"
-    tau = -1.0 / np.polyfit(hs[m], np.log(rs[m]), 1)[0]
-    if tau <= 0:
-        return None, "ρ does not decay (persistent/explosive) — no finite half-life"
-    return float(tau * np.log(2)), "exponential fit (no direct crossing in range)"
+        return HalfLife(None, hl_lower, hl_upper, "insufficient positive ρ", "none")
+    slope = np.polyfit(hs[m], np.log(rho[m]), 1)[0]
+    if slope >= 0:
+        return HalfLife(None, hl_lower, None, "ρ does not decay — no finite half-life", "none")
+    tau = -1.0 / slope
+    return HalfLife(float(tau * np.log(2)), hl_lower, hl_upper,
+                    f"exponential fit extrapolated beyond h={h_max:.0f}", "extrapolated")
+
+
+def _half_life_notes(hl: HalfLife, fits: list[HorizonFit]) -> list[str]:
+    notes: list[str] = []
+    if not fits:
+        return notes
+    h_max = fits[-1].horizon
+    if hl.support == "extrapolated":
+        notes.append(
+            f"HALF-LIFE ({hl.point:.0f}d) EXCEEDS THE FITTING WINDOW (h={h_max}). ρ does not "
+            "cross ½ in range, so this is an EXTRAPOLATION, not an observed half-life.")
+    elif hl.support == "interpolated_underpowered":
+        notes.append(
+            f"Half-life {hl.point:.0f}d is INSIDE the fitting window (h={h_max}) — no longer an "
+            f"extrapolation — but it sits where only ~{hl.n_eff_at_point:.0f} independent spans "
+            f"support it (threshold {IDENTIFIED_EFF_SPANS:.0f}). The crossing is observed; it is "
+            "not precisely located.")
+    if hl.unbounded_above:
+        notes.append(
+            f"NO FINITE UPPER BOUND. The upper 95% edge of ρ_h stays above ½ across every "
+            f"estimable horizon (to h={h_max}), so the data do not reject a premium that never "
+            "halves. Any quantity linear in holding horizon — financing cost above all — "
+            "inherits an unbounded upper tail and must be quoted as a floor, never a point.")
+    if hl.lower is not None:
+        notes.append(
+            f"Lower bound {hl.lower:.0f}d is the FASTEST convergence consistent with the data at "
+            "95%, and it is the defensible number: it sits where the coefficients are still "
+            "identified.")
+    return notes
 
 
 def run_panel(max_h: int = MAX_HORIZON) -> dict[str, ConvergenceResult]:

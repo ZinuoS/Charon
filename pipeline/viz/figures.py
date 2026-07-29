@@ -225,32 +225,65 @@ def g4_asymmetry(pi_tsm: pd.Series, pi_skhy: pd.Series):
 
 
 def g_convergence(results: dict):
-    """Persistence ρ_h by horizon, per regime class — the months-vs-days contrast drawn.
+    """Persistence ρ_h by horizon with its 95% HAC band — the open upper tail drawn.
 
-    PROVISIONAL: regime labels are the proposed taxonomy. The chart's honesty is that the
-    constrained curve stays high across the whole window (no 0.5 crossing → the half-life
-    is an extrapolation, said on the chart), while the fungible control sits at zero.
+    S17 rewrite. The old version stopped at h=20 and its whole point was that the curve
+    never reached ½. Extended to h=400 the crossing IS reached, and the honest content moves
+    to the band: the shaded upper edge stays above ½ across the entire estimable window, so
+    the chart's subject is now the *unbounded* side of the interval rather than a point.
+
+    PROVISIONAL: regime labels are the proposed taxonomy.
     """
-    fig, ax = theme.figure(height=4.8)
+    fig, ax = theme.figure(height=5.0)
     colors = {"one_way_constrained": theme.CLAY, "fungible": theme.MOSS}
     for regime, res in results.items():
         hs = [f.horizon for f in res.horizons]
         rs = [f.rho for f in res.horizons]
         c = colors.get(regime, theme.INK)
-        ax.plot(hs, rs, color=c, linewidth=1.8, marker="o", markersize=3)
+        lo = [f.band()[0] for f in res.horizons]
+        hi = [f.band()[1] for f in res.horizons]
+        ax.fill_between(hs, lo, hi, color=c, alpha=0.13, linewidth=0)
+        ax.plot(hs, rs, color=c, linewidth=1.8)
+        # Identified stretch drawn solid-marked; underpowered stretch left bare, so the eye
+        # can see where the evidence thins without reading a caption.
+        idh = [f.horizon for f in res.horizons if f.identified]
+        idr = [f.rho for f in res.horizons if f.identified]
+        ax.plot(idh, idr, color=c, linewidth=0, marker="o", markersize=2.6)
         theme.label_line_end(ax, hs[-1], rs[-1], regime.replace("_", " "), c)
+
+        hl = getattr(res, "hl", None)
+        if hl is not None and hl.support in ("interpolated", "interpolated_underpowered"):
+            ax.plot([hl.point], [0.5], marker="v", markersize=6, color=c, zorder=5)
+            ax.annotate(f"first passage {hl.point:.0f}d", xy=(hl.point, 0.5),
+                        xytext=(4, 12), textcoords="offset points", fontsize=theme.NOTE_SIZE,
+                        color=c, fontfamily=theme.SERIF_STACK)
+            if hl.lower:
+                ax.axvline(hl.lower, color=c, linewidth=0.9, linestyle=":", alpha=0.8)
+                # Anchored low, in the empty band below the control line — at y≈0 it
+                # overprinted the fungible series.
+                ax.annotate(f"95% floor\n{hl.lower:.0f}d", xy=(hl.lower, -0.30),
+                            xytext=(5, 0), textcoords="offset points", fontsize=theme.NOTE_SIZE,
+                            color=theme.MUTED, fontfamily=theme.SERIF_STACK, linespacing=1.3,
+                            va="center")
+            if hl.unbounded_above:
+                ax.annotate("upper band never crosses ½ →\nno finite upper bound",
+                            xy=(0.62, 0.86), xycoords="axes fraction",
+                            fontsize=theme.NOTE_SIZE, color=theme.MUTED,
+                            fontfamily=theme.SERIF_STACK, linespacing=1.4)
+
     ax.axhline(0.5, color=theme.RULE, linewidth=1.0, linestyle="--")
-    ax.annotate("ρ = ½  (half-life crossing)", xy=(0.02, 0.5), xycoords=("axes fraction", "data"),
+    ax.annotate("ρ = ½", xy=(0.015, 0.5), xycoords=("axes fraction", "data"),
                 xytext=(0, 4), textcoords="offset points", fontsize=theme.NOTE_SIZE,
                 color=theme.MUTED, fontfamily=theme.SERIF_STACK)
     ax.axhline(0.0, color=theme.RULE, linewidth=0.8)
-    ax.set_ylim(-0.1, 1.05); ax.set_xlabel("horizon (trading days)", fontsize=8, color=theme.MUTED)
+    ax.set_ylim(-0.45, 1.15); ax.set_xlabel("horizon (trading days)", fontsize=8, color=theme.MUTED)
     ax.set_ylabel("premium persistence ρ", fontsize=8, color=theme.MUTED)
     theme.finalize(
         fig, kicker="convergence",
-        headline="A barrier-held premium reverts over months; a fungible one, over days",
-        subtitle="Jordà local-projection persistence by horizon, per proposed regime class. "
-                 "The constrained curve never crosses ½ in range — its half-life is extrapolated.",
+        headline="The premium half-life has a floor, and no ceiling",
+        subtitle="Jordà local-projection persistence with 95% Newey–West bands. Markers mark "
+                 "horizons where at least 12 independent spans support the fit; beyond them the "
+                 "line continues but the evidence does not. The fungible control starts below ½.",
         source="Nasdaq; TWSE; EODHD; frankfurter/ECB; FRED. Repo-computed, HAC errors.",
         footnote="PROVISIONAL — regime labels are the proposed taxonomy, pending ratification. "
                  "SKHY excluded from all fits (forward test).",

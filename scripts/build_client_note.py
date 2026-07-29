@@ -145,11 +145,16 @@ md(r"""
 # §2 Expressions menu
 
 Each sheet below states structure, hedge, residual exposures, cost, stress, constraints,
-risk and the observable that monitors it. **Fields that depend on a convergence horizon
-render as `pending M3 estimate`** — the research programme's half-life estimate is currently
-extrapolated beyond its fitting window, and financing cost scales linearly with horizon, so
-publishing a number would convert an extrapolation into a fabricated cost. §6 states exactly
-which table cell fills each.
+risk and the observable that monitors it.
+
+**On the holding period, which every cost line accrues against.** The research programme now
+measures it rather than extrapolating it, and the measurement has an unusual shape: the
+premium's half-life has a **floor of about 143 trading days (~7 months) at 95%, and no upper
+bound.** The upper edge of the confidence band never reaches half-decay at any horizon the
+data can estimate — so these data do not reject a premium that never halves. Financing cost
+is linear in holding period. **It is therefore quoted as a floor, never as a point**, and a
+financing line that can be withdrawn inside that floor is the binding risk on any convergence
+expression. §6 sets out what remains genuinely unquantified.
 """)
 
 code(r'''
@@ -304,7 +309,8 @@ Full research programme: **[00 — executive pitch](00_executive_pitch.ipynb)** 
 
 | Field | Fills from | Why not yet |
 |---|---|---|
-| Expected holding period | S4 metrics table, `half_life_days` (one_way_constrained) | current figure is extrapolated 11× beyond its 20-day fitting window, single pair, provisional taxonomy |
+| Upper bound on holding period | — | **none exists at 95%.** ρ's upper band never crosses ½ at any estimable horizon; the floor (~143d) is quoted instead |
+| Precise holding period | more constrained pairs, or intraday resolution | first passage sits at ~331d but on ~6 independent spans — observed, not located |
 | Financed cost over horizon | linear in the above | inherits the same gate |
 | Beta hedge ratio + interval | M5 single-name context layer | M5 not built; no Korea index proxy landed |
 | FX hedge points | SGX curve at the horizon tenor | tenor follows the holding period; deferred SGX months are exchange-marked, not executable |
@@ -312,9 +318,10 @@ Full research programme: **[00 — executive pitch](00_executive_pitch.ipynb)** 
 
 **What is usable now, and robust:** the persistence contrast. ρ₁ = 0.94 (t-HAC 129) for the
 barrier-constrained regime against 0.04 (insignificant) for the fungible control, on 2,328 and
-1,593 observations. **The premium mean-reverts slowly.** Any expression must be financeable
-over a long — and currently unquantified — horizon. That qualitative fact is the one this note
-relies on.
+1,593 observations — and, since S17, a **measured floor** under the convergence horizon rather
+than an assumption. The premium mean-reverts slowly; it must be financeable for at least seven
+months, and possibly indefinitely. That is the fact this note relies on, and it is the fact a
+financing conversation should start from.
 
 ---
 
