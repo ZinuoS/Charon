@@ -8,6 +8,21 @@ Built as a standing research program in constrained cross-listing relative value
 
 ---
 
+## Reading the research
+
+Start with **[`notebooks/00_executive_pitch.ipynb`](notebooks/00_executive_pitch.ipynb)** —
+the full argument, chart-led, every number traceable. Continue into
+**[`notebooks/02_premium_anatomy.ipynb`](notebooks/02_premium_anatomy.ipynb)** for the
+measurement layer. [`notebooks/README.md`](notebooks/README.md) is the reading guide, and
+carries nbviewer links (GitHub truncates figure-heavy notebooks).
+
+Key documents: [`docs/research_notes.md`](docs/research_notes.md) — 57 cited sources, 40
+primary · [`docs/data_sources.md`](docs/data_sources.md) — every source evaluated, with its
+terms posture · [`docs/gate_reports/`](docs/gate_reports/) — what each stage established
+and what it could not.
+
+---
+
 ## 0. Status, scope, and compliance
 
 - **Status:** Stage 0 (pre-registration freeze). See §9 stage gates.

@@ -1,10 +1,10 @@
-"""Generate notebooks/00_pitch.ipynb. Regenerate: uv run python -m scripts.build_pitch"""
+"""Generate notebooks/00_executive_pitch.ipynb. Regenerate: uv run python -m scripts.build_pitch"""
 from __future__ import annotations
 import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "notebooks" / "00_pitch.ipynb"
+OUT = ROOT / "notebooks" / "00_executive_pitch.ipynb"
 cells: list[dict] = []
 md = lambda s: cells.append({"cell_type":"markdown","metadata":{},"source":s.strip().splitlines(True)})
 co = lambda s: cells.append({"cell_type":"code","execution_count":None,"metadata":{},"outputs":[],"source":s.strip().splitlines(True)})
@@ -477,7 +477,7 @@ for m in (numpy, pd, matplotlib): print(f"  {m.__name__:12s}{m.__version__}")
 print("\nseed 20260728 · executes offline · analysis imports no networking library (enforced by test)")
 print("\nFRED data is Public Domain (citation requested). This work uses the FRED API but is")
 print("NOT endorsed or certified by the Federal Reserve Bank of St. Louis.")
-print("\nFull citation list: docs/research_notes.md (57 sources, 40 primary).")
+print("\nSee notebooks/README.md for the reading order. Full citation list: docs/research_notes.md (57 sources, 40 primary).")
 ''')
 
 md(r"""

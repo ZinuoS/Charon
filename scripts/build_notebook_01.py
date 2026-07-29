@@ -1,4 +1,4 @@
-"""Generate notebooks/01_premium_anatomy.ipynb with outputs cleared.
+"""Generate notebooks/02_premium_anatomy.ipynb with outputs cleared.
 
 The notebook is generated rather than hand-edited so its structure stays reviewable in
 a diff and cannot drift from the modules it calls. Regenerate with:
@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-OUT = REPO_ROOT / "notebooks" / "01_premium_anatomy.ipynb"
+OUT = REPO_ROOT / "notebooks" / "02_premium_anatomy.ipynb"
 
 cells: list[dict] = []
 
