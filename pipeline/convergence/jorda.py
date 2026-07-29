@@ -52,33 +52,75 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-# Proposed taxonomy at pair level (PROVISIONAL — pending ratification).
+# ---------------------------------------------------------------- regime taxonomy
 #
-# S18: the constrained class goes from one pair to four. Membership is assigned from the
-# DOCUMENTED RE-ISSUANCE RULE, before any persistence is estimated — never from how the
-# resulting premium series behaves, which would be selecting on the outcome.
+# RATIFIED 2026-07-29 (S19). Full rule, evidence and falsification criteria:
+# docs/regime_taxonomy.md. Summary of what the rule is:
 #
-# The rule for all four is ROC law, and it is a REVOLVING facility rather than SKHY's
-# discretionary consent: 華僑及外國人投資證券管理辦法 Art. 31 permits domestic purchase for
-# re-issuance only "within the scope of the originally cancelled share count", and
-# Regulations Governing the Offering and Issuance of Overseas Securities by Issuers Art. 14
-# requires FSC effective registration for any follow-on issue outside that. TSMC's FY2024
-# 20-F Ex. 2(a)(1) states it directly; Chunghwa Telecom's FY2025 20-F goes further and draws
-# the price conclusion itself, which is why CHT is the citation of record for the mechanism.
+#   Step 1  DR -> local cancellation free at holder option?   no  -> out of scope
+#   Step 2  local -> DR issuance available to an unaffiliated holder at will?
+#             yes -> fungible          no -> one_way_constrained
+#   Step 3  record the sub-type: revolving | consent | hard_cap
+#   Step 4  exclude only on documented corporate actions, never on how a series looks
 #
-# ⚠️ THE LIMITATION, STATED WHEREVER THE POOLED ESTIMATE IS: these four share a REGULATOR.
-# Four pairs reduce ISSUER-idiosyncratic noise; they do not provide independent variation in
-# the RULE. A second jurisdiction remains the binding gap (see docs/gate_reports/S18.md).
+# EVERY STEP READS A FILING. NO STEP READS A PRICE. Classifying on observed premium and then
+# measuring premium persistence would be a circle; the rule is observable independently of
+# the outcome, which is what lets it be assigned first and be wrong.
+#
+# Two corrections the ratification makes, both load-bearing:
+#
+#  1. The label attaches to the DR ISSUANCE mechanism, never to a foreign-OWNERSHIP cap.
+#     Korea is the natural experiment: KT reports foreign ownership at 49.0% against a 49%
+#     statutory ceiling -- fully exhausted -- and its ADR trades at about +1%. KEPCO's 20-F
+#     lists depositary issuance among the circumstances in which its 40% ceiling may be
+#     EXCEEDED. An exhausted ownership limit does not produce a premium; an exhausted
+#     PROGRAMME cap does.
+#
+#  2. Regime is a RULE; binding-ness is a STATE. `one_way_constrained` says the valve is
+#     one-directional, not that it is currently shut. A reflected process sits at its barrier
+#     only when something pushes it there, which is why this class contains pairs that have
+#     spent most of their lives near parity. Binding-ness is observed separately as
+#     (shares on deposit / programme cap) -- a quantity, and what H5 monitors.
 REGIME_OF_PAIR = {
+    # one_way_constrained -- all ROC `revolving`. ROC 華僑及外國人投資證券管理辦法 Art. 31
+    # permits domestic purchase for re-issuance only "within the scope of the originally
+    # cancelled share count". TSMC FY2024 20-F Ex. 2(a)(1) states it; Chunghwa Telecom's
+    # FY2025 20-F states it AND draws the price conclusion itself.
     "tsmc": "one_way_constrained",
     "umc": "one_way_constrained",
-    "ase": "one_way_constrained",
+    "ase": "one_way_constrained",     # from 2018-05-02, see PairSpec.sample_reason
     "cht": "one_way_constrained",
-    # auo is the same rule but EXCLUDED: it delisted its ADSs from the NYSE in 2019 and
-    # moved to an OTC programme. See PairSpec.sample_reason.
+    # auo: same rule, EXCLUDED -- NYSE ADS delisting, Form 25 filed 2019-09-20.
+
+    # fungible -- Brazil: Resolucao Conjunta BCB/CVM no. 13/2024 imposes no quantity cap on
+    # DR issuance. Alibaba FY2026 20-F: holders "are able to convert these Shares into ADSs,
+    # and vice versa".
     "baba": "fungible",
-    # skhy is one_way_constrained too, but is FORWARD-TEST ONLY and never fitted.
+    "vale": "fungible",
+    "itub": "fungible",
+    "abev": "fungible",
+    "pbr": "fungible",                # PBR -> PETR3 (ordinary). PBR.A -> PETR4. See registry.
+    "ggb": "fungible",
+    # skhy is one_way_constrained / `consent`, but is FORWARD-TEST ONLY and never fitted.
 }
+
+# Sub-type per constrained pair, for the record. Not a separate class -- the estimator does
+# not condition on it -- but the mechanism differs and a reader should not have to guess.
+CONSTRAINT_SUBTYPE = {
+    "tsmc": "revolving", "umc": "revolving", "ase": "revolving", "cht": "revolving",
+    "skhy": "consent",
+}
+
+# The taxonomy is ratified; the PANEL is not. Both of these are stated wherever the pooled
+# estimate appears, because a caveat that lives in one place evaporates:
+#   - one regulator on the constrained side (four issuers, one ROC rule)
+#   - one country on the control side (five of six fungible pairs are Brazilian)
+TAXONOMY_RATIFIED = "2026-07-29"
+PANEL_CAVEATS = (
+    "constrained class is four issuers under ONE regulator -- reduces issuer noise, gives no "
+    "independent variation in the rule",
+    "fungible class is five Brazilian pairs plus Alibaba -- one country dominates the control",
+)
 FORWARD_TEST_PAIRS = {"skhy"}
 
 RIDGE_LAMBDA = 1e-4     # ridge penalty; near-OLS, stabilises small-sample folds. TODO(ash: ratify)
@@ -204,6 +246,8 @@ class ConvergenceResult:
     horizons: list[HorizonFit]
     half_life: float | None
     half_life_method: str
+    # Labels are ratified (docs/regime_taxonomy.md, 2026-07-29). This flag now tracks the
+    # PANEL's remaining limits -- see PANEL_CAVEATS -- not the classification.
     provisional: bool = True
     notes: list[str] = field(default_factory=list)
     hl: HalfLife | None = None          # the interval form; `half_life` is its point

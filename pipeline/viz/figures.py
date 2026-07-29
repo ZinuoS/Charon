@@ -419,3 +419,88 @@ def g10_expression_readiness(sheets):
                  "bound does not. Cost accrues against the floor.",
     )
     return fig, ax
+
+
+def g11_taxonomy_separation(per_pair: list[dict]):
+    """G11 — the ratified taxonomy, and the evidence it is not circular.
+
+    One point per pair: mean premium on x (the LEVEL), half-life on y (the DYNAMICS),
+    coloured by regime class. Two claims at once, pulling in opposite directions:
+
+    *   The classes **separate vertically, completely.** Constrained half-lives run 161-398
+        days; controls run 1-24. No overlap, and the nearest constrained pair is ~7x the
+        slowest control. That is the result.
+    *   The classes separate far more weakly on the horizontal. That is the alibi, and the
+        first draft of this docstring overstated it: the ranges do not literally overlap
+        (constrained min |mean pi| 1.96%, control max 0.91%), but the LEVEL gap is ~2.2x
+        while the DYNAMICS gap is ~6.7x across ranges that differ by 300x. ASE carries the
+        argument on its own — a mean premium roughly twice the largest control's, and a
+        half-life roughly seven times it. At comparable levels the dynamics differ by an
+        order of magnitude, which is what stops the label from restating the data.
+
+    A NOTE ON THE Y-AXIS, because the first draft of this figure got it wrong. Plotting
+    1-day persistence shows NO separation at all — ggb (fungible) is 0.934 against cht
+    (constrained) 0.936. The classes are indistinguishable at daily frequency and diverge
+    only over weeks, so rho_1 would have made the taxonomy look worthless while the half-life
+    shows it separating cleanly. Which horizon you look at decides what you conclude.
+    """
+    fig, ax = theme.figure(height=5.2)
+    colors = {"one_way_constrained": theme.CLAY, "fungible": theme.MOSS}
+
+    for row in per_pair:
+        c = colors.get(row["regime"], theme.INK)
+        x, y = abs(row["mean"]), row["half_life"]
+        ax.plot(x, y, marker="o", markersize=8, color=c, markerfacecolor=c, alpha=0.9, zorder=3)
+        ax.annotate(row["pair"], xy=(x, y), xytext=(10, row.get("dy", 0)),
+                    textcoords="offset points", fontsize=theme.NOTE_SIZE, color=c,
+                    va="center", fontfamily=theme.SERIF_STACK)
+
+    con_hl = [r["half_life"] for r in per_pair if r["regime"] == "one_way_constrained"]
+    fun_hl = [r["half_life"] for r in per_pair if r["regime"] == "fungible"]
+    # The gap is the finding — draw it rather than describing it.
+    ax.axhspan(max(fun_hl), min(con_hl), color=theme.GRAY, alpha=0.09, zorder=0)
+    ax.annotate(f"no pair lands here\n{max(fun_hl):.0f}d — {min(con_hl):.0f}d",
+                xy=(0.985, (max(fun_hl) * min(con_hl)) ** 0.5), xycoords=("axes fraction", "data"),
+                ha="right", va="center", fontsize=theme.NOTE_SIZE, color=theme.MUTED,
+                fontfamily=theme.SERIF_STACK, linespacing=1.5)
+
+    # The discriminating case, called out by name. An earlier draft shaded a horizontal
+    # "both classes live here" band; the ranges do not actually overlap, so the claim is
+    # made where it is true — on the pair that carries it — rather than by drawing a band.
+    con_x = [abs(r["mean"]) for r in per_pair if r["regime"] == "one_way_constrained"]
+    fun_x = [abs(r["mean"]) for r in per_pair if r["regime"] == "fungible"]
+    lo_pair = min((r for r in per_pair if r["regime"] == "one_way_constrained"),
+                  key=lambda r: abs(r["mean"]))
+    hi_ctrl = max((r for r in per_pair if r["regime"] == "fungible"),
+                  key=lambda r: abs(r["mean"]))
+    ax.annotate(
+        f"{lo_pair['pair']} carries the argument: {abs(lo_pair['mean'])/abs(hi_ctrl['mean']):.1f}x "
+        f"{hi_ctrl['pair']}'s premium,\n{lo_pair['half_life']/hi_ctrl['half_life']:.1f}x its "
+        "half-life. Similar level, different dynamics.",
+        xy=(abs(lo_pair["mean"]), lo_pair["half_life"]), xytext=(-14, 26),
+        textcoords="offset points", ha="right", fontsize=theme.NOTE_SIZE,
+        color=theme.MUTED, fontfamily=theme.SERIF_STACK, linespacing=1.5,
+        arrowprops=dict(arrowstyle="-", color=theme.RULE, linewidth=0.8,
+                        connectionstyle="angle,angleA=0,angleB=90,rad=3"))
+
+    ax.set_xscale("log"); ax.set_yscale("log")
+    ax.set_xlabel("mean premium, absolute value — the LEVEL", fontsize=8, color=theme.MUTED)
+    ax.set_ylabel("half-life, trading days — the DYNAMICS", fontsize=8, color=theme.MUTED)
+    ax.annotate("one-way constrained", xy=(0.02, 0.95), xycoords="axes fraction",
+                fontsize=theme.NOTE_SIZE, color=theme.CLAY, fontfamily=theme.SERIF_STACK)
+    ax.annotate("fungible control", xy=(0.02, 0.05), xycoords="axes fraction",
+                fontsize=theme.NOTE_SIZE, color=theme.MOSS, fontfamily=theme.SERIF_STACK)
+
+    theme.finalize(
+        fig, kicker="taxonomy",
+        headline="The regime label predicts how a premium behaves, not how big it is",
+        subtitle="One point per cross-listed pair. Classes are assigned from the documented "
+                 "issuance rule before any of this was estimated. They separate completely on "
+                 "half-life — a 6.7x gap across ranges 300x apart — and only weakly on level, "
+                 "a 2.2x gap. The label is about dynamics, not size.",
+        source="Repo-computed. Rule, evidence and falsification criteria: docs/regime_taxonomy.md.",
+        footnote="At 1-day horizon the classes do NOT separate (ρ₁ ≈ 0.93 in both) — the "
+                 "divergence appears over weeks. Taxonomy RATIFIED 2026-07-29; the PANEL is not: "
+                 "four constrained issuers share one regulator, five of six controls are Brazilian.",
+    )
+    return fig, ax

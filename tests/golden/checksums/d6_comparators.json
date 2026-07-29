@@ -1,5 +1,7 @@
 {
   "files": {
+    "data/raw/d6_comparators/2026-07-29/abev_adr_daily.csv": "5ecedb5ae7fdc497f6e831d5d0a4b45af9677525302220f1e028cff044f91a01",
+    "data/raw/d6_comparators/2026-07-29/abev_local_daily.csv": "8bdaa70a3ed334857cce6b3a56b632f4a3d9d5461f8e655f3d510bb6cff4c1d9",
     "data/raw/d6_comparators/2026-07-29/ase_adr_daily.csv": "f443c3276de9dfcdd78099fbd9fb8cc6328d62fbfe2b8c7774faa7176836fbcd",
     "data/raw/d6_comparators/2026-07-29/ase_local_daily.csv": "d705784ab5afebb8a4ede51fc9cd3589ed585d88f3b5e1a66c6cf62b812b3f3f",
     "data/raw/d6_comparators/2026-07-29/auo_adr_daily.csv": "99f0a3f6ee63e84b191c252f39cab675808395468afffdb8d6b9959375fefa83",
@@ -8,17 +10,26 @@
     "data/raw/d6_comparators/2026-07-29/baba_local_daily.csv": "8ccbf10b746d8fba682e3d966a28bafcc772624a1099348177fa0c11ffc772a7",
     "data/raw/d6_comparators/2026-07-29/cht_adr_daily.csv": "f035e4b451eddf2dbacb6d9555a124cc2371ba6801b5806a0bfa32a604ad2032",
     "data/raw/d6_comparators/2026-07-29/cht_local_daily.csv": "1cacc53a4fb18d470ab6da815173881f755d4a3f7dc20111e016e7f9928c4854",
+    "data/raw/d6_comparators/2026-07-29/ggb_adr_daily.csv": "041d905a380190904d2c22bc971981114ec6c8d0d1828fb8c3e6f1f1cecf268d",
+    "data/raw/d6_comparators/2026-07-29/ggb_local_daily.csv": "24bf519770c0a085415916bc04a8b285e3b566a2d19004a31d95b387885f7890",
     "data/raw/d6_comparators/2026-07-29/ibn_adr_daily.csv": "a0e1ad737c1000e801bf885361fa23f8c0b5c9bd50256d6571c05d3935521313",
     "data/raw/d6_comparators/2026-07-29/infy_adr_daily.csv": "c6bb9627f34f019aed28cdb79289e7efb54259f2854879f3efd07a07267a12eb",
+    "data/raw/d6_comparators/2026-07-29/itub_adr_daily.csv": "edec84c621aa26dac8fc47007a373a7171832a791e2e06ee4fb84ea61afa40a3",
+    "data/raw/d6_comparators/2026-07-29/itub_local_daily.csv": "56f228246a1f102b3c420df2e96ea57adca71b5b34e018b10034a45b0ed24528",
+    "data/raw/d6_comparators/2026-07-29/pbr_adr_daily.csv": "8fdd5cdbe9c62e0cad513affb201ebeac5af2817dc0998e90f579132fe4c5ee3",
+    "data/raw/d6_comparators/2026-07-29/pbr_local_daily.csv": "a3473708122e2e1b524e5bd101676b6fcac76f623009d7f4ff07cc8345a796cd",
     "data/raw/d6_comparators/2026-07-29/tsm_adr_daily.csv": "59ca660daf2b7f2c275d375c6e7556888236a8bb372ad3984d3f6de85ddd7fe7",
     "data/raw/d6_comparators/2026-07-29/tsmc_local_daily.csv": "cdc99dc8e708862094a1da0400fe7df2df7d438a72345b362216560dc8344a5e",
     "data/raw/d6_comparators/2026-07-29/umc_adr_daily.csv": "83a87dd09ffb928e31f5940891fab0b89ae207a507ac3308d8343d2e20076733",
     "data/raw/d6_comparators/2026-07-29/umc_local_daily.csv": "211fe1ee4efb4f20b5fdde3e7bf6bae6d237579291d0d2d1fda3adf7c20354f4",
+    "data/raw/d6_comparators/2026-07-29/usdbrl_spot_daily.csv": "dfbe3760ade4288e69d64f5dc2295727d68138799b410a2af92f261066edac52",
     "data/raw/d6_comparators/2026-07-29/usdhkd_spot_daily.csv": "34fc64398f4bf218e3fb609d089c22540e5e23f970a61e57f835c4f1cb6e00b3",
     "data/raw/d6_comparators/2026-07-29/usdinr_spot_daily.csv": "b985ddfbc1a01726429e1a4279241cb7986cf86ea523e8de51576eb229020558",
-    "data/raw/d6_comparators/2026-07-29/usdtwd_spot_daily.csv": "cd3a7aec6a4b3cd8a7a5b415d5ad350d0a0ac04b41e88a49e39c989cd0502978"
+    "data/raw/d6_comparators/2026-07-29/usdtwd_spot_daily.csv": "cd3a7aec6a4b3cd8a7a5b415d5ad350d0a0ac04b41e88a49e39c989cd0502978",
+    "data/raw/d6_comparators/2026-07-29/vale_adr_daily.csv": "0b5e0032f861643f7f4d719036ff35c1afce4817d2f589c89be56dbf3b2eca1f",
+    "data/raw/d6_comparators/2026-07-29/vale_local_daily.csv": "8c7c0ebb3073163a273d720803a5eeae899db980ef350d0a12a1a2f16171e018"
   },
   "history": {},
   "source": "d6_comparators",
-  "updated_at_utc": "2026-07-29T10:21:23+00:00"
+  "updated_at_utc": "2026-07-29T10:40:20+00:00"
 }

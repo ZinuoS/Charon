@@ -128,7 +128,76 @@ Three things changed, and one did not:
 reduce *issuer*-idiosyncratic noise; they do not give independent variation in the *rule*. A
 second jurisdiction is the remaining gap — and India, the obvious candidate, turns out to be
 the wrong one: its headroom regime was repealed effective 15 December 2014.
+
+## The taxonomy, ratified
+
+S19 discharges the `PROVISIONAL` flag that every M3 result had carried. The reason it could
+not be discharged earlier is simple: with one pair per class, "the class is persistent" and
+"this pair is persistent" are the same sentence. A taxonomy over two elements is a pair of
+names. The constrained class now holds four and the control class six — Brazil, the
+literature's standard control, where **Resolução Conjunta BCB/CVM nº 13/2024 imposes no
+quantity cap on DR issuance.**
+
+The rule is in `docs/regime_taxonomy.md` and is four steps. **Every step reads a filing. No
+step reads a price** — classifying on the observed premium and then measuring the premium's
+persistence would be a circle.
+
+**Two corrections it makes, both load-bearing.**
+
+*An exhausted ownership limit does not produce a premium; an exhausted programme cap does.*
+Korea is the natural experiment: KT reports foreign ownership at **49.0% against a 49%
+statutory ceiling — fully exhausted — and its ADR trades at about +1%.** KEPCO's 20-F lists
+depositary issuance among the circumstances in which its 40% ceiling may be *exceeded*. So
+the label attaches to the DR issuance mechanism, never to a foreign-ownership cap.
+
+*Regime is a rule; binding-ness is a state.* `one_way_constrained` says the valve is
+one-directional, not that it is currently shut. A reflected process sits at its barrier only
+when something pushes it there — which is why this class contains pairs that have spent most
+of their lives near parity. Binding-ness is observed separately, as shares-on-deposit over
+programme cap, and that is what H5 monitors.
 """)
+code(r'''
+from pipeline.convergence.jorda import REGIME_OF_PAIR, CONSTRAINT_SUBTYPE, TAXONOMY_RATIFIED, PANEL_CAVEATS, estimate_regime
+from pipeline.measurement.premium import build_all_variants
+from pipeline.viz import figures
+print(f"TAXONOMY RATIFIED {TAXONOMY_RATIFIED}   (docs/regime_taxonomy.md)")
+print(f"{'pair':6s} {'regime':22s} {'sub-type':10s} {'n':>6s} {'mean pi':>9s} {'half-life':>10s}")
+_rows = []
+for pid, rg in REGIME_OF_PAIR.items():
+    s_ = build_all_variants(pid)[0].series
+    hl = estimate_regime([s_], rg).hl.point
+    _rows.append({"pair": pid, "regime": rg, "mean": float(s_.mean()), "half_life": hl})
+    print(f"{pid:6s} {rg:22s} {CONSTRAINT_SUBTYPE.get(pid,'-'):10s} {len(s_):6d} "
+          f"{s_.mean():+8.2%} {hl:9.0f}d")
+print()
+print("PANEL CAVEATS (the taxonomy is ratified; the panel is not):")
+for c in PANEL_CAVEATS: print("  !", c)
+''')
+
+code(r'''
+fig, ax = figures.g11_taxonomy_separation(_rows)
+fig;
+''')
+
+md(r"""
+The classes separate **completely on half-life** — constrained 161–398 trading days, controls
+1–24, with nothing in between — and only weakly on level, a 2.2× gap. ASE carries the argument
+by itself: a mean premium roughly twice the largest control's, and a half-life roughly seven
+times it. Same neighbourhood on size, an order of magnitude apart on behaviour.
+
+**And a caution the figure states in its own footnote:** at *one-day* horizon the classes do
+not separate at all (ρ₁ ≈ 0.93 for both a constrained and a control pair). The divergence
+appears only over weeks. Choosing the wrong horizon would have made this taxonomy look
+worthless.
+
+One honesty note on the controls. Several Brazilian pairs carry episodic ratio contamination
+that survives the sample restrictions — multi-day runs of extreme values that I can detect but
+cannot attribute to documented corporate actions without more filing work. They are left **as
+landed**, because cleaning them *lowers* control persistence (ρ₁ 0.87 → 0.34, half-life 4d →
+under 1d). The contaminated number is therefore the conservative one: it makes the contrast
+look smaller than it is, so reporting it cannot flatter the result.
+""")
+
 code(r'''
 from pipeline.convergence.jorda import REGIME_OF_PAIR
 from pipeline.measurement.premium import build_all_variants

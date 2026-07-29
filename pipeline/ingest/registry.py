@@ -387,7 +387,125 @@ D6_TAIWAN_SERIES: tuple[SeriesSpec, ...] = (
     _tw_adr("cht_adr_daily", "CHT"),      _tw_local("cht_local_daily", "2412.TW"),
 )
 
+
+# ------------------------------------------------------------------------------------
+# D6 Brazil cohort (S19) — the FUNGIBLE control class.
+#
+# Ratifying a two-class taxonomy on one control pair would be ratifying half of it. Brazil
+# is the literature's standard control (Stigler/Shah/Patnaik use Brazil and Mexico against
+# India) and is free in BOTH directions: Resolucao Conjunta BCB/CVM no. 13/2024 (effective
+# Jan 2025, revoking CMN 4.373/2014) imposes no quantity cap on DR issuance.
+#
+# ⚠️ SHARE-LINE MAPPING IS A TRAP HERE. Brazilian issuers list multiple classes and the ADR
+# maps to a SPECIFIC one: PBR -> PETR3 (ordinary) while PBR.A -> PETR4 (preferred); BBD ->
+# BBDC4; ITUB -> ITUB4; GGB -> GGBR4. Mapping PBR to PETR4 yields an implied ratio of 2.169
+# with a wide interquartile range instead of 1.999 +/- 0.3% -- wrong, but not obviously
+# wrong, which is exactly the failure mode the ratio check exists to catch.
+# ------------------------------------------------------------------------------------
+def _br_local(series_id: str, symbol: str) -> SeriesSpec:
+    return SeriesSpec(
+        series_id=series_id, symbol=symbol, asset_class="local_equity", currency="BRL",
+        market="B3", timezone="America/Sao_Paulo", close_local=time(17, 0),
+        availability_lag=_STD_LAG, availability_note="B3 close 17:00 BRT, +15min.",
+        units="BRL per share", start=None, confirmed=False,
+        providers=("eodhd",), provider_symbols={"eodhd": symbol},
+    )
+
+
+def _br_adr(series_id: str, symbol: str) -> SeriesSpec:
+    return SeriesSpec(
+        series_id=series_id, symbol=symbol, asset_class="adr", currency="USD",
+        market="NYSE", timezone="America/New_York", close_local=time(16, 0),
+        availability_lag=_STD_LAG, availability_note="NYSE close 16:00 ET, +15min.",
+        units="USD per ADR", start=None, confirmed=False,
+        providers=("eodhd", "nasdaq"),
+        provider_symbols={"eodhd": f"{symbol}.US", "nasdaq": symbol},
+    )
+
+
+D6_BRAZIL_SERIES: tuple[SeriesSpec, ...] = (
+    _br_adr("vale_adr_daily", "VALE"),   _br_local("vale_local_daily", "VALE3.SA"),
+    _br_adr("itub_adr_daily", "ITUB"),   _br_local("itub_local_daily", "ITUB4.SA"),
+    _br_adr("abev_adr_daily", "ABEV"),   _br_local("abev_local_daily", "ABEV3.SA"),
+    _br_adr("pbr_adr_daily", "PBR"),     _br_local("pbr_local_daily", "PETR3.SA"),
+    _br_adr("ggb_adr_daily", "GGB"),     _br_local("ggb_local_daily", "GGBR4.SA"),
+    SeriesSpec(
+        series_id="usdbrl_spot_daily", symbol="USDBRL", asset_class="fx", currency="BRL",
+        market="OTC FX", timezone="UTC", close_local=time(21, 0),
+        availability_lag=timedelta(0), availability_note=_FX_NOTE,
+        units="BRL per 1 USD", start=None, confirmed=False,
+        providers=("eodhd",), provider_symbols={"eodhd": "USDBRL.FOREX"},
+    ),
+)
+
+# Shared preamble for control-class sample restrictions. Stated once so the reasoning cannot
+# drift between pairs, and so it is obvious that it is a CLASS-level argument.
+_CONTROL_RATIO_REGIME = (
+    "CONTROL-CLASS RATIO REGIME. This restriction is sound only because the pair is classified "
+    "`fungible` on the RULE: a freely arbitraged premium cannot be 20x or 500x, so a deviation "
+    "of that size is unambiguously a ratio change, not a premium. The same reasoning is NOT "
+    "applied to constrained pairs, where a large premium is the object of study -- ASE was "
+    "located instead by an explicit price-step diagnostic at a known reorganisation. "
+)
+
+
 PAIRS: tuple[PairSpec, ...] = (
+    # --- Brazil control cohort (S19). Every ratio verified against the implied ratio and
+    # every one lands within 1.1% of an exact integer -- which is itself evidence of
+    # fungibility, since a freely arbitraged pair has nowhere to drift TO.
+    PairSpec(
+        pair_id="vale", adr="vale_adr_daily", local="vale_local_daily", fx="usdbrl_spot_daily",
+        local_shares_per_adr=1.0, ratio_source="Vale ADR: 1 ADS = 1 ordinary share.",
+        confirmed=False, notes="Implied ratio 1.000, IQR [0.997, 1.003].",
+    ),
+    PairSpec(
+        pair_id="itub", adr="itub_adr_daily", local="itub_local_daily", fx="usdbrl_spot_daily",
+        local_shares_per_adr=1.0, ratio_source="Itau Unibanco ADR: 1 ADS = 1 preferred share (ITUB4).",
+        confirmed=False, notes="Implied ratio 0.997, IQR [0.993, 1.001].",
+        sample_start="2006-01-01",
+        sample_reason=(
+            _CONTROL_RATIO_REGIME
+            + "ADR ratio regime. Annual median implied ratio runs ~499 (2002-2004), 0.50 (2005), then 1.00 from 2006 to date -- two ratio changes before the current 1:1 regime. Sample starts at the current regime. TODO(ash): confirm the change dates against Itau's 20-F/6-K."
+        ),
+    ),
+    PairSpec(
+        pair_id="abev", adr="abev_adr_daily", local="abev_local_daily", fx="usdbrl_spot_daily",
+        local_shares_per_adr=1.0, ratio_source="Ambev ADR: 1 ADS = 1 ordinary share.",
+        confirmed=False, notes="Implied ratio 0.994, IQR [0.989, 1.000].",
+        sample_start="2008-01-01",
+        sample_reason=(
+            _CONTROL_RATIO_REGIME
+            + "ADR ratio regime. Annual median implied ratio runs ~100 (2000), ~20 (2001-2007), then 1.00 from 2008 to date. TODO(ash): confirm against AmBev/Ambev S.A. filings; note the 2013 Ambev S.A. reorganisation sits INSIDE the stable regime and does not move the ratio."
+        ),
+    ),
+    PairSpec(
+        pair_id="pbr", adr="pbr_adr_daily", local="pbr_local_daily", fx="usdbrl_spot_daily",
+        local_shares_per_adr=2.0,
+        ratio_source="Petrobras ADR (PBR): 1 ADS = 2 ORDINARY shares (PETR3).",
+        confirmed=False,
+        notes=(
+            "PBR maps to PETR3, NOT PETR4 -- PBR.A is the preferred-line ADR. Against PETR3 "
+            "the implied ratio is 1.999, IQR [1.993, 2.005]; against PETR4 it is 2.169 with "
+            "IQR [2.090, 2.232]. The wrong mapping is plausible, not obviously broken."
+        ),
+        sample_start="2008-01-01",
+        sample_reason=(
+            _CONTROL_RATIO_REGIME
+            + "ADR ratio regime: annual median implied ratio runs 1.00 (2000-2005), 4.00 "
+              "(2006-2007), then 2.00 from 2008 to date. TODO(ash): confirm against Petrobras "
+              "filings."
+        ),
+    ),
+    PairSpec(
+        pair_id="ggb", adr="ggb_adr_daily", local="ggb_local_daily", fx="usdbrl_spot_daily",
+        local_shares_per_adr=1.0, ratio_source="Gerdau ADR: 1 ADS = 1 preferred share (GGBR4).",
+        confirmed=False, notes="Implied ratio 0.995, IQR [0.989, 1.001]. GGB maps to GGBR4, not GGBR3.",
+        sample_start="2000-01-01",
+        sample_reason=(
+            _CONTROL_RATIO_REGIME
+            + "First-year artefact: annual median implied ratio 0.02 in 1999 against 1.00 from 2000 to date. TODO(ash): confirm whether 1999 is a ratio regime or a bad-print window."
+        ),
+    ),
     # --- Taiwan cohort (S18). Ratios from each issuer's ADS terms; all unconfirmed
     # pending a filing check, and each is sanity-checked against the implied ratio
     # P_adr*FX/P_local, which flags a gross error without being used to TUNE the value.
@@ -502,7 +620,8 @@ PAIRS: tuple[PairSpec, ...] = (
 
 
 def all_series() -> tuple[SeriesSpec, ...]:
-    return D1_SERIES + D6_TSMC_SERIES + D6_EXTRA_SERIES + D6_TAIWAN_SERIES
+    return (D1_SERIES + D6_TSMC_SERIES + D6_EXTRA_SERIES + D6_TAIWAN_SERIES
+            + D6_BRAZIL_SERIES)
 
 
 def series_by_id(series_id: str) -> SeriesSpec:

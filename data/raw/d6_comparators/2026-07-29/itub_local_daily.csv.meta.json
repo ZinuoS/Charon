@@ -1,0 +1,37 @@
+{
+  "asset_class": "local_equity",
+  "availability_confirmed": false,
+  "availability_lag": "close 17:00:00 America/Sao_Paulo + 15min",
+  "availability_note": "B3 close 17:00 BRT, +15min.",
+  "close_local": "17:00:00",
+  "currency": "BRL",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-28T20:15:00+00:00",
+    "obs_date": "2026-07-28",
+    "observation_ts_utc": "2026-07-28T20:00:00+00:00"
+  },
+  "first_obs_date": "2000-12-21",
+  "last_obs_date": "2026-07-28",
+  "market": "B3",
+  "native_timezone": "America/Sao_Paulo",
+  "notes": "",
+  "provider": "eodhd",
+  "provider_chain": [
+    "eodhd"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-07-29T10:40:00+00:00",
+  "request_params": {
+    "fmt": "json",
+    "from": "1990-01-01",
+    "period": "d",
+    "to": "2026-07-29"
+  },
+  "rows": 6417,
+  "series_id": "itub_local_daily",
+  "sha256": "56f228246a1f102b3c420df2e96ea57adca71b5b34e018b10034a45b0ed24528",
+  "source_url": "https://eodhd.com/api/eod/ITUB4.SA",
+  "symbol": "ITUB4.SA",
+  "transport": "eod_api_v1",
+  "units": "BRL per share"
+}

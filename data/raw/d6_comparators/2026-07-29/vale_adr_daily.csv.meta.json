@@ -1,0 +1,38 @@
+{
+  "asset_class": "adr",
+  "availability_confirmed": false,
+  "availability_lag": "close 16:00:00 America/New_York + 15min",
+  "availability_note": "NYSE close 16:00 ET, +15min.",
+  "close_local": "16:00:00",
+  "currency": "USD",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-28T20:15:00+00:00",
+    "obs_date": "2026-07-28",
+    "observation_ts_utc": "2026-07-28T20:00:00+00:00"
+  },
+  "first_obs_date": "2002-03-21",
+  "last_obs_date": "2026-07-28",
+  "market": "NYSE",
+  "native_timezone": "America/New_York",
+  "notes": "",
+  "provider": "eodhd",
+  "provider_chain": [
+    "eodhd",
+    "nasdaq"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-07-29T10:39:54+00:00",
+  "request_params": {
+    "fmt": "json",
+    "from": "1990-01-01",
+    "period": "d",
+    "to": "2026-07-29"
+  },
+  "rows": 6127,
+  "series_id": "vale_adr_daily",
+  "sha256": "0b5e0032f861643f7f4d719036ff35c1afce4817d2f589c89be56dbf3b2eca1f",
+  "source_url": "https://eodhd.com/api/eod/VALE.US",
+  "symbol": "VALE",
+  "transport": "eod_api_v1",
+  "units": "USD per ADR"
+}

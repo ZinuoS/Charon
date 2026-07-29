@@ -78,6 +78,17 @@ CONVENTIONS: dict[str, FxConvention] = {
         "USDINR", "INR", "local_per_usd", 30.0, 150.0,
         "Indian rupee. frankfurter primary, FRED DEXINUS as reconciliation partner.",
     ),
+    "USDBRL": FxConvention(
+        "USDBRL", "BRL", "local_per_usd", 1.2, 12.0,
+        "Brazilian real. EODHD USDBRL.FOREX. The band is wide because the history is: 1.21/USD "
+        "in 2011 against 6.29 in 2021-2025, so a tight guard would reject valid observations. "
+        "THE FLOOR IS THE POST-FLOAT (Jan 1999) MINIMUM, DELIBERATELY. The series reaches back "
+        "to the real's 1994 introduction and spends its first two years below 1.0 (506 obs to "
+        "1996-06-11) -- and a rate near 1.0 CANNOT be distinguished from its own reciprocal by "
+        "any range, so no honest guard covers that window. It is excluded rather than "
+        "accommodated: no pair in the panel uses it (the earliest control sample starts "
+        "2000-01-01), so the guard is set where it can actually discriminate.",
+    ),
     "USDHKD": FxConvention(
         "USDHKD", "HKD", "local_per_usd", 7.5, 8.0,
         "Hong Kong dollar. The narrow band is not a guess — see `peg`.",
@@ -112,6 +123,7 @@ def for_series(series_id: str) -> FxConvention:
         "usdtwd_spot_daily": "USDTWD",
         "usdinr_spot_daily": "USDINR",
         "usdhkd_spot_daily": "USDHKD",
+        "usdbrl_spot_daily": "USDBRL",
     }
     if series_id not in mapping:
         raise KeyError(f"{series_id!r} is not a declared FX series")
