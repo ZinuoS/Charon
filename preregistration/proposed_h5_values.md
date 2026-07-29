@@ -1,5 +1,10 @@
 # PROPOSED values for the H5 Class C freeze
 
+> **AUTHOR RULING (2026-07-29): option (a) — scope H5 to the measurable claim and add an
+> INDETERMINATE branch.** The criterion below has been rewritten accordingly. The
+> false-refutation risk identified in `docs/data_sources.md` is closed by making
+> consent-state an explicit resolution branch rather than an unstated assumption.
+
 **Status: PROPOSAL ONLY. Nothing here is in `calls.yaml`.** README §11 permits analysis
 sessions to propose and forbids them to ratify. Reply "accept" (or edit any line) and I
 will apply them, write Amendment 001, and stage the commit for you to run.
@@ -35,15 +40,27 @@ h5_quota_ledger:
     window. The call is directional: headroom creation PRECEDES compression.
   resolution_date: 2026-10-31
   resolution_criterion: >-
-    CONFIRMED if, over the window from 2026-07-29 to the resolution date, at least two
-    distinct headroom-creation episodes (per threshold) are each followed within 5
-    trading days by a premium compression episode (per threshold), and the count of
-    compression episodes NOT preceded by headroom creation does not exceed the count
-    that are. REFUTED if headroom-creation episodes occur but compressions do not follow
-    at above that rate. UNTESTABLE if fewer than two headroom-creation episodes are
-    observed in the window — including the specific case where US78392B2060 remains
-    pinned at 0 throughout, or where KSD publishes no daily series for it. An UNTESTABLE
-    resolution is a recorded outcome, not a failure, and is reported as such.
+    Scoped to the measurable claim: this call concerns headroom creation CONDITIONAL ON
+    DEPOSITS BEING PERMITTED. The SEIBro field measures a programme's issuance-ceiling
+    headroom; the operative gate on deposits is the Company's undisclosed determination
+    plus prior consent. These can diverge, so consent-state is a resolution branch, not
+    an assumption.
+    CONFIRMED if, from 2026-07-29 to the resolution date, at least two distinct
+    headroom-creation episodes (per threshold) are each followed within 5 trading days by
+    a premium compression episode (per threshold), AND at least one deposit is observed
+    to clear on US78392B2060 in the window (evidencing that consent operates), AND the
+    count of compression episodes not preceded by headroom creation does not exceed the
+    count that are.
+    REFUTED if headroom-creation episodes occur, at least one deposit is observed to
+    clear, and compressions do not follow at above that rate.
+    INDETERMINATE if headroom moves but NO deposit is observed to clear — the consent
+    gate is then unobserved, the mechanism was never demonstrably engaged, and the
+    directional claim cannot be tested. This branch exists because measured headroom and
+    the operative gate are distinct; without it a never-granted consent would masquerade
+    as a refutation.
+    UNTESTABLE if fewer than two headroom-creation episodes are observed at all —
+    including US78392B2060 remaining pinned at 0, or KSD publishing no series for it.
+    INDETERMINATE and UNTESTABLE are recorded outcomes, not failures.
   freeze_class: C
   status: frozen
 ```
