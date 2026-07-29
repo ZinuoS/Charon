@@ -1057,3 +1057,45 @@ indistinguishable.
 source: dart_corporate_disclosure
 approved: TODO(ash)          # proposed: the upper barrier's opening is a corporate action
 ```
+
+---
+
+# India retry, 2026-07-29 — conclusive negative on the current tier
+
+Re-probed after the vendor tier upgrade, with the cache bypassed (standing rule: a stale
+pre-upgrade response is indistinguishable from a real 404).
+
+**Direct symbol probes — all `404 Ticker Not Found`:**
+
+```
+INFY.NSE  ·  INFY.BSE  ·  INFY.IN  ·  ICICIBANK.NSE  ·  RELIANCE.NSE
+```
+
+`RELIANCE.NSE` is the decisive one. It is among the largest listings on the exchange, so a
+404 there **rules out a symbology problem** — this is coverage, not formatting. Four
+suffix conventions were tried across two exchanges.
+
+**Exchange list:** the tier exposes **70 exchanges**. Korea is present
+(`KO`, MIC `XKRX`, KRW). **Neither NSE nor BSE appears.**
+
+⚠️ **One honest caveat on that list.** Hong Kong also does *not* appear in it, yet
+`9988.HK` pulls 1,638 rows successfully. So the exchanges-list endpoint is **not an
+authoritative statement of what is fetchable**, and the conclusive evidence here is the
+direct probes rather than the absence from the list. Both point the same way, which is why
+the conclusion holds.
+
+## Consequence, unchanged and now confirmed
+
+The `two_way_headroom` regime class stays an **empty, labelled panel**. The Indian pairs
+are the panel's only instance of bounded-but-non-zero conversion capacity — structurally
+between TSMC's constrained regime and BABA's full fungibility — so the taxonomy remains a
+three-point scale missing its middle, precisely where SKHY would move if the discretionary
+ceiling were ever raised.
+
+**This is not resolvable by trying harder from here.** It needs either the entitlement
+question answered by the vendor, or a different India source approved.
+
+```yaml
+source: eodhd_india
+approved: TODO(ash)          # NOT AVAILABLE on the current tier — evidence above
+```
