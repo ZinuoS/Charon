@@ -303,3 +303,86 @@ def thin_date_ticks(ax, max_ticks: int = 5) -> None:
     import matplotlib.dates as mdates
     ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=2, maxticks=max_ticks))
     ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
+
+
+# --------------------------------------------------------------------------------
+# finalize() — the single owner of figure chrome
+# --------------------------------------------------------------------------------
+#
+# Every collision fixed in the Session 11 and 13 audits had the same root cause: chrome
+# (kicker, headline, subtitle, source, footnote) placed by whoever was writing the figure,
+# each choosing coordinates independently, none knowing what the others had reserved.
+# `suptitle` does not know a `fig.text` subtitle is coming; `tight_layout` does not know
+# either exists.
+#
+# The structural fix is ownership. `finalize` places ALL chrome, in one pass, measuring as
+# it goes and reserving the space it uses. Figure modules draw data; they do not place
+# text. `tests/test_chrome_lint.py` enforces that division.
+
+KICKER_SIZE = 8.0
+_CHROME_LINE_H = 0.030          # figure-fraction per chrome line at default geometry
+_CHROME_GAP = 0.014
+
+
+def finalize(
+    fig,
+    headline: str,
+    subtitle: str | None = None,
+    source: str | None = None,
+    footnote: str | None = None,
+    kicker: str | None = None,
+) -> None:
+    """Place every piece of figure chrome, once, without collisions.
+
+    ``kicker`` is the editorial grammar that makes a figure sequence read like a
+    publication — a small-caps category line above the headline ("BARRIER STRUCTURE",
+    "MEASUREMENT", "FINANCING"). Optional; omit it for standalone figures.
+
+    Text is laid out downward from the top of the figure and upward from the bottom, with
+    each block reserving its own height, so adding a subtitle can never push a headline
+    into the axes and adding a footnote can never clip a source line. Callers must not
+    also call ``suptitle``, ``tight_layout`` or bare ``fig.text`` — see the lint test.
+    """
+    # Top block is built UPWARD from the axes, so ordering is structural rather than
+    # arithmetic: subtitle sits directly above the axes, headline above it, kicker on top.
+    # Laying it out downward (the obvious way) makes each element's position depend on
+    # what comes after it, which is how the kicker ended up overprinting the subtitle.
+    y = 1.0 + _CHROME_GAP
+    if subtitle:
+        fig.text(0.0, y, subtitle, fontsize=SUBTITLE_SIZE, color=MUTED,
+                 ha="left", va="bottom", fontfamily=SERIF_STACK)
+        y += _CHROME_LINE_H
+    fig.text(0.0, y, headline, fontsize=TITLE_SIZE, color=TEXT,
+             ha="left", va="bottom", fontfamily=SERIF_STACK)
+    y += _CHROME_LINE_H * 1.35
+    if kicker:
+        # matplotlib's Text has no letterspacing property, so the tracked-caps look is
+        # produced by construction: uppercase with a thin space between characters.
+        tracked = "\u2009".join(kicker.upper())
+        fig.text(0.0, y, tracked, fontsize=KICKER_SIZE, color=MUTED,
+                 ha="left", va="bottom", fontfamily=SERIF_STACK)
+
+    # Bottom block, laid out downward from just under the axes.
+    y = -0.02
+    if source:
+        fig.text(0.0, y, f"Source: {source}", fontsize=NOTE_SIZE, color=MUTED,
+                 ha="left", va="top", fontfamily=SERIF_STACK)
+        y -= _CHROME_LINE_H + _CHROME_GAP
+    if footnote:
+        fig.text(0.0, y, footnote, fontsize=NOTE_SIZE, color=MUTED,
+                 ha="left", va="top", fontfamily=SERIF_STACK, wrap=True)
+
+
+def obol(ax, x, y, size: float = 42.0, color: str | None = None) -> None:
+    """A small coin glyph marking a conversion-fee annotation.
+
+    Drawn rather than shipped as an asset, so it inherits the palette and scales with the
+    figure. One consistent signature for "this crossing costs money" — and the project's
+    name made visible without saying it.
+    """
+    import matplotlib.patches as mpatches
+    c = color or MUTED
+    ax.scatter([x], [y], s=size, facecolors="none", edgecolors=c,
+               linewidths=1.0, zorder=5, clip_on=False)
+    ax.scatter([x], [y], s=size * 0.18, facecolors=c, edgecolors="none",
+               zorder=5, clip_on=False)

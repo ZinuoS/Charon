@@ -450,12 +450,13 @@ a2.set_title("TSM -- 10 years", loc="left", fontsize=10.5,
 for ax in (a1, a2):
     ax.axhline(0.0, color=theme.RULE, linewidth=1.0, linestyle="--")
 
-fig.suptitle("Same one-sided barrier, twenty years apart -- and neither converges",
-             x=0.0, ha="left", fontsize=theme.TITLE_SIZE,
-             color=theme.TEXT, fontfamily=theme.SERIF_STACK)
-theme.source_note(
-    fig, "Nasdaq; EODHD; TWSE; frankfurter/ECB; FRED H.10.",
-    "Shared y-scale. DESCRIPTIVE ONLY -- no claim that SKHY will follow TSM's path.",
+theme.finalize(
+    fig,
+    kicker="comparator",
+    headline="Same one-sided barrier, twenty years apart -- and neither converges",
+    subtitle="Shared y-scale. Descriptive only.",
+    source="Nasdaq; EODHD; TWSE; frankfurter/ECB; FRED H.10.",
+    footnote="DESCRIPTIVE ONLY -- no claim that SKHY will follow TSM's path.",
 )
 fig
 """)

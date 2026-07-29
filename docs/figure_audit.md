@@ -46,7 +46,26 @@ claims drift toward the author's prior unless something checks them against the 
 | missing units | `pct_axis` / `bp_axis` helpers, plus explicit axis labels | `theme.py` |
 | annotation collision | anchor to axes fraction in reserved whitespace, never data coords | figure modules |
 
-**Not yet built:** the `finalize(fig, headline, subtitle, source, footnote)` single-entry
-chrome owner, and the lint test forbidding notebooks from calling `suptitle` /
-`tight_layout` / bare `text()`. Those are the *structural* version of the above and remain
-the highest-value remaining item in Task 1.
+## `finalize()` — built 2026-07-29, and the lint caught a live violation
+
+`theme.finalize(fig, headline, subtitle, source, footnote, kicker)` now places **all**
+figure chrome in one pass. `tests/test_chrome_lint.py` walks the AST of every notebook
+code cell and fails on a direct `suptitle` / `tight_layout` call.
+
+**On its first run the lint failed** — notebook 01's F5 cell called `fig.suptitle`
+directly, precisely the pattern that produced the collisions this audit catalogued. Now
+migrated. The rule is enforced rather than remembered.
+
+**One ordering bug shipped and was caught by its own test.** The first implementation laid
+the top block out *downward*, which makes each element's position depend on what follows
+it — and the kicker overprinted the subtitle. Rebuilt to stack **upward from the axes**, so
+ordering is structural: subtitle sits above the axes, headline above it, kicker on top.
+`test_chrome_stack_orders_kicker_above_headline_above_subtitle` pins it.
+
+Also added: `theme.obol()`, a small drawn coin glyph (two scatters, no image asset)
+marking conversion-fee annotations — one consistent signature for "this crossing costs
+money", and the project's name made visible without saying it.
+
+**Kicker typography:** matplotlib's `Text` has no `letterspacing` property, so tracked caps
+are produced by construction — uppercase joined with thin spaces. A kicker set solid reads
+as a shout rather than a category.
