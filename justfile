@@ -52,6 +52,11 @@ smoke:
 test:
     uv run pytest
 
+# Re-execute the committed notebooks offline and assert they reproduce their outputs
+# (structure + figure pixels). Skips cleanly where the D1/D6 payloads are not ingested.
+notebook:
+    uv run pytest tests/test_notebook_reexecution.py -v
+
 # ---------------------------------------------------------------- artifacts
 
 # The 24x34in poster (5.2) and the 1200x600 social card, both palettes.
