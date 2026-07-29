@@ -21,6 +21,19 @@ cannot recur, never inline in a notebook.
 
 **Open defects: 1 (low severity).**
 
+### Migration to `finalize` — complete for G1/G2/G4
+
+All three now route every chrome element through `theme.finalize`, with a kicker each
+(`BARRIER STRUCTURE`, `PLUMBING`, `RISK`). Zero legacy `headline` / `multiples_headline` /
+`source_note` calls remain in `pipeline/viz/figures.py`, so the collision classes cannot
+reappear through those paths.
+
+The migration surfaced one further collision: G1's deposit-agreement quote had been parked
+at 0.88 axes-fraction, which the newly-placed chrome and the dashed ceiling both now
+occupy. Moved to the lower-right — the only quadrant free of the path, both barrier rules
+and their labels. Recorded because it is the pattern the audit keeps finding: annotations
+anchored to *whatever was empty at the time* break as soon as anything else moves.
+
 ## The one that mattered
 
 The G4 headline was **wrong, and wrong in the direction that flattered the thesis**. The

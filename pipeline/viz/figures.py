@@ -71,11 +71,17 @@ def g1_barrier_anatomy(pi: pd.Series, events: list[dict] | None = None, fee_pct:
     theme.pct_axis(ax)
     ax.set_ylim(min(-0.03, float(pi.min()) - 0.04), top * 1.16)
 
-    theme.headline(
-        ax,
-        "The premium has a floor that works and a ceiling that is somebody's decision",
-        "SKHY vs 000660.KS close-to-close. The asymmetry is structural, not incidental: "
-        "one direction is a holder's right, the other requires the issuer's consent.",
+    theme.finalize(
+        fig,
+        kicker="barrier structure",
+        headline="The premium has a floor that works and a ceiling that is somebody's decision",
+        subtitle="SKHY vs 000660.KS close-to-close. The asymmetry is structural, not incidental: "
+                 "one direction is a holder's right, the other requires the issuer's consent.",
+        source="Nasdaq (SKHY); EODHD (000660.KO); frankfurter/ECB. Barrier language: "
+               "SEC 424B4 and Deposit Agreement F-6 Ex. 99(a).",
+        footnote="pi = P_ADR * FX / (0.1 * P_local) - 1, raw closes. STALE: KRX closes "
+                 "15:30 KST, Nasdaq 16:00 ET - 13.5h apart, so each point pairs "
+                 "non-contemporaneous legs.",
     )
     theme.label_line_end(ax, pi.index[-1], pi.values[-1], "SKHY / 000660", theme.INK)
     if events:
@@ -84,7 +90,8 @@ def g1_barrier_anatomy(pi: pd.Series, events: list[dict] | None = None, fee_pct:
             "skhy_q2_earnings": "Q2 earnings"}, y_frac=0.62)
 
     # Sits in the empty upper-right quadrant: anywhere lower collides with the floor rule.
-    ax.annotate(DEPOSIT_QUOTE, xy=(0.985, 0.88), xycoords="axes fraction",
+    # Lower-right: the only quadrant free of the path, both barrier rules and the labels.
+    ax.annotate(DEPOSIT_QUOTE, xy=(0.985, 0.17), xycoords="axes fraction",
                 fontsize=theme.NOTE_SIZE - 0.5, color=theme.MUTED, ha="right", va="top",
                 style="italic", fontfamily=theme.SERIF_STACK)
     theme.thin_date_ticks(ax, 6)
@@ -134,8 +141,14 @@ def g2_plumbing_map():
     ax.text(5.05, 3.40, "D5 observable — capped programme headroom: 0",
             ha="center", fontsize=7.4, color=theme.MUTED, fontfamily=theme.SERIF_STACK)
 
-    theme.headline(ax, "One direction is a right; the other is a permission",
-                   "Why the classic create-to-arbitrage trade is unavailable here.")
+    theme.finalize(
+        fig,
+        kicker="plumbing",
+        headline="One direction is a right; the other is a permission",
+        subtitle="Why the classic create-to-arbitrage trade is unavailable here.",
+        source="SEC 424B4; Deposit Agreement F-6 Ex. 99(a); 17 CFR 239.36(a); 6-K 2026-07-15.",
+        footnote="Solid = barrier that operates mechanically. Long-dash = discretionary.",
+    )
     ax.annotate(DEPOSIT_QUOTE, xy=(0.5, 0.02), xycoords="axes fraction",
                 fontsize=theme.NOTE_SIZE - 0.5, color=theme.MUTED, ha="center", va="bottom",
                 style="italic", fontfamily=theme.SERIF_STACK)
@@ -199,8 +212,13 @@ def g4_asymmetry(pi_tsm: pd.Series, pi_skhy: pd.Series):
     theme.pct_axis(b)
     b.xaxis.set_major_formatter(theme.mpl.ticker.FuncFormatter(lambda v, _: f"{v:.0%}"))
 
-    theme.multiples_headline(
-        fig, "This is relative value against a one-sided barrier — not arbitrage",
-        "Left: conditional next-day change by starting-level quintile, TSM, 2,328 days. "
-        "Right: what the convergence expression actually pays.")
+    theme.finalize(
+        fig,
+        kicker="risk",
+        headline="This is relative value against a one-sided barrier - not arbitrage",
+        subtitle="Left: conditional next-day change by starting-level quintile, TSM, "
+                 "2,328 days. Right: what the convergence expression actually pays.",
+        source="Nasdaq; TWSE; EODHD; FRED H.10; frankfurter/ECB. Repo-computed.",
+        footnote="The excursion marked on the right is realized, not hypothetical.",
+    )
     return fig, axes
