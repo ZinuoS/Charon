@@ -1099,3 +1099,24 @@ question answered by the vendor, or a different India source approved.
 source: eodhd_india
 approved: TODO(ash)          # NOT AVAILABLE on the current tier — evidence above
 ```
+
+## Asian-market alternatives probed 2026-07-29 — all closed
+
+Asked to find another route to the Indian local legs. Four evaluated, none usable:
+
+| Route | Result | Basis |
+|---|---|---|
+| **Yahoo** (`INFY.NS`, `ICICIBANK.NS`) | ❌ **HTTP 429** on every symbol including the `AAPL` control | IP-level throttle, persistent across many hours and multiple sessions. Not a coverage problem — Yahoo does list both — but the block has outlived every patient retry attempted |
+| **Current keyed vendor** | ❌ **404 Ticker Not Found** on 5 symbol forms; NSE and BSE absent from the 70 exchanges the tier exposes | `RELIANCE.NSE` failing rules out symbology (see above) |
+| **NSE India direct** | ❌ **bot-challenge** | `robots.txt` is permissive (`Allow: /`, only `/market-data-test` disallowed), but `api/historical/cm/equity` returns an HTML interstitial marked `noindex, nofollow` instead of JSON. **A challenge is a refusal.** Not routed around |
+| **Stooq** | ❌ JS browser-verification challenge | Established earlier; same class |
+
+**The remaining routes all require an account only the author can open:** the vendor
+entitlement question (one support email, evidence now assembled), or a keyed alternative
+with confirmed NSE coverage — Twelve Data lists `XKRX`/India but gates non-US exchanges
+behind a paid tier.
+
+**Assessment.** This is no longer a technical problem and further probing has negative
+expected value. Every free, terms-clean route has been tried and documented. The
+`two_way_headroom` regime class stays an empty labelled panel until an account decision is
+made.
