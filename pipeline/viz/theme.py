@@ -173,27 +173,9 @@ NOTE_SIZE = 7.5
 # like; deriving from the anchor makes that impossible by construction.
 # ================================================================================
 
-def _to_rgb(hex_color: str) -> tuple[float, float, float]:
-    h = hex_color.lstrip("#")
-    return tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+from matplotlib.colors import to_hex as _to_hex, to_rgb as _to_rgb
 
 
-def _to_hex(rgb) -> str:
-    return "#" + "".join(f"{max(0, min(255, round(c * 255))):02x}" for c in rgb)
-
-
-def sequential_ramp(meaning: str, n: int = 7, light: float = 0.88) -> list[str]:
-    """n colours from near-white to the semantic anchor. For density/heatmaps."""
-    anchor = SEMANTIC[meaning]
-    return [_ramp(anchor, light - (light + 0.15) * i / max(1, n - 1)) for i in range(n)]
-
-
-def diverging_ramp(low: str = "fungible", high: str = "constrained", n: int = 9) -> list[str]:
-    """Two semantic anchors through a near-neutral midpoint. Odd n keeps the midpoint exact."""
-    half = n // 2
-    lo = [_ramp(SEMANTIC[low], 0.80 - 0.80 * i / max(1, half)) for i in range(half)][::-1]
-    hi = [_ramp(SEMANTIC[high], 0.80 - 0.80 * i / max(1, half)) for i in range(half)]
-    return lo[::-1] + ["#f2f0ec"] + hi[::-1]
 
 
 #: Deuteranope simulation. Brettel/Vienot-style linear approximation in linear-RGB, which is
@@ -462,13 +444,6 @@ def small_multiples(n: int, height: float = 4.4, sharey: bool = True):
         ax.tick_params(labelsize=8)
     return fig, axes
 
-
-def multiples_headline(fig, finding: str, subtitle: str) -> None:
-    """Headline block above a small-multiples row, with the layout rect reserved."""
-    fig.suptitle(finding, x=0.0, y=1.06, ha="left", fontsize=TITLE_SIZE,
-                 color=TEXT, fontfamily=SERIF_STACK)
-    fig.text(0.0, 1.00, subtitle, fontsize=SUBTITLE_SIZE, color=MUTED,
-             ha="left", va="top", fontfamily=SERIF_STACK)
 
 
 def thin_date_ticks(ax, max_ticks: int = 5) -> None:

@@ -106,26 +106,3 @@ class TestSemanticConstancy:
         assert theme.MOSS == theme.SEMANTIC["fungible"]
         assert theme.GRAY == theme.SEMANTIC["context"]
 
-
-class TestDerivedRamps:
-    def test_sequential_ramp_ends_at_its_anchor_family(self):
-        ramp = theme.sequential_ramp("constrained", 6)
-        assert len(ramp) == 6
-        lightness = [theme._lab(c)[0] for c in ramp]
-        assert lightness == sorted(lightness, reverse=True), "ramp must run light -> dark"
-
-    def test_diverging_ramp_is_symmetric_with_neutral_midpoint(self):
-        ramp = theme.diverging_ramp(n=9)
-        assert len(ramp) == 9
-        mid = theme._lab(ramp[4])
-        assert abs(mid[1]) < 6 and abs(mid[2]) < 8, "midpoint should be near-neutral"
-
-    def test_ramps_are_generated_not_hardcoded(self):
-        """Changing an anchor must move the ramp, or the ramp is not derived."""
-        original = theme.SEMANTIC["constrained"]
-        before = theme.sequential_ramp("constrained", 5)
-        theme.SEMANTIC["constrained"] = theme.OKABE_ITO["sky_blue"]
-        try:
-            assert theme.sequential_ramp("constrained", 5) != before
-        finally:
-            theme.SEMANTIC["constrained"] = original

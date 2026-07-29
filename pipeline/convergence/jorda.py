@@ -471,3 +471,144 @@ def metrics_table(results: dict[str, ConvergenceResult], horizons=(1, 5, 20)) ->
     if not df.empty:
         df["PROVISIONAL"] = "pending taxonomy ratification"
     return df
+
+
+# ================================================================================
+# S4 — the per-regime metrics table.
+#
+# RMSE, R-squared and sign hit rate per regime class and per horizon, out of fold.
+#
+# No new model. A Jordà local projection at horizon h ALREADY IS a forecast of pi_{t+h}
+# from pi_t, so the errors the table wants fall straight out of it -- the only thing
+# `estimate_regime` lacks is out-of-sample evaluation, because it fits on the whole pooled
+# series. So this reuses that fit under the validation layer's existing walk-forward
+# splitter and collects out-of-fold predictions. Nothing else is required.
+#
+# In particular M2 is NOT required, and would have nothing to learn: the regime label is
+# assigned from a documented filing (docs/regime_taxonomy.md), so it is an INPUT here, not
+# something to estimate. A classifier predicting a label already fixed by a deposit
+# agreement is a model fitted to its own answer key.
+# ================================================================================
+
+_PAIR_OF_SERIES: list[str] = []      # order matches _regime_series() insertion order
+
+TABLE_HORIZONS = (1, 5, 20, 60)   # named constant; short end is where coefficients are identified
+
+
+def _oof_predictions(pi_series: list[pd.Series], h: int, n_splits: int = 5,
+                     extra: list[pd.Series] | None = None, use_extra: bool = True
+                     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Out-of-fold (actual, predicted) for pi_{t+h} ~ pi_t, pooled across a regime's pairs.
+
+    Embargo = h. Training labels overlap the test block by h periods, so without it the
+    fit sees its own test window through the label and the metrics come out flattering.
+    """
+    from pipeline.validation.splitters import expanding_walk_forward
+
+    acts, preds, levels = [], [], []
+    for idx, pi in enumerate(pi_series):
+        cols = {"x": pi, "y": pi.shift(-h)}
+        if extra:
+            cols["z"] = extra[idx]           # aligned even when NOT used as a feature
+        df = pd.concat(cols, axis=1).dropna()
+        if len(df) < 60:
+            continue
+        feats = ["x"] + (["z"] if (extra and use_extra) else [])
+        X = df[feats].to_numpy(float)
+        y = df["y"].to_numpy(float)
+        for split in expanding_walk_forward(len(df), n_splits=n_splits, embargo=h):
+            tr, te = split.train, split.test
+            if len(tr) < 30 or len(te) == 0:
+                continue
+            # Train-only centring: fitting the mean on the full sample is the exact leak
+            # pipeline.validation.splitters.assert_scaler_fitted_on_train_only exists to catch.
+            mu_x, mu_y = X[tr].mean(axis=0), y[tr].mean()
+            A = X[tr] - mu_x
+            beta = np.linalg.solve(A.T @ A + RIDGE_LAMBDA * np.eye(A.shape[1]), A.T @ (y[tr] - mu_y))
+            preds.append((X[te] - mu_x) @ beta + mu_y)
+            acts.append(y[te])
+            levels.append(X[te, 0])          # pi_t, for sign-of-change scoring
+    if not acts:
+        return np.array([]), np.array([]), np.array([])
+    return np.concatenate(acts), np.concatenate(preds), np.concatenate(levels)
+
+
+def _score(actual: np.ndarray, predicted: np.ndarray, level: np.ndarray) -> dict:
+    """RMSE, R-squared and sign hit rate. Sign is scored on the CHANGE from today's level.
+
+    Scoring the sign of the level would report ~100% for a premium that is almost always
+    positive -- a number that says nothing about the forecast. The direction that matters is
+    whether the premium widens or narrows from here.
+    """
+    if len(actual) == 0:
+        return {"n": 0, "rmse": None, "r2": None, "hit_rate": None}
+    err = actual - predicted
+    ss_tot = ((actual - actual.mean()) ** 2).sum()
+    d_act, d_pred = actual - level, predicted - level
+    move = d_act != 0
+    return {
+        "n": int(len(actual)),
+        "rmse": float(np.sqrt((err ** 2).mean())),
+        "r2": float(1 - (err ** 2).sum() / ss_tot) if ss_tot else None,
+        "hit_rate": float((np.sign(d_act[move]) == np.sign(d_pred[move])).mean()) if move.any() else None,
+    }
+
+
+def _fx_trend(pair: str, window: int = 20) -> pd.Series:
+    """M6, minimal: the pair's OWN FX trend. One feature, not a family."""
+    from pipeline.ingest.registry import PAIRS
+    from pipeline.measurement.premium import DEFAULT_SOURCE, PAIR_SOURCE, _load_close
+    spec = next(p for p in PAIRS if p.pair_id == pair)
+    fx = _load_close(PAIR_SOURCE.get(pair, DEFAULT_SOURCE), spec.fx)
+    return (fx / fx.shift(window) - 1.0)
+
+
+def _regime_series() -> dict[str, list[pd.Series]]:
+    from pipeline.measurement.premium import build_all_variants
+    from pipeline.validation.splitters import assert_no_forward_test_instrument
+
+    out: dict[str, list[pd.Series]] = {}
+    fitted = []
+    for pair, regime in REGIME_OF_PAIR.items():
+        if pair in FORWARD_TEST_PAIRS:
+            continue
+        out.setdefault(regime, []).append(build_all_variants(pair)[0].series)
+        _PAIR_OF_SERIES.append(pair)
+        fitted.append(pair)
+    assert_no_forward_test_instrument(fitted)      # structural guard: no SKHY in any fit
+    return out
+
+
+def s4_metrics_table(horizons=TABLE_HORIZONS, with_macro: bool = False) -> pd.DataFrame:
+    """The S4 deliverable. Per regime class x horizon, out of fold, pooled row last."""
+    _PAIR_OF_SERIES.clear()
+    by_regime = _regime_series()
+    # Alignment is ALWAYS on the macro column so both arms of the ablation see one sample;
+    # `use_extra` alone decides whether it is a feature.
+    fx_of = {p: _fx_trend(p) for p in _PAIR_OF_SERIES}
+    pairs_by_regime, i = {}, 0
+    for regime in sorted(by_regime, key=lambda r: list(by_regime).index(r)):
+        pairs_by_regime[regime] = _PAIR_OF_SERIES[i:i + len(by_regime[regime])]
+        i += len(by_regime[regime])
+
+    rows = []
+    for regime in sorted(by_regime):
+        for h in horizons:
+            series = by_regime[regime]
+            extra = [fx_of[p].reindex(s.index) for p, s in zip(pairs_by_regime[regime], series)]
+            rows.append({"regime": regime, "horizon": h,
+                         **_score(*_oof_predictions(series, h, extra=extra,
+                                                    use_extra=with_macro))})
+    # Pooled LAST and labelled, because a pooled row read as a regime row is the single
+    # easiest way to misreport a per-regime result.
+    allser = [s for v in by_regime.values() for s in v]
+    allfx = [fx_of[p].reindex(s.index) for p, s in zip(_PAIR_OF_SERIES, allser)]
+    for h in horizons:
+        rows.append({"regime": "POOLED (all classes)", "horizon": h,
+                     **_score(*_oof_predictions(allser, h, extra=allfx,
+                                                use_extra=with_macro))})
+    df = pd.DataFrame(rows)
+    df["PROVISIONAL"] = "panel: one regulator (constrained), one country (control)"
+    return df
+
+

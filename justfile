@@ -63,3 +63,9 @@ clean-derived:
 # The hard gate. Nothing downstream is trustworthy while this is red.
 validate:
     uv run python -m scripts.validate
+
+# ---------------------------------------------------------------- S4
+
+# The per-regime metrics table. Regenerates from landed data; no network.
+s4:
+    uv run python -m scripts.s4_table
