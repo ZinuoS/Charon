@@ -126,22 +126,35 @@ class TestFrozenMode:
         ]
         assert not leftovers, "frozen calls.yaml still contains TODO(ash):\n" + "\n".join(leftovers)
 
-    def test_every_hypothesis_is_frozen(self, calls, is_frozen):
+    def test_every_hypothesis_has_a_freeze_class_and_consistent_status(self, calls, is_frozen):
+        """Post-freeze, every call carries a freeze_class, and status matches it:
+        Class C/P => frozen, Class X => exploratory. The minimal-freeze design
+        (preregistration/minimal_freeze_checklist.md) registers only what is genuinely
+        pre-registrable and marks the rest exploratory rather than forcing a value."""
         if not is_frozen:
             pytest.skip("file is still a draft")
         for h in HYPOTHESES:
-            assert calls[h]["status"] == "frozen", f"{h}.status is {calls[h]['status']!r}, expected 'frozen'"
+            fc = calls[h].get("freeze_class")
+            assert fc in ("C", "P", "X"), f"{h} missing/invalid freeze_class: {fc!r}"
+            if fc in ("C", "P"):
+                assert calls[h]["status"] == "frozen", f"{h} is Class {fc} but status {calls[h]['status']!r}"
+            else:
+                assert calls[h]["status"] == "exploratory", f"{h} is Class X but status {calls[h]['status']!r}"
 
     def test_commit_note_written(self, calls, is_frozen):
         if not is_frozen:
             pytest.skip("file is still a draft")
         assert calls["commit_note"], "frozen file needs a commit_note"
 
-    def test_resolution_dates_parse(self, calls, is_frozen):
+    def test_frozen_call_resolution_dates_parse(self, calls, is_frozen):
+        """Only Class C/P (registered) calls need a parseable resolution date; Class X
+        (exploratory) calls carry a label, not a date."""
         if not is_frozen:
             pytest.skip("file is still a draft")
         import datetime
         for h in HYPOTHESES:
+            if calls[h].get("freeze_class") not in ("C", "P"):
+                continue
             value = calls[h]["resolution_date"]
             assert isinstance(value, (datetime.date, datetime.datetime)), (
                 f"{h}.resolution_date must be a YAML date, got {value!r}"

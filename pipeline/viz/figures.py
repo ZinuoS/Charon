@@ -222,3 +222,37 @@ def g4_asymmetry(pi_tsm: pd.Series, pi_skhy: pd.Series):
         footnote="The excursion marked on the right is realized, not hypothetical.",
     )
     return fig, axes
+
+
+def g_convergence(results: dict):
+    """Persistence ρ_h by horizon, per regime class — the months-vs-days contrast drawn.
+
+    PROVISIONAL: regime labels are the proposed taxonomy. The chart's honesty is that the
+    constrained curve stays high across the whole window (no 0.5 crossing → the half-life
+    is an extrapolation, said on the chart), while the fungible control sits at zero.
+    """
+    fig, ax = theme.figure(height=4.8)
+    colors = {"one_way_constrained": theme.CLAY, "fungible": theme.MOSS}
+    for regime, res in results.items():
+        hs = [f.horizon for f in res.horizons]
+        rs = [f.rho for f in res.horizons]
+        c = colors.get(regime, theme.INK)
+        ax.plot(hs, rs, color=c, linewidth=1.8, marker="o", markersize=3)
+        theme.label_line_end(ax, hs[-1], rs[-1], regime.replace("_", " "), c)
+    ax.axhline(0.5, color=theme.RULE, linewidth=1.0, linestyle="--")
+    ax.annotate("ρ = ½  (half-life crossing)", xy=(0.02, 0.5), xycoords=("axes fraction", "data"),
+                xytext=(0, 4), textcoords="offset points", fontsize=theme.NOTE_SIZE,
+                color=theme.MUTED, fontfamily=theme.SERIF_STACK)
+    ax.axhline(0.0, color=theme.RULE, linewidth=0.8)
+    ax.set_ylim(-0.1, 1.05); ax.set_xlabel("horizon (trading days)", fontsize=8, color=theme.MUTED)
+    ax.set_ylabel("premium persistence ρ", fontsize=8, color=theme.MUTED)
+    theme.finalize(
+        fig, kicker="convergence",
+        headline="A barrier-held premium reverts over months; a fungible one, over days",
+        subtitle="Jordà local-projection persistence by horizon, per proposed regime class. "
+                 "The constrained curve never crosses ½ in range — its half-life is extrapolated.",
+        source="Nasdaq; TWSE; EODHD; frankfurter/ECB; FRED. Repo-computed, HAC errors.",
+        footnote="PROVISIONAL — regime labels are the proposed taxonomy, pending ratification. "
+                 "SKHY excluded from all fits (forward test).",
+    )
+    return fig, ax

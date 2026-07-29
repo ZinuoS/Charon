@@ -146,7 +146,7 @@ class TestNotebookFreshness:
     looked like a deliberate choice rather than a break.
     """
 
-    NOTEBOOKS = ["00_executive_pitch", "02_premium_anatomy"]
+    NOTEBOOKS = ["00_executive_pitch", "02_premium_anatomy", "05_hypothesis_engines"]
 
     @pytest.mark.parametrize("name", NOTEBOOKS)
     def test_notebook_is_executed_with_outputs(self, name):

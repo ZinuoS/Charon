@@ -1,28 +1,20 @@
 # charon — pre-registration freeze (README §9, stage S0)
 #
 # ==============================================================================
-#  THIS FILE IS A TEMPLATE. IT IS NOT YET FROZEN.
+#  FROZEN 2026-07-29. Minimal Class C freeze: H5 is registered (freeze_class C);
+#  H1-H4 are exploratory (freeze_class X) and are NOT pre-registered calls.
 #
-#  Every `TODO(ash)` below is a decision reserved to the author (README §11:
-#  "Curation and threshold decisions are the author's alone; analysis sessions may
-#  propose, never ratify"). No analysis session may fill one in.
-#
-#  Freeze procedure:
-#    1. Replace every TODO(ash) with a value.
-#    2. Set `frozen_at` to the UTC timestamp of the freeze and write `commit_note`.
-#    3. Set each hypothesis's `status` to `frozen`.
-#    4. Commit and tag BEFORE 2026-07-29 09:00 KST (2026-07-28 20:00 ET).
-#
-#  After the freeze commit this file is never edited. Corrections go to
-#  `preregistration/amendments/` as dated, append-only files.
+#  THIS FILE IS NOW APPEND-ONLY. It is never edited after the freeze commit;
+#  corrections go to `preregistration/amendments/` as dated, append-only files.
+#  See preregistration/amendments/001_partitioned_freeze.md for the partition.
 # ==============================================================================
 
 schema_version: 1
 
 # Set at freeze time. `frozen_at` being null is what marks this file as a draft, and
 # tests/test_preregistration.py asserts that a frozen file has no TODOs left in it.
-frozen_at: null          # e.g. "2026-07-28T23:30:00+00:00"
-commit_note: null        # e.g. "S0 freeze ahead of 2026-07-29 KRX open; SKHY forward test opens."
+frozen_at: "2026-07-29T05:20:00+00:00"
+commit_note: "Minimal Class C freeze: H5 only (option-a criterion, 4 branches). H1-H4 exploratory. Class P empty (no prior commit). Amendment 001 partitions the post-release ledger."
 
 # Rules that bind every hypothesis below. Stated once so no engine can quietly adopt
 # looser ones later.
@@ -60,9 +52,9 @@ h1_term_structure:
     relative to the model half-life. Trade: long ADR forward / short local forward at
     front expiries, reversed at the back, FX-forwarded. Trades convergence speed, not
     level, and requires no conversion.
-  threshold: TODO(ash)              # frozen decision level — the author's alone
-  resolution_date: TODO(ash)
-  resolution_criterion: TODO(ash)
+  threshold: EXPLORATORY (not registered)              # frozen decision level — the author's alone
+  resolution_date: EXPLORATORY
+  resolution_criterion: EXPLORATORY — analysed but not a pre-registered call
   data_requirements:
     - D1   # premium/basis series, both variants
     - D2   # USDKRW forwards/NDF for the FX_fwd leg
@@ -75,7 +67,8 @@ h1_term_structure:
   known_blockers:
     - "KRX single-stock futures/options on 000660: public source not yet confirmed (docs/data_sources.md)."
     - "USDKRW NDF curve: no clean free public source identified in session 1."
-  status: frozen_pending_signature
+  freeze_class: X
+  status: exploratory
 
 # ------------------------------------------------------------------------------
 # H2 — Synthetic local access via the index
@@ -88,9 +81,9 @@ h2_index_access:
   direction: >-
     KOSPI200 futures basis is rich to fair value, and implied index correlation is
     elevated, on premium-widening days.
-  threshold: TODO(ash)
-  resolution_date: TODO(ash)
-  resolution_criterion: TODO(ash)
+  threshold: EXPLORATORY (not registered)
+  resolution_date: EXPLORATORY
+  resolution_criterion: EXPLORATORY — analysed but not a pre-registered call
   data_requirements:
     - D1   # pi innovations
     - D2   # FX, for carry fair-value controls
@@ -101,7 +94,8 @@ h2_index_access:
     control. Dual use: the night-session futures leg also powers D1(b).
   known_blockers:
     - "KOSPI200 futures settlement series and Eurex night-session prices: public source not yet confirmed."
-  status: frozen_pending_signature
+  freeze_class: X
+  status: exploratory
 
 # ------------------------------------------------------------------------------
 # H3 — LETF cross-market close-imbalance loop
@@ -115,9 +109,9 @@ h3_letf_loop:
   direction: >-
     pi changes over each close window partially revert at the other market's open,
     scaled by estimated rebalance notional (D4).
-  threshold: TODO(ash)
-  resolution_date: TODO(ash)
-  resolution_criterion: TODO(ash)
+  threshold: EXPLORATORY (not registered)
+  resolution_date: EXPLORATORY
+  resolution_criterion: EXPLORATORY — analysed but not a pre-registered call
   data_requirements:
     - D1   # pi at both closes and both opens
     - D4   # LETF AUM + NAV, for the rebalance-notional estimate
@@ -130,7 +124,8 @@ h3_letf_loop:
     - "D4 missing AUM => observation weight 0. Never imputed (README §4 D4)."
   known_blockers:
     - "Korean 2x single-stock ETF AUM/NAV: source and puller design deferred to session 2."
-  status: frozen_pending_signature
+  freeze_class: X
+  status: exploratory
 
 # ------------------------------------------------------------------------------
 # H4 — Volatility decomposition RV
@@ -145,9 +140,9 @@ h4_vol_decomposition:
     If US options price SKHY IV off local history or Micron comps, premium-vol is being
     sold for free: long SKHY straddles / short 000660 straddles plus USDKRW vol,
     ratio-weighted by the decomposition.
-  threshold: TODO(ash)
-  resolution_date: TODO(ash)
-  resolution_criterion: TODO(ash)
+  threshold: EXPLORATORY (not registered)
+  resolution_date: EXPLORATORY
+  resolution_criterion: EXPLORATORY — analysed but not a pre-registered call
   data_requirements:
     - D1   # realized variance shares of ADR, local, FX and pi
     - D2   # USDKRW implied vol
@@ -159,7 +154,8 @@ h4_vol_decomposition:
   known_blockers:
     - "SKHY and 000660 option surfaces: public source not yet confirmed."
     - "USDKRW implied vol: no clean free public source identified in session 1."
-  status: frozen_pending_signature
+  freeze_class: X
+  status: exploratory
 
 # ------------------------------------------------------------------------------
 # H5 — Quota-recycling flow signal (barrier-state monitor)
@@ -172,9 +168,12 @@ h5_quota_ledger:
   direction: >-
     Premium-compression episodes are preceded by headroom creation, with a lag set by
     settlement plumbing.
-  threshold: TODO(ash)
-  resolution_date: TODO(ash)
-  resolution_criterion: TODO(ash)
+  threshold: >-
+    Headroom creation is a day-over-day increase in KSD DR전환가능주식수량 for ISIN US78392B2060 (the 2.5%-capped ADR programme, NOT the legacy US78392B1070) of at least 0.25% of that programme ceiling. Premium compression is a fall in close-to-close pi of at least 3 percentage points over any 5-trading-day window. Directional: headroom creation PRECEDES compression.
+  resolution_date: 2026-10-31
+  resolution_criterion: >-
+    Scoped to headroom creation CONDITIONAL ON DEPOSITS BEING PERMITTED (the SEIBro field measures issuance-ceiling headroom, not the operative consent gate; these can diverge). CONFIRMED if from 2026-07-29 to the resolution date at least two distinct headroom-creation episodes are each followed within 5 trading days by a compression episode, AND at least one deposit is observed to clear on US78392B2060, AND compressions not preceded by headroom creation do not outnumber those that are. REFUTED if episodes and an observed deposit occur but compressions do not follow at above that rate. INDETERMINATE if headroom moves but no deposit clears (consent-state unobserved, mechanism never demonstrably engaged). UNTESTABLE if fewer than two headroom-creation episodes occur (incl. US78392B2060 pinned at 0). INDETERMINATE and UNTESTABLE are recorded outcomes, not failures.
+  freeze_class: C
   data_requirements:
     - D1   # pi, the compression target
     - D5   # DR outstanding from depositary reporting; KSD notices
@@ -190,4 +189,4 @@ h5_quota_ledger:
       the confound stated (README §5, docs/confounds.md).
   known_blockers:
     - "DR outstanding / KSD notices: source and puller design deferred to session 2."
-  status: frozen_pending_signature
+  status: frozen

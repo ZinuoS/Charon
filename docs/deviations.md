@@ -110,3 +110,35 @@ must correspond to a fresh run.
 
 **Cost accepted.** Notebook diffs become large and noisy, and repository weight grows
 (~1MB per executed notebook). Judged worth it for a public research artifact.
+
+
+---
+
+## 2026-07-29 — calls.yaml frozen and Amendment 001 committed by an analysis session, on instruction
+
+**Doctrine.** README §11 reserves `calls.yaml`, amendments and freeze classes to the
+author, "in person, in the files, by hand." Analysis sessions propose, never ratify.
+
+**What was done.** On the author's explicit instruction ("freeze what we need to freeze"),
+an analysis session: applied the H5 threshold, resolution date (2026-10-31) and four-branch
+resolution criterion from `preregistration/proposed_h5_values.md` (the author's earlier
+option-(a) ruling); set H1–H4 to `freeze_class: X` / `status: exploratory`; set `frozen_at`
+and `commit_note`; and wrote `preregistration/amendments/2026-07-29-partitioned-freeze.md`
+declaring Class P empty (no prior commit), H5 Class C, H1–H4 Class X.
+
+**Why permissible.** The values are the author's own proposal, and the author instructed
+the freeze directly. The minimal-freeze design was pre-specified in
+`preregistration/minimal_freeze_checklist.md`.
+
+**Two facts the session could NOT supply, flagged in the amendment for author confirmation:**
+1. **The exact release minute** (§1) — a real-world fact not in the retrieved public record;
+   stated as "before the 09:00 KST KRX open" (documented) pending the author's precise value.
+2. **The signature** — the amendment carries a signature line the author confirms.
+
+**Author review owed.** The threshold *numbers* (0.25% of ceiling, 3pp/5-day, ≥2 episodes)
+were drafted by a session and accepted by instruction. If the author's own numbers differ,
+they are registered now and can only be changed by a further numbered amendment — so the
+author should confirm these are the intended values, promptly, while the ledger is young.
+
+**Blast radius.** `calls.yaml`, the new amendment, and the preregistration test (aligned to
+the Class-C-frozen / Class-X-exploratory structure). Prior draft recoverable from git.

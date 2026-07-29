@@ -23,7 +23,7 @@ material to do it.
 | **02** | [`02_premium_anatomy.ipynb`](02_premium_anatomy.ipynb) | How π is constructed and how much of it is measurement rather than economics | ✅ live, 8 figures |
 | 03 | `03_comparator_panel.ipynb` | The training universe: three regimes, corporate-action QA, calendar policy | not written — needs the taxonomy ratified |
 | 04 | `04_regimes_convergence.ipynb` | M2 regimes and M3 convergence dynamics | not written — models are quarantined pending taxonomy ratification |
-| 05 | `05_hypothesis_engines.ipynb` | H1–H5, per-engine status and results | not written — H4 and H5 engines exist; H1/H2/H3 blocked on data |
+| **05** | [`05_hypothesis_engines.ipynb`](05_hypothesis_engines.ipynb) | H1–H5 status + results: H5 monitor (registered), H4 variance, M3 convergence metrics table | ✅ live, 4 figures |
 
 Numbers are reserved even where the notebook does not exist yet, so the sequence stays
 stable as it fills in. **00 and 02 were previously numbered 00_pitch and
