@@ -70,45 +70,25 @@ class SnapshotSpec:
     body: Callable[[], dict] | None = None
 
 
+# TIGER (tiger_issuer_disclosure) is APPROVED but ABSENT from the capture set:
+# its per-product data URL was not resolved. tigeretf.com redirects to
+# investments.miraeasset.com/tigeretf/, a JS SPA whose fund data arrives via XHR that
+# was not reverse-engineered in the Cap-0 budget (product/detail/view/list/all paths all
+# 404). Capturing the 1KB redirect shell was stopped rather than continued, because a
+# phantom series could silently enter H3's two-issuer flow proxy. Consequence recorded in
+# docs/gate_reports/S4.md: H3 runs on the KODEX single-issuer proxy until this resolves.
+# CORRECTION (2026-07-29): both issuer pages are JS SPAs carrying NO fund data in static
+# HTML. An earlier commit (6acd199) claimed the KODEX capture "carries a NAV token, an
+# embedded timestamp and large integers" as evidence of data. All three were misreads:
+# 하이닉스 is in a marketing blurb, "NAV" is a JS label, 20260728070300 is a build stamp,
+# and 253039467 is a Google Analytics ID (UA-253039467-1). data-bearing check (순자산총액 /
+# 기준가격) is False. Static HTTP capture does not yield AUM from either issuer -- both need
+# a browser to run the SPA and capture its XHR, or the JSON endpoint identified directly.
+# The only D4 route verified to carry AUM data is the Naver JSON API, which is terms-
+# withheld. H3 has NO landed AUM input; see docs/gate_reports/S4.md.
+ABSENT_UNRESOLVED = ("kodex_issuer_disclosure", "tiger_issuer_disclosure")
+
 SNAPSHOTS: tuple[SnapshotSpec, ...] = (
-    SnapshotSpec(
-        source_id="kodex_issuer_disclosure",
-        series_id="kodex_skhynix_2x",
-        url="https://www.kodex.com/kr/etf/0193T0",
-        method="GET",
-        native_timezone="Asia/Seoul",
-        availability_lag=(
-            "page carries an embedded timestamp (observed 20260728070300). NAV is struck "
-            "against the KRX close 15:30 KST. TODO(ash): confirm the strike time and "
-            "whether the embedded stamp is publication or as-of."
-        ),
-        units="TODO — page carries a NAV token and large integers but no explicit 순자산 label; parsing unresolved",
-        encoding="UTF-8",
-        extension="html",
-        rationale=(
-            "D4, issuer disclosure — cleaner provenance than the portal (robots.txt "
-            "allows /etf). KODEX SK하이닉스 2x. CAPTURED BEFORE PARSED, deliberately: the "
-            "AUM series may be snapshot-only, in which case every uncaptured day is lost "
-            "permanently, whereas a parser can be written at leisure against stored bytes."
-        ),
-    ),
-    SnapshotSpec(
-        source_id="tiger_issuer_disclosure",
-        series_id="tiger_etf_index",
-        url="https://investments.miraeasset.com/tigeretf/",
-        method="GET",
-        native_timezone="Asia/Seoul",
-        availability_lag="TODO(ash): unverified. tigeretf.com redirects to investments.miraeasset.com/tigeretf/; the per-product path is still unidentified.",
-        units="TODO — landing page only; the per-product endpoint is unresolved",
-        encoding="UTF-8",
-        extension="html",
-        rationale=(
-            "D4, issuer disclosure (robots.txt allows /tigeretf/). The per-product URL "
-            "pattern was not identified — guessed paths returned 404 — so this captures "
-            "the landing page to start the series and preserve whatever it carries while "
-            "the correct path is found."
-        ),
-    ),
     SnapshotSpec(
         source_id="naver_etf_navlist",
         series_id="naver_etf_navlist",
