@@ -3,6 +3,8 @@
     "data/raw/d1_prices/2026-07-29.2/skhy_adr_daily.csv": "5f623dd5395f161166cb028b301fdca6f5eba33691b987f5c9b78c30ba4d9fe0",
     "data/raw/d1_prices/2026-07-29.2/skhynix_local_daily.csv": "707674aeb9df2477e1e1a715739def2bc2aeca2877cb9113cfe86e1f8d789506",
     "data/raw/d1_prices/2026-07-29.3/skhynix_local_daily.csv": "65d53e70f3125b07620cd7e62ed81dfa0b76e507a1d6e2702d118644065d590d",
+    "data/raw/d1_prices/2026-07-29.4/skhy_adr_daily.csv": "5f623dd5395f161166cb028b301fdca6f5eba33691b987f5c9b78c30ba4d9fe0",
+    "data/raw/d1_prices/2026-07-29.4/skhynix_local_daily.csv": "707674aeb9df2477e1e1a715739def2bc2aeca2877cb9113cfe86e1f8d789506",
     "data/raw/d1_prices/2026-07-29/skhy_adr_daily.csv": "5f623dd5395f161166cb028b301fdca6f5eba33691b987f5c9b78c30ba4d9fe0",
     "data/raw/d1_prices/2026-07-29/skhynix_local_daily.csv": "494283cd53878f4e2d62b581dc7e3d01341da032f69b083a357f34104017aac4",
     "data/raw/d1_prices/2026-07-29/usdkrw_spot_daily.csv": "13315a3ce1805c0146c56188c8a87e1165ff7056980e4dcff4a9a495a6a8ffc0",
@@ -10,5 +12,5 @@
   },
   "history": {},
   "source": "d1_prices",
-  "updated_at_utc": "2026-07-29T20:15:06+00:00"
+  "updated_at_utc": "2026-07-29T22:48:03+00:00"
 }

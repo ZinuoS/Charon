@@ -1,0 +1,38 @@
+{
+  "asset_class": "local_equity",
+  "availability_confirmed": false,
+  "availability_lag": "close 15:30:00 Asia/Seoul + 15min",
+  "availability_note": "KRX regular session closes 15:30 KST; daily bar assumed knowable 15:45 KST. KRX also runs an after-hours single-price session to 18:00 KST which does NOT set the official close. TODO(ash): confirm the daily bar we store is the 15:30 regular-session close and not an after-hours print.",
+  "close_local": "15:30:00",
+  "currency": "KRW",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-29T06:45:00+00:00",
+    "obs_date": "2026-07-29",
+    "observation_ts_utc": "2026-07-29T06:30:00+00:00"
+  },
+  "first_obs_date": "2015-01-02",
+  "last_obs_date": "2026-07-29",
+  "market": "KRX",
+  "native_timezone": "Asia/Seoul",
+  "notes": "SK Hynix common. >=5y history per Task 3.1. UNROUTED: no keyless provider verified. Yahoo is throttled; KRX Open API needs a key + admin approval; Stooq serves a JS bot-challenge; Naver's terms are unreviewed. This is the binding gap \u2014 without the local leg the SKHY premium cannot be computed.",
+  "provider": "eodhd",
+  "provider_chain": [
+    "eodhd",
+    "yahoo_finance"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-07-29T22:48:03+00:00",
+  "request_params": {
+    "fmt": "json",
+    "from": "2015-01-01",
+    "period": "d",
+    "to": "2026-07-29"
+  },
+  "rows": 2840,
+  "series_id": "skhynix_local_daily",
+  "sha256": "707674aeb9df2477e1e1a715739def2bc2aeca2877cb9113cfe86e1f8d789506",
+  "source_url": "https://eodhd.com/api/eod/000660.KO",
+  "symbol": "000660.KS",
+  "transport": "eod_api_v1",
+  "units": "KRW per common share"
+}

@@ -29,8 +29,8 @@ def build(palette: str = "public") -> Path:
 
     top = float(pi.max()) * 1.16
     ax.axhspan(0.0007, top, color=theme.INK, alpha=0.05, zorder=0)
-    ax.axhline(0.0007, color=theme.INK, linewidth=2.0, zorder=2)
-    ax.axhline(top, color=theme.CLAY, linewidth=1.8, linestyle=(0, (9, 5)), zorder=2)
+    ax.axhline(0.0007, color=theme.BARRIER, linewidth=2.0, zorder=2)
+    ax.axhline(top, color=theme.BARRIER, linewidth=1.8, linestyle=(0, (9, 5)), zorder=2)
     ax.plot(pi.index, pi.values, color=theme.INK, linewidth=2.6,
             marker="o", markersize=4.5, zorder=3)
     theme.pct_axis(ax)
@@ -43,11 +43,11 @@ def build(palette: str = "public") -> Path:
 
     ax.annotate("OPEN — cancellation, uncapped", xy=(0.005, 0.0007),
                 xycoords=("axes fraction", "data"), xytext=(0, -14),
-                textcoords="offset points", fontsize=8.5, color=theme.INK,
+                textcoords="offset points", fontsize=8.5, color=theme.BARRIER,
                 fontfamily=theme.SERIF_STACK)
     ax.annotate("DISCRETIONARY — issuance at the Company's determination", xy=(0.005, top),
                 xycoords=("axes fraction", "data"), xytext=(0, 7),
-                textcoords="offset points", fontsize=8.5, color=theme.CLAY,
+                textcoords="offset points", fontsize=8.5, color=theme.BARRIER,
                 fontfamily=theme.SERIF_STACK)
 
     fig.text(0.06, 0.90, "C H A R O N", fontsize=11, color=theme.MUTED,

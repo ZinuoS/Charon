@@ -21,6 +21,10 @@ from pipeline.viz import theme
 
 REPO = Path(__file__).resolve().parents[1]
 FIGURES = REPO / "pipeline" / "viz" / "figures.py"
+#: Every module that draws. The social card was missed by the S17 palette migration and
+#: shipped with the two barriers in DIFFERENT hues -- on the most-viewed artifact in the
+#: repo. Anything that draws is in scope for the semantic lint, not just figures.py.
+DRAWING_MODULES = (FIGURES, REPO / "scripts" / "make_social_card.py")
 
 
 class TestColourVision:
@@ -54,6 +58,15 @@ class TestColourVision:
 
 
 class TestSemanticConstancy:
+    @pytest.mark.parametrize("module", DRAWING_MODULES, ids=lambda p: p.name)
+    def test_barriers_use_one_hue_everywhere(self, module):
+        """Barrier state is encoded by LINESTYLE. A second hue would double-encode it and
+        then disagree with itself the first time a third barrier state appeared."""
+        src = module.read_text()
+        for banned in ("axhline(top, color=theme.CLAY", "axhline(top, color=theme.INK",
+                       "axhline(0.0007, color=theme.INK"):
+            assert banned not in src, f"{module.name}: barrier drawn in a series hue ({banned})"
+
     def test_figures_introduce_no_raw_hex(self):
         """Every colour in a figure must come from the palette. Raw hex is how a hue
         acquires a second meaning."""
