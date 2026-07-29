@@ -302,6 +302,85 @@ would masquerade as a refutation.
 """)
 
 md(r"""
+## 2.5 What the variance decomposition says about the mechanism
+
+The premium's behaviour is not only a level story. Writing returns in logs makes the
+decomposition an identity rather than an approximation —
+
+$$r_{\pi} = r_{ADR} + r_{FX} - r_{local} \quad\Longrightarrow\quad r_{ADR} = r_{local} - r_{FX} + r_{\pi}$$
+
+— so ADR variance decomposes exactly into local, FX and premium variance plus covariances,
+with a residual of zero to floating point. Every term below is measured, none estimated.
+""")
+
+co(r'''
+from hypotheses.h4_vol_decomposition.realized import compare_pairs
+vd = compare_pairs()
+vd[["pair","n","ann_vol_adr_pct","share_local","share_fx","share_pi","share_cov_local_pi","residual"]]
+''')
+
+md(r"""
+**Two results, and the second is the mechanism showing itself.**
+
+*First:* premium variance is **not a small residual**. It is comparable to — for TSM
+slightly exceeding — total ADR variance. A premium that moved as a minor wobble around
+fundamentals would not do that.
+
+*Second, and more interesting:* the covariance between the local leg and the premium is
+**strongly negative in every pair**. That is the premium **absorbing** local moves rather
+than transmitting them. When the Korean line falls, the ADR falls less, and the premium
+widens to take up the difference.
+
+This is what two nearly disjoint participant pools repricing on different information
+looks like in second moments. It also has a direct consequence for anyone considering the
+convergence expression: the premium is *load-bearing*, not incidental — it is where the
+disagreement between the two markets is stored.
+
+**BABA is the control that makes this legible.** Its local share is 0.999 and its
+local-premium covariance share is −0.946: near-total cancellation. For a freely fungible
+pair the premium is mean-reverting noise around parity, contributing variance that is
+almost exactly offset. The barrier-constrained pairs do not look like that.
+
+*A caveat carried, not buried:* SKHY's decomposition rests on **11 return observations**.
+Its annualised ADR volatility of ~184% is a real measurement of a very short window, and
+README §8 is explicit that a sample this size is not validation. **The contrast between
+the pairs is the evidence; the SKHY level is not.**
+
+## 2.6 The barrier-state observable, live
+
+H5's registered observable is maintained as a monitor rather than a signal. Its current
+state, with the scope limit printed as it is on every output:
+""")
+
+co(r'''
+from hypotheses.h5_quota_ledger.monitor import status_report
+print(status_report())
+''')
+
+md(r"""
+**The publication check is the substantive line.** The capped programme has not printed
+since 2026-07-15, which on its own is ambiguous between *"the barrier has not moved"* and
+*"the data feed is silent."* The legacy programme — a different, unconstrained channel,
+carried purely as a control — printed through 2026-07-28. So the feed is live, and the
+capped programme's silence means **the barrier is sealed by observation, not by absence of
+data.**
+
+That distinction is not pedantry: H5's registered criterion has an UNTESTABLE branch that
+fires precisely when headroom never moves, and without the control it would be impossible
+to say whether that branch had been reached.
+
+**The scope limit is the honest part.** This series measures a programme's issuance-ceiling
+headroom — it does **not** measure the operative deposit gate, which additionally requires
+the Company's prior consent against an undisclosed level. Headroom can rise via
+cancellation while deposits remain blocked by consent never granted.
+
+That is why the registered criterion carries an **INDETERMINATE** branch: headroom moved,
+no deposit cleared, consent-state unobserved, mechanism never demonstrably engaged. Without
+it, a never-granted consent would be indistinguishable from a refuted hypothesis — and a
+false refutation is worse than an untestable one, because it looks like a result.
+""")
+
+md(r"""
 ---
 
 # Part 3 — Execution
