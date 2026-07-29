@@ -1,0 +1,38 @@
+{
+  "asset_class": "adr",
+  "availability_confirmed": false,
+  "availability_lag": "close 16:00:00 America/New_York + 15min",
+  "availability_note": "NYSE close 16:00 ET, +15min.",
+  "close_local": "16:00:00",
+  "currency": "USD",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-28T20:15:00+00:00",
+    "obs_date": "2026-07-28",
+    "observation_ts_utc": "2026-07-28T20:00:00+00:00"
+  },
+  "first_obs_date": "2016-07-28",
+  "last_obs_date": "2026-07-28",
+  "market": "NYSE",
+  "native_timezone": "America/New_York",
+  "notes": "",
+  "provider": "nasdaq",
+  "provider_chain": [
+    "nasdaq",
+    "eodhd"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-07-29T02:58:04+00:00",
+  "request_params": {
+    "assetclass": "stocks",
+    "fromdate": "1990-01-01",
+    "limit": "99999",
+    "todate": "2026-07-28"
+  },
+  "rows": 2513,
+  "series_id": "ibn_adr_daily",
+  "sha256": "a0e1ad737c1000e801bf885361fa23f8c0b5c9bd50256d6571c05d3935521313",
+  "source_url": "https://api.nasdaq.com/api/quote/IBN/historical",
+  "symbol": "IBN",
+  "transport": "api_quote_historical",
+  "units": "USD per ADR"
+}

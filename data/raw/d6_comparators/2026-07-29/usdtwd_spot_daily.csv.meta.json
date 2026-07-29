@@ -1,0 +1,38 @@
+{
+  "asset_class": "fx",
+  "availability_confirmed": false,
+  "availability_lag": "close 21:00:00 UTC + 0min",
+  "availability_note": "Yahoo's FX 'daily close' is a snapshot of a 24h OTC market, not an exchange print, and its snapshot instant is not documented. Assumed 21:00 UTC (~17:00 ET), the conventional NY rollover. This matters: the FX leg's snapshot time sits between the KRX close and the Nasdaq close, so it contributes its own asynchronicity term to close-to-close pi (README D1a). TODO(ash): decide whether D1(b) should replace this with a KRW NDF fix (e.g. a 15:30 KST or 16:00 ET fixing) before M1 is built.",
+  "close_local": "21:00:00",
+  "currency": "TWD",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-24T21:00:00+00:00",
+    "obs_date": "2026-07-24",
+    "observation_ts_utc": "2026-07-24T21:00:00+00:00"
+  },
+  "first_obs_date": "1990-01-04",
+  "last_obs_date": "2026-07-24",
+  "market": "OTC FX",
+  "native_timezone": "UTC",
+  "notes": "FRED DEXTAUS is the primary: ECB publishes no TWD, so frankfurter 404s. H.10 noon-New-York fix \u2014 a DOCUMENTED instant, unlike the Yahoo snapshot.",
+  "provider": "fred",
+  "provider_chain": [
+    "fred",
+    "yahoo_finance"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-07-29T01:24:02+00:00",
+  "request_params": {
+    "file_type": "json",
+    "observation_end": "2026-07-28",
+    "observation_start": "1990-01-01",
+    "series_id": "DEXTAUS"
+  },
+  "rows": 9033,
+  "series_id": "usdtwd_spot_daily",
+  "sha256": "cd3a7aec6a4b3cd8a7a5b415d5ad350d0a0ac04b41e88a49e39c989cd0502978",
+  "source_url": "https://api.stlouisfed.org/fred/series/observations",
+  "symbol": "TWD=X",
+  "transport": "fred_observations_v1",
+  "units": "TWD per 1 USD"
+}

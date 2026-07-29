@@ -1,0 +1,23 @@
+{
+  "availability_lag": "TODO(ash): KSD's publication time for the daily capacity figure is unverified. Rows appear to be published on change rather than daily.",
+  "first_obs_date": "2010-03-31",
+  "isin": "US78392B1070",
+  "last_obs_date": "2026-07-28",
+  "native_timezone": "Asia/Seoul",
+  "notes": "Legacy programme, history to 2010, actively moving. NOT the SKHY barrier \u2014 carried as a control that distinguishes 'KSD did not publish' from 'headroom did not move'.",
+  "provider": "ksd_seibro",
+  "pulled_at_utc": "2026-07-29T03:07:11+00:00",
+  "request_params": {
+    "searchCode": "US78392B1070",
+    "txt_code": "US78392B1070",
+    "txt_sch": "\uc5d0\uc2a4\ucf00\uc774\ud558\uc774\ub2c9\uc2a4"
+  },
+  "role": "publication_control",
+  "rows": 1260,
+  "semantics": "Issuance ceiling minus DRs outstanding, per PROGRAMME. Level = barrier state; first difference = creation (consumed) / cancellation (freed).",
+  "series_id": "skhynix_dr_headroom_legacy",
+  "sha256": "bf8fbfedc457ec48aaecc0c199b4832605be9d3930ed32207d30b95a54431bbe",
+  "source_url": "https://m.seibro.or.kr/cnts/ovssec/selectOverSecDRConvPoss.do",
+  "transport": "selectOverSecDRConvPoss",
+  "units": "shares (remaining ordinary shares convertible into DRs \u2014 HEADROOM, not DR outstanding)"
+}

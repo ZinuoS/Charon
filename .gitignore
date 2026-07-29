@@ -1,0 +1,41 @@
+# --- charon ---
+# Doctrine (README §8): raw data is immutable and lives outside version control;
+# derived data is regenerated only by pipeline code. Provenance artefacts
+# (pull logs, metadata sidecars, checksum manifests) ARE tracked, because they are
+# how a later session proves what was pulled without shipping the payload.
+
+# Data payloads: ignored.
+data/raw/**
+data/derived/**
+
+# Provenance: kept.
+!data/raw/**/
+!data/derived/**/
+!**/.gitkeep
+!data/raw/**/pull_log.jsonl
+!data/raw/**/*.meta.json
+!data/derived/**/*.meta.json
+
+# D7 event calendar is hand-maintained, append-only, and IS the source of record
+# (README §4 D7; the one documented exception to raw-immutability).
+!data/raw/events/events.yaml
+
+# Checksum manifests live under tests/golden/checksums/ and are always tracked.
+
+# --- python ---
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# --- os / editor ---
+.DS_Store
+.idea/
+.vscode/
+
+# Secrets — never committed. Provide keys via environment or this file.
+.env
+.env.*
+!.env.example

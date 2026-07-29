@@ -1,0 +1,161 @@
+# D7 — event calendar (README §4 D7).
+#
+# THIS FILE IS THE DOCUMENTED EXCEPTION TO RAW-IMMUTABILITY.
+# It is hand-maintained and APPEND-ONLY: add new events at the bottom of `events:`.
+# Never edit or delete an existing entry. If an event's facts change (a date moves, a
+# rumour is confirmed), append a NEW entry with `supersedes: <id>` and leave the
+# original in place. The record of what was believed when is itself data — a design
+# that quietly rewrites the calendar destroys every event study built on it.
+#
+# `known_from` is the information-timing firewall applied to events (README §4): the
+# date the event was publicly SCHEDULED, which is not the date it occurred. An event
+# study may only condition on an event from `known_from` onward.
+#
+# Seeded from README §2 only. Nothing here is inferred, and no event carries a
+# hypothesis parameter.
+
+schema_version: 1
+maintained_by: ash
+append_only: true
+
+events:
+  - id: skhy_adr_listing
+    date: 2026-07-10
+    known_from: TODO(ash)   # date the listing/pricing was publicly announced
+    market: US
+    category: listing
+    title: SK Hynix ADR (SKHY) lists on Nasdaq
+    detail: >-
+      177.9M ADRs priced at $149, raising ~$26.5B. Ratio 10 ADRs = 1 common share
+      (000660.KS). Priced at a ~3% markup to the Seoul close; opened ~$170, closed
+      day one at $168.01 (+13%).
+    source: README §2
+    confounded_with: []
+
+  - id: skhy_conversion_open
+    date: 2026-07-29
+    known_from: TODO(ash)   # date the 07-29 two-way conversion open was announced
+    market: KR
+    category: conversion_plumbing
+    title: Two-way ADR/local conversion opens
+    detail: >-
+      Depositary Citibank; issuance and cancellation overseen by the Korea Securities
+      Depository (KSD). Local->ADR creation remains bounded by the 2.5% cap, which was
+      fully exhausted at the offering; ADR->local cancellation is uncapped.
+    source: README §2
+    confounded_with: [skhy_q2_earnings]
+
+  - id: skhy_q2_earnings
+    date: 2026-07-29
+    known_from: TODO(ash)   # date the Q2 earnings date was publicly scheduled
+    market: KR
+    category: earnings
+    title: SK Hynix Q2 2026 earnings
+    detail: >-
+      Falls on the same session as the conversion open. README §5 confound register:
+      no design in this repo claims to separate the two on this date; effects are
+      reported jointly with the confound stated.
+    source: README §2
+    confounded_with: [skhy_conversion_open]
+
+  # ---------------------------------------------------------------------------
+  # Appended 2026-07-29 (Session 4) from docs/data_sources.md research findings.
+  # These are infrastructure and regime events, not price events: each one changes
+  # what data exists or what the conversion/trading plumbing is, which is exactly
+  # what M2 conditions on. `known_from` is TODO(ash) throughout because the dates
+  # below are EFFECTIVE dates taken from primary sources; the dates on which each
+  # was publicly ANNOUNCED are a separate fact I have not verified.
+  # ---------------------------------------------------------------------------
+
+  - id: eurex_krx_link_termination
+    date: 2025-06-06
+    known_from: TODO(ash)   # Eurex circular publication date
+    market: GLOBAL
+    category: venue_structure
+    title: Eurex-KRX Link terminated; all KOSPI products delisted
+    detail: >-
+      Last trading day 2025-06-04, decommissioned 2025-06-05, effective 2025-06-06.
+      Eurex's stated reason was KRX's own extended trading hours from 2025-06-09.
+      Products removed: OKS2 (options on KOSPI 200 options), FBK2 (futures on KOSPI
+      200 futures), FMK2 (mini), the OKW/OKM weeklies, and FCUW (USD/KRW). All were
+      "Daily Futures on ..." wrappers cash-settled into KRX's daily settlement price;
+      Eurex never listed a plain KOSPI 200 future. CONSEQUENCE: the D1(b) and H2
+      night-session leg named in README §4 D1 and §5 H2 no longer exists as specified.
+    source: https://www.eurex.com/ex-en/find/circulars/circular-4260544
+    confounded_with: []
+
+  - id: krx_night_session_launch
+    date: 2025-06-09
+    known_from: TODO(ash)
+    market: KR
+    category: venue_structure
+    title: KRX launches its own night session, 18:00-06:00 KST
+    detail: >-
+      Ten products including KOSPI 200 futures, Mini KOSPI 200 futures, KOSPI 200
+      options, KOSDAQ 150 futures/options, USD futures, and 3Y/10Y KTB futures. The
+      window fully covers the US cash session (22:30-05:00 KST under EDT), so the
+      D1(b) construction survives with KRX as the venue instead of Eurex, and with
+      both the index leg and a USD/KRW futures leg on a single venue. Two open risks:
+      night-session history truncates at ~14 months, and it is UNVERIFIED whether day
+      and night bars are separable in the data as served (KRX instrument names carry
+      a "(주간)" day-session suffix, but the selecting parameter was not identified).
+    source: https://www.eurex.com/ec-en/clear/eurex-krx-link
+    confounded_with: [eurex_krx_link_termination]
+
+  - id: krx_data_login_wall
+    date: 2025-12-27
+    known_from: TODO(ash)
+    market: KR
+    category: data_access
+    title: KRX data portal becomes login-mandatory
+    detail: >-
+      data.krx.co.kr rebranded "KRX Data Marketplace"; login became mandatory for all
+      data screens. Viewing remains free (Naver/Kakao SSO accepted). The anonymous
+      getJsonData.cmd path now returns the literal string LOGOUT, verified against
+      both derivatives and equities bld identifiers. KRX terms Art. 10(2) prohibits
+      automated collection independently of robots.txt (there is none). CONSEQUENCE
+      for D3: no sanctioned programmatic route to short-sale data exists, since the
+      KRX Open API has no short-selling endpoint.
+    source: https://data.krx.co.kr/contents/MDC/INFO/informationController/MDCINFO003.cmd
+    confounded_with: []
+
+  - id: kr_single_stock_2x_etf_listing
+    date: 2026-05-27
+    known_from: TODO(ash)   # FSC rule revision approved 2026-04-16, effective 2026-04-28
+    market: KR
+    category: product_launch
+    title: Korean 2x single-stock ETFs and ETNs list (18 products)
+    detail: >-
+      16 ETFs plus 2 ETNs. FSC rule revision approved by Cabinet 2026-04-16, effective
+      2026-04-28. 2x only, leveraged and inverse; 3x not permitted. Eligibility
+      requires the underlying to be >=10% of benchmark market cap and >=5% of trading
+      volume over the trailing three months, which ONLY Samsung Electronics and SK
+      hynix satisfy. CONSEQUENCE: D4 exists as README §4 assumed, and H3's Samsung
+      control is available by construction rather than by choice.
+    source: https://www.koreaherald.com/article/10722289
+    confounded_with: []
+
+  - id: kr_2x_etf_curb_review
+    date: 2026-07-08
+    known_from: TODO(ash)
+    market: KR
+    category: regulatory_risk
+    title: Ruling party reviewing curbs on 2x single-stock ETFs; delisting discussed
+    detail: >-
+      New listings reported "effectively off the table" and delisting under
+      discussion. Combined market cap of the 18 products was 13.02tn KRW on this
+      date; a later probe put combined AUM at 7.13tn KRW. This is a live threat to
+      the H3 sample, not background colour: a delisting terminates the LETF
+      rebalance channel the hypothesis is built on.
+    source: https://www.koreaherald.com/article/10802213
+    confounded_with: [kr_single_stock_2x_etf_listing]
+
+# TODO(ash): the following are known to be needed but their dates are yours to set,
+# not mine to infer. Append entries as you fix them:
+#   - KSD / depositary announcements on conversion mechanics and DR outstanding
+#     reporting cadence (feeds D5, the H5 headroom ledger).
+#   - Index review dates: KOSPI200, MSCI, FTSE (feeds H2; index-driven flow is a
+#     first-order confound for the KOSPI200 futures basis).
+#   - Korean short-sale regime changes (feeds D3/M2; the regulatory state is a regime
+#     variable, README §4 D3).
+#   - Lock-up expiry dates from the offering, if any.

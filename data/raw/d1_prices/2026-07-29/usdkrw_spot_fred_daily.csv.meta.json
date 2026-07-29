@@ -1,0 +1,37 @@
+{
+  "asset_class": "fx",
+  "availability_confirmed": false,
+  "availability_lag": "close 12:00:00 America/New_York + 360min",
+  "availability_note": "H.10 noon buying rate in New York \u2014 a DOCUMENTED fix instant, unlike the Yahoo snapshot. Published with a lag: H.10 is a weekly release, so the most recent observations trail the equity legs by up to several days. TODO(ash): confirm the +6h availability lag against the H.10 release schedule.",
+  "close_local": "12:00:00",
+  "currency": "KRW",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-24T22:00:00+00:00",
+    "obs_date": "2026-07-24",
+    "observation_ts_utc": "2026-07-24T16:00:00+00:00"
+  },
+  "first_obs_date": "2015-01-02",
+  "last_obs_date": "2026-07-24",
+  "market": "Federal Reserve H.10",
+  "native_timezone": "America/New_York",
+  "notes": "Reconciliation partner for usdkrw_spot_daily. Public Domain (citation requested).",
+  "provider": "fred",
+  "provider_chain": [
+    "fred"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-07-29T01:24:37+00:00",
+  "request_params": {
+    "file_type": "json",
+    "observation_end": "2026-07-28",
+    "observation_start": "2015-01-01",
+    "series_id": "DEXKOUS"
+  },
+  "rows": 2889,
+  "series_id": "usdkrw_spot_fred_daily",
+  "sha256": "68c3692d78fdf74e9afadcab8cfda54210bd3560c90bbaa36bd9339992a014f1",
+  "source_url": "https://api.stlouisfed.org/fred/series/observations",
+  "symbol": "DEXKOUS",
+  "transport": "fred_observations_v1",
+  "units": "KRW per 1 USD"
+}

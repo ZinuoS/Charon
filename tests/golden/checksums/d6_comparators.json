@@ -1,0 +1,16 @@
+{
+  "files": {
+    "data/raw/d6_comparators/2026-07-29/baba_adr_daily.csv": "2786adcb1929ad00130c29ff37b231cc6df778f439308948d8264344243b8e78",
+    "data/raw/d6_comparators/2026-07-29/baba_local_daily.csv": "8ccbf10b746d8fba682e3d966a28bafcc772624a1099348177fa0c11ffc772a7",
+    "data/raw/d6_comparators/2026-07-29/ibn_adr_daily.csv": "a0e1ad737c1000e801bf885361fa23f8c0b5c9bd50256d6571c05d3935521313",
+    "data/raw/d6_comparators/2026-07-29/infy_adr_daily.csv": "c6bb9627f34f019aed28cdb79289e7efb54259f2854879f3efd07a07267a12eb",
+    "data/raw/d6_comparators/2026-07-29/tsm_adr_daily.csv": "59ca660daf2b7f2c275d375c6e7556888236a8bb372ad3984d3f6de85ddd7fe7",
+    "data/raw/d6_comparators/2026-07-29/tsmc_local_daily.csv": "cdc99dc8e708862094a1da0400fe7df2df7d438a72345b362216560dc8344a5e",
+    "data/raw/d6_comparators/2026-07-29/usdhkd_spot_daily.csv": "34fc64398f4bf218e3fb609d089c22540e5e23f970a61e57f835c4f1cb6e00b3",
+    "data/raw/d6_comparators/2026-07-29/usdinr_spot_daily.csv": "b985ddfbc1a01726429e1a4279241cb7986cf86ea523e8de51576eb229020558",
+    "data/raw/d6_comparators/2026-07-29/usdtwd_spot_daily.csv": "cd3a7aec6a4b3cd8a7a5b415d5ad350d0a0ac04b41e88a49e39c989cd0502978"
+  },
+  "history": {},
+  "source": "d6_comparators",
+  "updated_at_utc": "2026-07-29T03:06:55+00:00"
+}

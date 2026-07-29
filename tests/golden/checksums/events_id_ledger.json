@@ -1,0 +1,13 @@
+{
+  "ids": [
+    "skhy_adr_listing",
+    "skhy_conversion_open",
+    "skhy_q2_earnings",
+    "eurex_krx_link_termination",
+    "krx_night_session_launch",
+    "krx_data_login_wall",
+    "kr_single_stock_2x_etf_listing",
+    "kr_2x_etf_curb_review"
+  ],
+  "updated_at_utc": "2026-07-29T00:52:58+00:00"
+}

@@ -1,0 +1,38 @@
+{
+  "asset_class": "adr",
+  "availability_confirmed": false,
+  "availability_lag": "close 16:00:00 America/New_York + 15min",
+  "availability_note": "Nasdaq regular-session close 16:00 ET; daily bar assumed knowable 16:15 ET.",
+  "close_local": "16:00:00",
+  "currency": "USD",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-28T20:15:00+00:00",
+    "obs_date": "2026-07-28",
+    "observation_ts_utc": "2026-07-28T20:00:00+00:00"
+  },
+  "first_obs_date": "2026-07-10",
+  "last_obs_date": "2026-07-28",
+  "market": "Nasdaq",
+  "native_timezone": "America/New_York",
+  "notes": "SK Hynix ADR, listed 2026-07-10 (README \u00a72). Forward-test instrument only (README \u00a78).",
+  "provider": "nasdaq",
+  "provider_chain": [
+    "nasdaq",
+    "yahoo_finance"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-07-29T01:04:16+00:00",
+  "request_params": {
+    "assetclass": "stocks",
+    "fromdate": "2026-07-10",
+    "limit": "99999",
+    "todate": "2026-07-28"
+  },
+  "rows": 13,
+  "series_id": "skhy_adr_daily",
+  "sha256": "5f623dd5395f161166cb028b301fdca6f5eba33691b987f5c9b78c30ba4d9fe0",
+  "source_url": "https://api.nasdaq.com/api/quote/SKHY/historical",
+  "symbol": "SKHY",
+  "transport": "api_quote_historical",
+  "units": "USD per ADR"
+}

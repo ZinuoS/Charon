@@ -1,0 +1,193 @@
+# charon — pre-registration freeze (README §9, stage S0)
+#
+# ==============================================================================
+#  THIS FILE IS A TEMPLATE. IT IS NOT YET FROZEN.
+#
+#  Every `TODO(ash)` below is a decision reserved to the author (README §11:
+#  "Curation and threshold decisions are the author's alone; analysis sessions may
+#  propose, never ratify"). No analysis session may fill one in.
+#
+#  Freeze procedure:
+#    1. Replace every TODO(ash) with a value.
+#    2. Set `frozen_at` to the UTC timestamp of the freeze and write `commit_note`.
+#    3. Set each hypothesis's `status` to `frozen`.
+#    4. Commit and tag BEFORE 2026-07-29 09:00 KST (2026-07-28 20:00 ET).
+#
+#  After the freeze commit this file is never edited. Corrections go to
+#  `preregistration/amendments/` as dated, append-only files.
+# ==============================================================================
+
+schema_version: 1
+
+# Set at freeze time. `frozen_at` being null is what marks this file as a draft, and
+# tests/test_preregistration.py asserts that a frozen file has no TODOs left in it.
+frozen_at: null          # e.g. "2026-07-28T23:30:00+00:00"
+commit_note: null        # e.g. "S0 freeze ahead of 2026-07-29 KRX open; SKHY forward test opens."
+
+# Rules that bind every hypothesis below. Stated once so no engine can quietly adopt
+# looser ones later.
+global_rules:
+  training_universe: >-
+    D6 comparator panel only. SKHY is a forward test and is never backtested on
+    (README §8). An OOS point that changes the input distribution is invalid.
+  validation_protocol: >-
+    Purged and embargoed CV on overlapping labels; expanding walk-forward for one-step
+    forecasts; Jorda local projections for decay questions. Scalers, regime parameters
+    and feature selection fit train-only inside every fold.
+  reporting_protocol: >-
+    RMSE, R-squared and sign hit rate reported side by side, per regime, never
+    pooled-only. A null result is a deliverable.
+  language_discipline: >-
+    Nothing is called "arbitrage" except the (dead) conversion channel. Everything
+    live is "relative value against a one-sided barrier."
+  amendment_rule: >-
+    This file is append-only after freeze. Amendments live in
+    preregistration/amendments/<YYYY-MM-DD>-<slug>.md and must state what changed,
+    why, and what was already observed at the time of the change.
+
+# ------------------------------------------------------------------------------
+# H1 — Premium term structure (derivatives-implied convergence)
+# ------------------------------------------------------------------------------
+h1_term_structure:
+  statement: >-
+    Implied premium at expiry T, constructed from KRX single-stock futures/options on
+    000660 against US-listed SKHY options as
+    pi_impl(T) = F_ADR(T) / (10 * F_local(T) * FX_fwd(T)) - 1, is the market's priced
+    convergence schedule, set by two nearly disjoint participant pools.
+  direction: >-
+    US-side pricing embeds too-fast convergence at the front (LOOP intuition versus the
+    TSMC base rate of multi-year persistence), so front-end implied pi is too low
+    relative to the model half-life. Trade: long ADR forward / short local forward at
+    front expiries, reversed at the back, FX-forwarded. Trades convergence speed, not
+    level, and requires no conversion.
+  threshold: TODO(ash)              # frozen decision level — the author's alone
+  resolution_date: TODO(ash)
+  resolution_criterion: TODO(ash)
+  data_requirements:
+    - D1   # premium/basis series, both variants
+    - D2   # USDKRW forwards/NDF for the FX_fwd leg
+    - D6   # TSM options vs TAIFEX 2330 futures, 15y+, for the backtest
+    - D7   # event calendar, to exclude confounded expiries
+  validation_design: >-
+    Identical construction backtested on TSM options versus TAIFEX 2330 futures over
+    15+ years, expanding walk-forward. The SKHY direction is a pre-registered forward
+    test only.
+  known_blockers:
+    - "KRX single-stock futures/options on 000660: public source not yet confirmed (docs/data_sources.md)."
+    - "USDKRW NDF curve: no clean free public source identified in session 1."
+  status: frozen_pending_signature
+
+# ------------------------------------------------------------------------------
+# H2 — Synthetic local access via the index
+# ------------------------------------------------------------------------------
+h2_index_access:
+  statement: >-
+    SK Hynix is the largest KOSPI weight, and offshore demand for cheap local Hynix can
+    only express through KOSPI200 futures (including the Eurex night session) or
+    long-KOSPI200 / short ex-Hynix baskets.
+  direction: >-
+    KOSPI200 futures basis is rich to fair value, and implied index correlation is
+    elevated, on premium-widening days.
+  threshold: TODO(ash)
+  resolution_date: TODO(ash)
+  resolution_criterion: TODO(ash)
+  data_requirements:
+    - D1   # pi innovations
+    - D2   # FX, for carry fair-value controls
+    - D7   # index review dates are a first-order confound
+  validation_design: >-
+    Regress basis innovations on pi innovations controlling for standard carry
+    determinants (dividends, funding, FX). The pre-listing period is the natural own
+    control. Dual use: the night-session futures leg also powers D1(b).
+  known_blockers:
+    - "KOSPI200 futures settlement series and Eurex night-session prices: public source not yet confirmed."
+  status: frozen_pending_signature
+
+# ------------------------------------------------------------------------------
+# H3 — LETF cross-market close-imbalance loop
+# ------------------------------------------------------------------------------
+h3_letf_loop:
+  statement: >-
+    US 2x SKHY products rebalance at the US close (moving the ADR while Korea sleeps)
+    and Korean 2x products rebalance at the KRX close (moving the local line while the
+    US sleeps), so each close mechanically perturbs pi in a predictable direction and
+    size with an hours-long response lag.
+  direction: >-
+    pi changes over each close window partially revert at the other market's open,
+    scaled by estimated rebalance notional (D4).
+  threshold: TODO(ash)
+  resolution_date: TODO(ash)
+  resolution_criterion: TODO(ash)
+  data_requirements:
+    - D1   # pi at both closes and both opens
+    - D4   # LETF AUM + NAV, for the rebalance-notional estimate
+    - D7   # event calendar, for exclusions
+  validation_design: >-
+    Event study with matched controls — Samsung (Korean LETFs, no fresh ADR premium)
+    and NVDA/TSLA (US LETF mechanics, no pair) — effect sized per unit of estimated
+    flow, then purged walk-forward on the SKHY pair. Market-neutral to the AI trade.
+  hard_gates:
+    - "D4 missing AUM => observation weight 0. Never imputed (README §4 D4)."
+  known_blockers:
+    - "Korean 2x single-stock ETF AUM/NAV: source and puller design deferred to session 2."
+  status: frozen_pending_signature
+
+# ------------------------------------------------------------------------------
+# H4 — Volatility decomposition RV
+# ------------------------------------------------------------------------------
+h4_vol_decomposition:
+  statement: >-
+    Var(ADR) is approximately Var(local) + Var(FX) + Var(pi) + covariances, and pi
+    realized vol has been extreme (51 -> 19 -> 33 -> 22 inside three weeks), so SKHY
+    implied vol should carry a structural premium over [000660 implied + USDKRW
+    implied].
+  direction: >-
+    If US options price SKHY IV off local history or Micron comps, premium-vol is being
+    sold for free: long SKHY straddles / short 000660 straddles plus USDKRW vol,
+    ratio-weighted by the decomposition.
+  threshold: TODO(ash)
+  resolution_date: TODO(ash)
+  resolution_criterion: TODO(ash)
+  data_requirements:
+    - D1   # realized variance shares of ADR, local, FX and pi
+    - D2   # USDKRW implied vol
+    - D6   # same decomposition on TSM/2330/USDTWD, where the pi-vol share is small
+  validation_design: >-
+    Daily realized variance shares since 2026-07-10 against the implied stack; the same
+    decomposition run on TSM/2330/USDTWD. The CONTRAST between the constrained and
+    comparator pairs is the evidence, not the SKHY level on its own.
+  known_blockers:
+    - "SKHY and 000660 option surfaces: public source not yet confirmed."
+    - "USDKRW implied vol: no clean free public source identified in session 1."
+  status: frozen_pending_signature
+
+# ------------------------------------------------------------------------------
+# H5 — Quota-recycling flow signal (barrier-state monitor)
+# ------------------------------------------------------------------------------
+h5_quota_ledger:
+  statement: >-
+    After 2026-07-29 the conversion mechanism is a queue: an ADR cancellation frees
+    headroom that a local->ADR converter can claim, and DR outstanding (D5) makes the
+    freed-headroom balance observable.
+  direction: >-
+    Premium-compression episodes are preceded by headroom creation, with a lag set by
+    settlement plumbing.
+  threshold: TODO(ash)
+  resolution_date: TODO(ash)
+  resolution_criterion: TODO(ash)
+  data_requirements:
+    - D1   # pi, the compression target
+    - D5   # DR outstanding from depositary reporting; KSD notices
+    - D7   # conversion-open and earnings events
+  validation_design: >-
+    Role is monitor more than trade at research scale. It is the state variable that
+    switches M2 between barrier-off and barrier-partial regimes, so its resolution
+    criterion is about state classification, not PnL.
+  confounds:
+    - >-
+      2026-07-29 is simultaneously Q2 earnings and conversion-open. No design in this
+      repo claims to separate the two on that date; effects are reported jointly with
+      the confound stated (README §5, docs/confounds.md).
+  known_blockers:
+    - "DR outstanding / KSD notices: source and puller design deferred to session 2."
+  status: frozen_pending_signature

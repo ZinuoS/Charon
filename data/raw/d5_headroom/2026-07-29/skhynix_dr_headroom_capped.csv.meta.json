@@ -1,0 +1,23 @@
+{
+  "availability_lag": "TODO(ash): KSD's publication time for the daily capacity figure is unverified. Rows appear to be published on change rather than daily.",
+  "first_obs_date": "2026-07-15",
+  "isin": "US78392B2060",
+  "last_obs_date": "2026-07-15",
+  "native_timezone": "Asia/Seoul",
+  "notes": "The 2026 ADR programme. Headroom 0 at first observation (2026-07-15) \u2014 the exhausted 2.5% deal cap. THIS is H5's observable.",
+  "provider": "ksd_seibro",
+  "pulled_at_utc": "2026-07-29T03:07:10+00:00",
+  "request_params": {
+    "searchCode": "US78392B2060",
+    "txt_code": "US78392B2060",
+    "txt_sch": "\uc5d0\uc2a4\ucf00\uc774\ud558\uc774\ub2c9\uc2a4"
+  },
+  "role": "barrier_state",
+  "rows": 1,
+  "semantics": "Issuance ceiling minus DRs outstanding, per PROGRAMME. Level = barrier state; first difference = creation (consumed) / cancellation (freed).",
+  "series_id": "skhynix_dr_headroom_capped",
+  "sha256": "f3dd9ff2e3f015e8d06329f108ca83acad3ab067a50a7caaa3161e243a4d74b6",
+  "source_url": "https://m.seibro.or.kr/cnts/ovssec/selectOverSecDRConvPoss.do",
+  "transport": "selectOverSecDRConvPoss",
+  "units": "shares (remaining ordinary shares convertible into DRs \u2014 HEADROOM, not DR outstanding)"
+}

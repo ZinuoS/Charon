@@ -1,0 +1,9 @@
+{
+  "files": {
+    "data/raw/d5_headroom/2026-07-29/skhynix_dr_headroom_capped.csv": "f3dd9ff2e3f015e8d06329f108ca83acad3ab067a50a7caaa3161e243a4d74b6",
+    "data/raw/d5_headroom/2026-07-29/skhynix_dr_headroom_legacy.csv": "bf8fbfedc457ec48aaecc0c199b4832605be9d3930ed32207d30b95a54431bbe"
+  },
+  "history": {},
+  "source": "d5_headroom",
+  "updated_at_utc": "2026-07-29T03:07:14+00:00"
+}
