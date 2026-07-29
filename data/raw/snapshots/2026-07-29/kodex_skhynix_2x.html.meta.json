@@ -1,0 +1,16 @@
+{
+  "availability_lag": "page carries an embedded timestamp (observed 20260728070300). NAV is struck against the KRX close 15:30 KST. TODO(ash): confirm the strike time and whether the embedded stamp is publication or as-of.",
+  "bytes": 136412,
+  "encoding": "UTF-8",
+  "native_timezone": "Asia/Seoul",
+  "provider": "https://www.kodex.com/kr/etf/0193T0",
+  "pulled_at_utc": "2026-07-29T04:54:41+00:00",
+  "rationale": "D4, issuer disclosure \u2014 cleaner provenance than the portal (robots.txt allows /etf). KODEX SK\ud558\uc774\ub2c9\uc2a4 2x. CAPTURED BEFORE PARSED, deliberately: the AUM series may be snapshot-only, in which case every uncaptured day is lost permanently, whereas a parser can be written at leisure against stored bytes.",
+  "series_id": "kodex_skhynix_2x",
+  "sha256": "1321719cb0a87c7a64632c8c71e8d29f52e22aeb6009f881dd83acd245bdb025",
+  "snapshot_semantics": "Point-in-time capture, append-only. This file is the RAW response; parsing is downstream so a parser bug cannot destroy an unrepeatable capture.",
+  "source_id": "kodex_issuer_disclosure",
+  "source_url": "https://www.kodex.com/kr/etf/0193T0",
+  "transport": "http_get",
+  "units": "TODO \u2014 page carries a NAV token and large integers but no explicit \uc21c\uc790\uc0b0 label; parsing unresolved"
+}

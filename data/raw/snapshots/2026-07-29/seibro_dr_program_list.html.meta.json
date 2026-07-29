@@ -4,7 +4,7 @@
   "encoding": "UTF-8",
   "native_timezone": "Asia/Seoul",
   "provider": "https://m.seibro.or.kr/cnts/ovssec/selectOverSecDRPubSearch.do",
-  "pulled_at_utc": "2026-07-29T01:59:52+00:00",
+  "pulled_at_utc": "2026-07-29T04:54:42+00:00",
   "rationale": "D5. The program list; per-ISIN daily series needs a POST with ISIN + Korean name. NOTE the semantics: this is HEADROOM (issuance ceiling minus DRs outstanding), NOT DR outstanding. Level = barrier state (M2); first difference = creation/cancellation flow (H5). See docs/data_sources.md D5-a.",
   "series_id": "seibro_dr_program_list",
   "sha256": "ffb1c2b3dfc8ba62f47cbb594f8e10755cb77b66e2a465a474951b7d27603cc3",

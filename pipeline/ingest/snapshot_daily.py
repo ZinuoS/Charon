@@ -72,6 +72,44 @@ class SnapshotSpec:
 
 SNAPSHOTS: tuple[SnapshotSpec, ...] = (
     SnapshotSpec(
+        source_id="kodex_issuer_disclosure",
+        series_id="kodex_skhynix_2x",
+        url="https://www.kodex.com/kr/etf/0193T0",
+        method="GET",
+        native_timezone="Asia/Seoul",
+        availability_lag=(
+            "page carries an embedded timestamp (observed 20260728070300). NAV is struck "
+            "against the KRX close 15:30 KST. TODO(ash): confirm the strike time and "
+            "whether the embedded stamp is publication or as-of."
+        ),
+        units="TODO — page carries a NAV token and large integers but no explicit 순자산 label; parsing unresolved",
+        encoding="UTF-8",
+        extension="html",
+        rationale=(
+            "D4, issuer disclosure — cleaner provenance than the portal (robots.txt "
+            "allows /etf). KODEX SK하이닉스 2x. CAPTURED BEFORE PARSED, deliberately: the "
+            "AUM series may be snapshot-only, in which case every uncaptured day is lost "
+            "permanently, whereas a parser can be written at leisure against stored bytes."
+        ),
+    ),
+    SnapshotSpec(
+        source_id="tiger_issuer_disclosure",
+        series_id="tiger_etf_index",
+        url="https://investments.miraeasset.com/tigeretf/",
+        method="GET",
+        native_timezone="Asia/Seoul",
+        availability_lag="TODO(ash): unverified. tigeretf.com redirects to investments.miraeasset.com/tigeretf/; the per-product path is still unidentified.",
+        units="TODO — landing page only; the per-product endpoint is unresolved",
+        encoding="UTF-8",
+        extension="html",
+        rationale=(
+            "D4, issuer disclosure (robots.txt allows /tigeretf/). The per-product URL "
+            "pattern was not identified — guessed paths returned 404 — so this captures "
+            "the landing page to start the series and preserve whatever it carries while "
+            "the correct path is found."
+        ),
+    ),
+    SnapshotSpec(
         source_id="naver_etf_navlist",
         series_id="naver_etf_navlist",
         url="https://finance.naver.com/api/sise/etfItemList.nhn",
