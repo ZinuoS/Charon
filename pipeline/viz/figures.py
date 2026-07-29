@@ -160,9 +160,17 @@ def g4_asymmetry(pi_tsm: pd.Series, pi_skhy: pd.Series):
     a.bar([f"{c:.0%}" for c in centres], grouped.values * 1e4,
           color=[theme.INK if v < 0 else theme.CLAY for v in grouped.values], width=0.62)
     a.axhline(0, color=theme.RULE, linewidth=1.0)
-    a.set_title("TSM: next-day premium change by starting level\n(bp, 2,328 days) — "
-                "no strong pull toward zero from high levels",
+    a.set_title("Mean reversion is asymmetric: the floor reflects\nharder than the ceiling pulls",
                 loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+    a.set_ylabel("mean next-day change (bp)", fontsize=8, color=theme.MUTED)
+    # The asymmetry IS the reflected-process thesis, measured. Bottom quintile pulls up at
+    # t=+10.9; the top quintile pulls down at only t=-5.0, and -70bp is small against
+    # 249bp daily premium volatility. Stating this precisely rather than claiming "no
+    # reversion" -- an earlier caption overstated in the direction that flattered the
+    # thesis, and the figure audit caught it.
+    a.annotate("bottom quintile t=+10.9   ·   top quintile t=-5.0", xy=(0.0, 1.005),
+               xycoords="axes fraction", fontsize=7.4, color=theme.MUTED, ha="left", va="bottom",
+               fontfamily=theme.SERIF_STACK)
     a.set_xlabel("starting premium quintile", fontsize=8, color=theme.MUTED)
 
     grid = np.linspace(-0.05, 0.60, 400)
@@ -185,7 +193,7 @@ def g4_asymmetry(pi_tsm: pd.Series, pi_skhy: pd.Series):
     b.annotate("LOSS UNBOUNDED — no ceiling on file", xy=(0.97, 0.90),
                xycoords="axes fraction", fontsize=8.4, color=theme.CLAY, ha="right",
                fontfamily=theme.SERIF_STACK, weight="medium")
-    b.set_title("Short-premium payoff: the skew is structural, not bad luck",
+    b.set_title("Short-premium payoff: the skew\nis structural, not bad luck",
                 loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
     b.set_xlabel("premium at exit", fontsize=8, color=theme.MUTED)
     theme.pct_axis(b)
@@ -193,6 +201,6 @@ def g4_asymmetry(pi_tsm: pd.Series, pi_skhy: pd.Series):
 
     theme.multiples_headline(
         fig, "This is relative value against a one-sided barrier — not arbitrage",
-        "Left: whether high premiums revert, shown rather than assumed. "
+        "Left: conditional next-day change by starting-level quintile, TSM, 2,328 days. "
         "Right: what the convergence expression actually pays.")
     return fig, axes
