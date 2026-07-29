@@ -962,3 +962,98 @@ approved: yes          # licence-safe on derived data; Korea requires Pro ($99/m
 source: marketstack_krx
 approved: TODO(ash)          # recommend: NO — 1y free history, Korea unverified
 ```
+
+---
+
+# ⚠️ D5 reinterpretation — what the SEIBro capacity field actually measures
+
+Forced by the Session 10 prospectus finding: if **no numeric deposit cap exists in any SEC
+filing**, then the earlier reading of `DR전환가능주식수량` as "the 2.5% quota's remaining
+headroom" cannot be right. This section rules on what it does measure, from the series'
+own behaviour, and flags a tension that **must be resolved before H5 is frozen**.
+
+## Evidence from the series itself
+
+Legacy programme `US78392B1070`, 1,260 observations 2010-03-31 → 2026-07-28:
+
+| Property | Value | Reading |
+|---|---|---|
+| Range | 129,031,707 – 142,906,564 | Bounded, not free-running |
+| Direction of moves | **502 up, 757 down, 0 unchanged** | **Bidirectional and revolving** — and it publishes *only on change* |
+| Net over 16 years | **−12,594,791** | Slow secular consumption |
+| Largest single moves | +1,230,000 / −1,438,670 | Block-sized, i.e. creations/cancellations |
+| Latest as % of 712,702,365 | 18.20% | No round-number ceiling |
+| Max observed as % | 20.05% | Suggestive of a ~20% ceiling, but see caveat |
+
+**Caveat on the percentages:** shares outstanding changed across 2010–2026, so expressing
+the whole history against the 2026 pre-offering count is only indicative. No round-number
+ceiling (100% / 49% / 40%) appears at any point.
+
+## Ruling
+
+**The field is programme-specific issuance-ceiling headroom: `ceiling − DRs outstanding`,
+revolving.** Three facts converge on this and no other reading survives all three:
+
+1. **It is bidirectional with no zero-deltas.** A foreign-ownership-limit measure would
+   move with *foreign holdings*, not in block-sized steps that reverse; and it would not
+   differ between two programmes of one issuer, which it does.
+2. **It revolves.** Creations consume it, cancellations restore it — matching the DR
+   mechanics documented in the SEC ADR bulletin and BNY's DR Basics, and matching TSMC's
+   20-F language that issuance is *"permitted to the extent that previously issued
+   depositary receipts have been cancelled."*
+3. **The capped programme `US78392B2060` reads exactly 0**, which is what
+   `ceiling − outstanding` gives when the entire board authorization (17,790,000 shares)
+   was issued to the depositary at the offering — precisely what the 6-K of 2026-07-15
+   documents ("all of the newly issued common shares were issued to Citibank, N.A. …
+   through a third-party allotment").
+
+**Rejected:** the foreign-ownership-limit reading (fails test 1). **Rejected:** "remaining
+2.5% quota" (the 2.5% is a primary-issuance authorization, not a deposit quota — see
+`research_notes.md` C-A).
+
+## ⚠️ The tension that blocks H5 — author ruling required
+
+H5's proposed criterion reads: *"headroom creation precedes premium compression."* The
+ruling above makes that **measurable but possibly not identifying**, for one reason:
+
+> **The measured headroom and the operative constraint may be different things.**
+
+- The SEIBro field measures the **registered/authorized ceiling** minus outstanding.
+- The **binding gate on deposits** is, per the deposit agreement, *"a level from time to
+  time determined by the Company"* plus the Company's **prior consent** — a level that is
+  **not disclosed anywhere** and is revisable at will.
+
+So a cancellation can raise measured headroom while deposits stay blocked by consent that
+was never granted. **The observable would move without the barrier opening.** H5 would
+then record a headroom-creation episode, observe no compression, and resolve REFUTED — when
+the honest reading is that the mechanism was never engaged.
+
+This is a **false-refutation risk**, and it is worse than the untestable risk already
+handled in the proposed criterion, because a false refutation looks like a result.
+
+### What settles it
+
+Only one observation does: **a deposit actually clearing on the capped programme after
+2026-07-29.** If `US78392B2060` headroom falls from 0 (impossible) or rises via cancellation
+and is then *consumed* by a new deposit, consent demonstrably exists and the measured
+series tracks the operative gate. Until such a round trip is observed, the two are
+indistinguishable.
+
+### Options for the author, before freezing
+
+- **(a) Scope H5 to the measurable claim.** Reword to "headroom creation precedes
+  compression **conditional on deposits being permitted**", and add a third resolution
+  branch: *INDETERMINATE — headroom moved but no deposit cleared, so consent state is
+  unobserved.* Costs a cleaner-sounding call, buys a criterion that cannot be falsely
+  refuted.
+- **(b) Re-target H5 at the corporate action itself.** The upper barrier now opens by
+  *issuer decision*, which is disclosable via Korean regulatory filings (DART). Register
+  the call against the disclosure event rather than the capacity series.
+- **(c) Freeze as proposed and accept the false-refutation risk**, stated on the record.
+
+**TODO(ash: rule) — this is the one decision that should not be made after the freeze.**
+
+```yaml
+source: dart_corporate_disclosure
+approved: TODO(ash)          # proposed: the upper barrier's opening is a corporate action
+```
