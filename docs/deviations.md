@@ -142,3 +142,14 @@ author should confirm these are the intended values, promptly, while the ledger 
 
 **Blast radius.** `calls.yaml`, the new amendment, and the preregistration test (aligned to
 the Class-C-frozen / Class-X-exploratory structure). Prior draft recoverable from git.
+
+
+---
+
+## 2026-07-29 — author ratification of the H5 freeze and Amendment 001 (review discharged)
+
+The prior two entries flagged that the H5 threshold numbers and the amendment were drafted
+by a session and applied on instruction, with author review owed. **The author has now
+confirmed the H5 values and ratified Amendment 001 (2026-07-29).** The owed review is
+discharged; the ledger stands as the author's registered call. The README §0–§5 corrections
+remain the one item still awaiting the author's wording confirmation.

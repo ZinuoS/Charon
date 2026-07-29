@@ -69,9 +69,11 @@ hidden.
 3. Any future in-window information event triggers the same protocol by a new numbered
    amendment.
 
-**Signed:** Ash — *signature line; the author confirms authorship of this partition.*
+**Signed:** Ash — **confirmed 2026-07-29.** The author has ratified the H5 threshold values and this partition.
 
 *Note (recorded per the deviation log): the H5 threshold values and this amendment's
 structure were drafted by an analysis session and applied on the author's explicit
-instruction to freeze. The two facts only the author holds — the exact release minute (§1)
-and this signature — remain the author's to confirm.*
+instruction to freeze. **The author has since confirmed both the H5 numbers and this
+amendment (2026-07-29).** The exact release minute in §1 stands as "before the 09:00 KST
+KRX open" — the documented bound — unless the author later pins it more precisely by a
+further amendment.*

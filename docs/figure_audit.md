@@ -108,3 +108,38 @@ into both applied to only one — loudly for one file, silently for the other, a
 looked deliberate. Fixed by unifying the helpers and pinned by
 `test_both_builders_use_the_same_cell_helper_names`. Notebook freshness (executed, no
 errors, carries the sparkline) is now asserted per notebook rather than assumed.
+
+
+---
+
+## Close-out audit — 2026-07-29 (session end)
+
+Every notebook re-executed fresh and every figure re-rendered and inspected at GitHub
+width. Final state:
+
+| Notebook | cells | figures | errors |
+|---|---|---|---|
+| `00_executive_pitch.ipynb` | 23 | 8 | 0 |
+| `02_premium_anatomy.ipynb` | 25 | 10 | 0 |
+| `05_hypothesis_engines.ipynb` | 12 | 4 | 0 |
+
+**22 figures, zero execution errors, all committed with outputs.** The freeze-status caption
+cells read the ledger at runtime and now correctly print `Ledger FROZEN 2026-07-29` — the
+notebooks reflect the frozen state, not a stale draft.
+
+**Figure formatting: all defect classes closed.** G1, G2, G4, G9 and the convergence and
+family-portrait small-multiples were each inspected in final form. Chrome runs through
+`finalize()` (kicker/headline/subtitle/source/footnote, no collisions); date axes use the
+thinning locator; small-multiples reserve their headline rect; the plumbing schematic's
+boxes are grid-aligned. The one remaining item (F1's reference-line label) sits in
+whitespace at current data and is low-severity.
+
+**No stale framing survives in the notebooks.** A grep for pre-reframe language returns one
+hit — the corrected disavowal of the 12.6% TSMC figure, which is the fix, not a survivor.
+
+**Verdict for a cold reader's first ninety seconds:** a corrected front page, a reading
+path into three executed notebooks with 22 visible figures, a frozen pre-registration
+ledger honestly partitioned (Class P empty, stated), and the barrier reframing carried
+through every surface. What they also see, fairly: three of six notebooks unbuilt, two
+regimes not four, H3 data-blocked, and an execution cost layer with honest gaps. Precise
+rather than flattering — which is the intended impression.
