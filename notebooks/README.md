@@ -40,8 +40,11 @@ fails outright on figure-heavy files. If a notebook does not render here, use nb
 ## What to know before reading
 
 **Notebooks are committed with their outputs.** The repository is the display medium, so a
-reader should see the figures and results without running anything. `make notebook`
-verifies that a fresh offline re-execution reproduces them.
+reader should see the figures and results without running anything. `just notebook`
+verifies that a fresh offline re-execution reproduces them — both output structure and
+figure pixels (`tests/test_notebook_reexecution.py`). It runs on the machine that built the
+notebooks, where the fonts match; on a host with a different serif stack the pixel check
+skips rather than mistaking the theme's DejaVu fallback for staleness.
 
 **Everything executes offline.** Ingestion is a separate, logged, network-permitted stage;
 analysis modules import no networking library, and a test walks the AST of every analysis
