@@ -151,11 +151,16 @@ def headline(ax, finding: str, subtitle: str | None = None) -> None:
         )
 
 
-def label_line_end(ax, x, y, text: str, color: str, dx: int = 6, dy: int = 0) -> None:
-    """Write a series' name at the end of its own line, in its own colour."""
+def label_line_end(ax, x, y, text: str, color: str, dx: int = 6, dy: int = 0,
+                   scale: float = 1.0) -> None:
+    """Write a series' name at the end of its own line, in its own colour.
+
+    ``scale`` grows the type and its offset together — a label nudged 6 points off a line
+    on a poster sits visually on top of it.
+    """
     ax.annotate(
-        text, xy=(x, y), xytext=(dx, dy), textcoords="offset points",
-        color=color, fontsize=LABEL_SIZE, va="center", ha="left", weight="medium",
+        text, xy=(x, y), xytext=(dx * scale, dy * scale), textcoords="offset points",
+        color=color, fontsize=LABEL_SIZE * scale, va="center", ha="left", weight="medium",
     )
 
 
@@ -198,7 +203,7 @@ def events_for(markets: Iterable[str] | None = None, categories: Iterable[str] |
 
 def annotate_events(ax, events: list[dict], labels: dict[str, str] | None = None,
                     y_frac: float = 0.98, stagger: int = 3, min_gap_frac: float = 0.06,
-                    max_labels: int | None = None) -> int:
+                    max_labels: int | None = None, scale: float = 1.0) -> int:
     """Thin vertical rules with short labels, drawn from the event calendar.
 
     ``labels`` optionally maps an event ``id`` to a shorter caption — calendar titles are
@@ -230,17 +235,20 @@ def annotate_events(ax, events: list[dict], labels: dict[str, str] | None = None
         x = mdates.date2num(ev["date"])
         if not (lo <= x <= hi):
             continue
-        ax.axvline(x, color=RULE, linewidth=0.9, zorder=0)
+        ax.axvline(x, color=RULE, linewidth=0.9 * scale, zorder=0)
 
         too_close = last_labeled_x is not None and (x - last_labeled_x) / span < min_gap_frac
         if too_close or (max_labels is not None and drawn >= max_labels):
             continue
 
         level = drawn % max(stagger, 1)
+        # Stagger spacing scales with the type: bigger labels on the same 0.055 of axes
+        # height would overprint the line below, which is the collision this staggering
+        # exists to prevent.
         ax.annotate(
             (labels or {}).get(ev["id"], ev["title"]),
-            xy=(x, y_frac - level * 0.055), xycoords=("data", "axes fraction"),
-            xytext=(3, 0), textcoords="offset points", fontsize=NOTE_SIZE,
+            xy=(x, y_frac - level * 0.055 * scale), xycoords=("data", "axes fraction"),
+            xytext=(3 * scale, 0), textcoords="offset points", fontsize=NOTE_SIZE * scale,
             color=MUTED, ha="left", va="top", fontfamily=SERIF_STACK,
         )
         drawn += 1
@@ -371,6 +379,183 @@ def finalize(
     if footnote:
         fig.text(0.0, y, footnote, fontsize=NOTE_SIZE, color=MUTED,
                  ha="left", va="top", fontfamily=SERIF_STACK, wrap=True)
+
+
+# --------------------------------------------------------------------------------
+# poster_frame() — the chrome owner for the single-page poster
+# --------------------------------------------------------------------------------
+#
+# `finalize` places chrome relative to a single axes: it writes at figure-fraction
+# `1.0 + gap`, which is "just above the plot area" only when the plot area fills the
+# figure. A poster is a page of several panels inside explicit rects, so those coordinates
+# land off-paper. Rather than let the poster script place its own text -- which is how
+# every collision in the Session 11 and 13 audits started -- chrome ownership stays in
+# this module, in a poster-shaped variant.
+
+POSTER_SIZE = (24.0, 34.0)          #: inches, portrait. Standard large-format poster.
+POSTER_LEFT = 0.055                 #: left margin, figure fraction — the poster's measure
+POSTER_RIGHT = 0.945
+
+
+def _line_h(fig, pt: float, lines: int = 1, leading: float = 1.30) -> float:
+    """Height of ``lines`` lines of ``pt`` type, as a fraction of figure height.
+
+    Every vertical gap in the poster chrome is computed through this rather than written
+    as a tuned constant. A hand-tuned `0.0155` encodes one font size at one paper size and
+    silently overprints as soon as either changes — which is how the first draft of this
+    poster put its kickers through its own headlines. Deriving the gap from the type means
+    the layout cannot go stale.
+    """
+    return pt * leading * lines / 72.0 / float(fig.get_size_inches()[1])
+
+
+def _n_lines(text: str) -> int:
+    return text.count("\n") + 1
+
+
+def poster_frame(
+    fig,
+    title: str,
+    standfirst: str,
+    source: str,
+    footnote: str | None = None,
+    kicker: str = "charon",
+    subtitle: str | None = None,
+    scale: float = 1.6,
+    top: float = 0.988,
+) -> float:
+    """Place the poster's masthead and footer, once, each block reserving its own height.
+
+    Laid out downward from the top edge and upward from the bottom edge, so a longer
+    standfirst cannot push the title off the page and a footnote cannot clip the source
+    line.
+
+    Returns the figure fraction where the masthead ends — the top of the region a caller
+    may fill. Callers place panels against the returned value rather than a number copied
+    out of this docstring, so adding a line to the masthead moves the page down instead of
+    overprinting it.
+    """
+    left, right = POSTER_LEFT, POSTER_RIGHT
+    y = top
+
+    fig.add_artist(plt.Line2D([left, right], [y, y], color=RULE,
+                              linewidth=1.1 * scale, transform=fig.transFigure))
+    y -= _line_h(fig, KICKER_SIZE * scale) * 0.55
+
+    kick_pt = KICKER_SIZE * scale
+    fig.text(left, y, " ".join(kicker.upper()), fontsize=kick_pt, color=MUTED,
+             ha="left", va="top", fontfamily=SERIF_STACK)
+    y -= _line_h(fig, kick_pt, leading=1.75)
+
+    title_pt = TITLE_SIZE * scale * 1.55
+    fig.text(left, y, title, fontsize=title_pt, color=TEXT,
+             ha="left", va="top", fontfamily=SERIF_STACK)
+    y -= _line_h(fig, title_pt, _n_lines(title), leading=1.22)
+
+    stand_pt = SUBTITLE_SIZE * scale * 1.15
+    fig.text(left, y, standfirst, fontsize=stand_pt, color=MUTED,
+             ha="left", va="top", fontfamily=SERIF_STACK)
+    y -= _line_h(fig, stand_pt, _n_lines(standfirst))
+
+    if subtitle:
+        sub_pt = SUBTITLE_SIZE * scale * 0.82
+        fig.text(left, y, subtitle, fontsize=sub_pt, color=MUTED,
+                 ha="left", va="top", fontfamily=SERIF_STACK, style="italic")
+        y -= _line_h(fig, sub_pt, _n_lines(subtitle))
+
+    # Hairline closing the masthead. Drawn in figure coords so it spans the full measure
+    # and belongs to no panel -- a rule owned by an axes moves when that axes moves.
+    y -= _line_h(fig, kick_pt) * 0.40
+    fig.add_artist(plt.Line2D([left, right], [y, y], color=RULE,
+                              linewidth=1.1 * scale, transform=fig.transFigure))
+    y -= _line_h(fig, TITLE_SIZE * scale) * 0.55      # breathing room under the rule
+
+    # Footer, upward from the bottom edge.
+    note_pt = NOTE_SIZE * scale * 0.92
+    fy = 0.040
+    rule_y = fy + _line_h(fig, note_pt) * 0.75
+    fig.add_artist(plt.Line2D([left, right], [rule_y, rule_y], color=RULE,
+                              linewidth=1.1 * scale, transform=fig.transFigure))
+    fig.text(left, fy, f"Source: {source}", fontsize=note_pt, color=MUTED,
+             ha="left", va="top", fontfamily=SERIF_STACK)
+    if footnote:
+        fig.text(left, fy - _line_h(fig, note_pt, _n_lines(source)), footnote,
+                 fontsize=note_pt, color=MUTED, ha="left", va="top", fontfamily=SERIF_STACK)
+    return y
+
+
+def poster_panel_head(fig, rect: list[float], kicker: str, headline: str,
+                      subtitle: str | None = None, scale: float = 1.6) -> None:
+    """A panel's kicker/headline block, stacked upward from the top of its rect.
+
+    Placed in **figure** coordinates derived from the panel's rect, not in the panel's own
+    axes fraction. Axes-fraction stacking makes the gap between two lines proportional to
+    the panel's height, so one identical call overprints on a short panel and sprawls on a
+    tall one — the first draft of this poster stacked in axes fraction and its kickers
+    printed through its headlines on exactly the short panels.
+
+    Same upward-stacking discipline as :func:`finalize`: each element sits above the one
+    before it, so ordering is structural rather than arithmetic.
+    """
+    left = rect[0]
+    y = rect[1] + rect[3] + _line_h(fig, SUBTITLE_SIZE * scale) * 0.30
+
+    if subtitle:
+        sub_pt = SUBTITLE_SIZE * scale * 0.85
+        fig.text(left, y, subtitle, fontsize=sub_pt, color=MUTED,
+                 ha="left", va="bottom", fontfamily=SERIF_STACK)
+        y += _line_h(fig, sub_pt, _n_lines(subtitle))
+
+    head_pt = TITLE_SIZE * scale * 0.95
+    fig.text(left, y, headline, fontsize=head_pt, color=TEXT,
+             ha="left", va="bottom", fontfamily=SERIF_STACK)
+    y += _line_h(fig, head_pt, _n_lines(headline))
+
+    kick_pt = KICKER_SIZE * scale * 0.85
+    fig.text(left, y, " ".join(kicker.upper()), fontsize=kick_pt, color=MUTED,
+             ha="left", va="bottom", fontfamily=SERIF_STACK)
+
+
+def poster_head_height(fig, headline: str, subtitle: str | None = None,
+                       scale: float = 1.6) -> float:
+    """Figure-fraction height :func:`poster_panel_head` occupies above a rect.
+
+    Exported so the poster stacks panels against reserved space it actually measured,
+    rather than a clearance that happens to work at today's font sizes.
+    """
+    h = _line_h(fig, SUBTITLE_SIZE * scale) * 0.30
+    if subtitle:
+        h += _line_h(fig, SUBTITLE_SIZE * scale * 0.85, _n_lines(subtitle))
+    h += _line_h(fig, TITLE_SIZE * scale * 0.95, _n_lines(headline))
+    h += _line_h(fig, KICKER_SIZE * scale * 0.85, 1, leading=1.9)
+    return h
+
+
+def stat_tiles(fig, tiles: list[tuple[str, str]], y: float,
+               scale: float = 1.6, left: float = POSTER_LEFT,
+               right: float = POSTER_RIGHT) -> float:
+    """A row of figure-level number tiles: big value, small caption beneath.
+
+    Values arrive already formatted, because a tile that formats its own number is a tile
+    that can disagree with the panel below it. The poster derives every one of these from
+    the same series the panels plot.
+
+    Returns the fraction where the row ends, **including a trailing gap** — so a caller
+    can hand the value straight to the next block without reaching into this module's
+    private line-height maths to work out its own clearance.
+    """
+    if not tiles:
+        return y
+    value_pt = TITLE_SIZE * scale * 1.05
+    cap_pt = NOTE_SIZE * scale * 0.95
+    span = (right - left) / len(tiles)
+    for i, (value, caption) in enumerate(tiles):
+        x = left + i * span
+        fig.text(x, y, value, fontsize=value_pt, color=TEXT,
+                 ha="left", va="top", fontfamily=SERIF_STACK)
+        fig.text(x, y - _line_h(fig, value_pt), caption, fontsize=cap_pt, color=MUTED,
+                 ha="left", va="top", fontfamily=SERIF_STACK)
+    return y - _line_h(fig, value_pt) - _line_h(fig, cap_pt, leading=2.0)
 
 
 def obol(ax, x, y, size: float = 42.0, color: str | None = None) -> None:

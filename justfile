@@ -52,6 +52,16 @@ smoke:
 test:
     uv run pytest
 
+# ---------------------------------------------------------------- artifacts
+
+# The 24x34in poster (5.2) and the 1200x600 social card, both palettes.
+# Offline: reads only what ingestion already wrote to data/raw/.
+poster:
+    uv run python -m scripts.make_poster
+
+social-card:
+    uv run python -m scripts.make_social_card
+
 # Everything an S1 gate review needs, offline.
 check: test checksums coverage smoke
 
