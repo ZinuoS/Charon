@@ -111,6 +111,11 @@ class TestTradeSheets:
         from pipeline.hedging.sheets import all_sheets
         return all_sheets(0.2257, "headroom 0; sealed by observation")
 
+    def _convergence(self):
+        """By NAME. These assertions are about the convergence expression specifically, and
+        indexing into all_sheets() made them break the moment the order changed."""
+        return next(s for s in self._sheets() if "CONVERGENCE" in s.name.upper())
+
     def test_every_sheet_declares_readiness(self):
         from pipeline.hedging.sheets import LIVE, CONTINGENT
         for s in self._sheets():
@@ -123,16 +128,27 @@ class TestTradeSheets:
                 assert s.contingency, f"{s.name} is contingent but does not say on what"
                 assert "CONTINGENT ON" in s.render()
 
-    def test_every_sheet_carries_the_skew_warning(self):
-        """The skew must appear in the same document as any convergence structure."""
+    def test_every_short_premium_sheet_carries_the_skew_warning(self):
+        """The skew must appear in the same document as any SHORT-premium structure.
+
+        Scoped, not weakened: the long-000660 access sheet is long the cheap leg, so it is
+        not short a one-sided barrier and a skew note there would be wrong. It is required
+        to carry its own risk section instead, asserted below."""
         for s in self._sheets():
+            if "ACCESS" in s.name.upper():
+                continue
             joined = " ".join(s.residual_exposures + s.risks)
             assert "skew" in joined.lower() or "unbounded" in joined.lower(), \
                 f"{s.name} lacks the negative-skew warning"
 
+    def test_the_access_sheet_still_states_its_own_risk(self):
+        access = next(s for s in self._sheets() if "ACCESS" in s.name.upper())
+        assert any("access risk" in r.lower() for r in access.risks), \
+            "access sheet is exempt from the skew guard, so it must name its own risk"
+
     def test_live_sheet_shows_the_alternative_expression(self):
         """Balanced treatment: the opposite expression sits beside the first."""
-        live = self._sheets()[0]
+        live = self._convergence()
         assert live.alternative and "local leg" in live.alternative
 
     def test_no_advisory_language_in_rendered_sheets(self):
@@ -150,22 +166,69 @@ class TestTradeSheets:
     def test_cost_stack_declares_its_accrual_basis_as_a_floor(self):
         """A cost stack without a horizon is unreadable: every line accrues. S17 added the
         basis row, and it must carry both the floor and the open tail."""
-        live = self._sheets()[0]
+        live = self._convergence()
         costs = dict(live.cost_stack)
         basis = costs["ACCRUAL BASIS"].lower()
         assert "floor" in basis and "no upper bound" in basis
 
     def test_remaining_pending_field_is_the_ceiling_and_says_none_exists(self):
-        live = self._sheets()[0]
+        live = self._convergence()
         assert any("upper bound" in p.lower() for p in live.pending), \
             "the open tail must survive as an explicit pending line, not vanish"
         assert any("m5" in p.lower() for p in live.pending)
 
     def test_undocumented_costs_say_quoted_live_never_zero(self):
-        live = self._sheets()[0]
+        live = self._convergence()
         for seg, val in live.cost_stack:
             assert val != "0" and val != "0%", f"{seg} rendered as zero"
 
     def test_stress_is_the_realized_excursion(self):
-        live = self._sheets()[0]
+        live = self._convergence()
         assert "51.60" in live.stress and "Not modelled" in live.stress
+
+
+class TestPartThreeSheets:
+    """The financing and access sheets. Both are LIVE, so the guards are about honesty."""
+
+    def _sheets(self):
+        from pipeline.hedging.sheets import financing_margin_sheet, local_access_sheet
+        r = "headroom 0 on US78392B2060"
+        return [financing_margin_sheet(r), local_access_sheet(r)]
+
+    def test_part_three_sheets_come_first(self):
+        """Operational depth before the view: a client who cannot book the leg or fund the
+        short does not need the expression."""
+        from pipeline.hedging.sheets import all_sheets
+        names = [s.name for s in all_sheets(0.226, "headroom 0")]
+        assert "FINANCING" in names[0] and "ACCESS" in names[1]
+
+    def test_horizon_is_derived_not_literal(self):
+        """These sheets quote a holding floor. It moved 143d -> 220d once already."""
+        from pipeline.hedging.ratios import sizing_horizon
+        floor = f"{sizing_horizon()['holding_period_floor_days']:.0f}"
+        assert any(floor in s.render() for s in self._sheets())
+
+    def test_hedge_numbers_cite_the_metrics_table_by_cell(self):
+        rendered = self._sheets()[0].render()
+        assert "metrics_table.csv" in rendered and "h=" in rendered
+
+    def test_firm_halves_are_listed_never_guessed(self):
+        """Public-data halves only. Anything needing a firm's borrow book or booking entity
+        must be a named follow-up, not a number."""
+        for s in self._sheets():
+            r = s.render()
+            assert "DESK FOLLOW-UP" in r, f"{s.name} has no firm-half follow-up"
+            for seg, val in s.cost_stack:
+                assert val not in ("0", "0%"), f"{seg} rendered as zero"
+
+    def test_recall_risk_is_named_on_the_financing_sheet(self):
+        """A 220-day floor against overnight-recallable borrow is the maturity mismatch most
+        likely to end the position early; burying it would be the flattering omission."""
+        assert "RECALL RISK" in self._sheets()[0].render()
+
+    def test_access_sheet_frames_booking_entity_as_the_live_question(self):
+        assert "BOOKING ENTITY" in self._sheets()[1].render()
+
+    def test_h3_power_is_stated_with_a_decision_date(self):
+        r = self._sheets()[1].render()
+        assert "H3 POWER" in r and "2026-10" in r

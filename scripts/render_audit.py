@@ -41,6 +41,9 @@ def main() -> int:
         "g10_expression_readiness": lambda: figures.g10_expression_readiness(
             all_sheets(sk.series.iloc[-1], "headroom 0")),
         "g11_taxonomy_separation": lambda: figures.g11_taxonomy_separation(rows),
+        "g12_variance_shares": lambda: figures.g12_variance_shares(
+            __import__("hypotheses.h4_vol_decomposition.realized", fromlist=["x"])
+            .compare_pairs().to_dict("records")),
     }
     for name, fn in jobs.items():
         fig, _ = fn()

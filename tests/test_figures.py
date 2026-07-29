@@ -78,9 +78,9 @@ class TestExpressionReadiness:
         rows would read as a shorter menu, not as a bug."""
         from pipeline.hedging.sheets import all_sheets
         from pipeline.viz import figures
-        sheets = all_sheets(0.226, "headroom 0")
+        sheets = [s for s in all_sheets(0.226, "headroom 0") if s.kind == "expression"]
         assert len(figures.g10_expression_readiness.__doc__) > 0
-        fig, ax = figures.g10_expression_readiness(sheets)
+        fig, ax = figures.g10_expression_readiness(all_sheets(0.226, "headroom 0"))
         labels = [t.get_text() for t in ax.texts]
         for s in sheets:
             assert any(s.name.split("(")[0].strip() in t for t in labels), \

@@ -363,6 +363,9 @@ def g10_expression_readiness(sheets):
         [2, 2, None, None, None, None, 0],   # 5 flow-aware overlay
     ]
     # Sheet names already carry their ordinal; prepending another produced "1. 1. ...".
+    # Expressions only. Operational sheets (financing, access) are not ways to take the
+    # view, and charting them here would put rows in a matrix whose columns do not apply.
+    sheets = [s for s in sheets if getattr(s, "kind", "expression") == "expression"]
     names = [s.name.split("(")[0].strip() for s in sheets]
     live = [s.readiness.strip("[] ").lower().startswith("live") for s in sheets]
 
@@ -560,6 +563,15 @@ LAYMAN: dict[str, list[str]] = {
         "problems rather than research problems.",
         "Nothing here says which trade is better — only which can be built honestly now.",
     ],
+    "g12_variance_shares": [
+        "Break the US share's daily moves into three parts: the Korean share, the currency, "
+        "and the gap between them.",
+        "The gap looks like most of the risk in every case — including the ones where the "
+        "trade works both ways. So a big gap-share on its own proves nothing.",
+        "The tell is that for a freely tradeable pair the gap almost exactly cancels against "
+        "the local share: it opens and closes inside a day, mostly because the two markets "
+        "close at different times.",
+    ],
     "g11_taxonomy_separation": [
         "Sort cross-listings by whether the trade works both ways, using only the legal "
         "documents. Then look at how their gaps behave.",
@@ -599,3 +611,65 @@ def ten_second_test() -> dict[str, bool]:
              and callable(globals()[n])]
     return {n: bool(layman(n)) for n in sorted(names)}
 
+
+
+def g12_variance_shares(rows):
+    """G12 — realized variance shares of the ADR return, per pair.
+
+    NUMBERED 12, not 10/11: those are taken by `g10_expression_readiness` and
+    `g11_taxonomy_separation`. Reusing the numbers would collide in the audit doc and in
+    every caption that cites one.
+
+    NO REGIME-TIMELINE COMPANION. The session spec paired this with a regime timeline; there
+    is nothing to plot. Regime is a per-pair label read off a filing, so a timeline of it is a
+    horizontal line. The time-varying quantity is binding-ness (headroom), which the H5
+    monitor already reports as text and which has one observation on the capped programme.
+
+    What the figure has to be honest about: the shares do NOT separate the classes. The
+    premium's share is high for the fungible control too. The separating structure is the
+    COVARIANCE — a fungible pair's premium variance is almost entirely cancelled by negative
+    covariance with the local leg, i.e. the two legs move apart and back inside the
+    measurement window rather than the premium being an independent risk.
+    """
+    fig, ax = theme.figure(height=4.6)
+    names = [r["pair"] for r in rows]
+    y = np.arange(len(names))
+    share_pi = [r["share_pi"] for r in rows]
+    cov = [r["share_cov_local_pi"] for r in rows]
+
+    ax.barh(y - 0.19, share_pi, height=0.34, color=theme.INK, label="premium variance share")
+    ax.barh(y + 0.19, cov, height=0.34, color=theme.WARNING,
+            label="covariance(local, premium) share")
+    ax.axvline(0, color=theme.RULE, linewidth=1.0)
+    ax.set_yticks(y); ax.set_yticklabels(names, fontsize=theme.LABEL_SIZE)
+    ax.invert_yaxis()
+    ax.set_xlabel("share of ADR return variance", fontsize=8, color=theme.MUTED)
+    ax.legend(fontsize=theme.NOTE_SIZE, frameon=False, loc="lower right")
+
+    # The one takeaway annotation: the cancellation, on the control.
+    i = next((k for k, r in enumerate(rows) if r["pair"] == "baba"), None)
+    if i is not None:
+        # Text into the empty upper-left, arrow down to the bar. Anchored at the bar with a
+        # point offset it landed on the x tick labels -- the same defect class as G1's floor
+        # label, and the bottom-left corner of a horizontal bar chart is always contested.
+        ax.annotate("the control's premium variance is\nalmost exactly cancelled by its\n"
+                    "covariance with the local leg",
+                    xy=(cov[i] * 0.55, i + 0.19), xytext=(0.03, 0.72),
+                    textcoords="axes fraction", ha="left", va="top",
+                    fontsize=theme.NOTE_SIZE, color=theme.MUTED,
+                    fontfamily=theme.SERIF_STACK, linespacing=1.45,
+                    arrowprops=dict(arrowstyle="-|>", color=theme.RULE, linewidth=0.9,
+                                    connectionstyle="arc3,rad=-0.15"))
+
+    theme.finalize(
+        fig, kicker="variance",
+        headline="A large premium-variance share is not evidence of a barrier",
+        subtitle="Log-additive decomposition of the ADR return. The premium's share is high "
+                 "for the fungible control too — what differs is how completely the local leg "
+                 "cancels it.",
+        source="Repo-computed from D1/D6 closes. hypotheses/h4_vol_decomposition.",
+        footnote="Non-contemporaneous closes inflate premium variance on every pair; the "
+                 "negative local-premium covariance is largely that artefact returning. SKHY "
+                 "n=11 — far too few to compare against 2,327 and 1,592.",
+    )
+    return fig, ax

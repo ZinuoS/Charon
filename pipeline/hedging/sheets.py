@@ -53,6 +53,10 @@ class TradeSheet:
     monitor_reading: str
     alternative: str = ""
     contingency: str = ""
+    # "expression" = a way to take the view. "operational" = how the position is carried or
+    # the leg is booked. G10 charts expressions only; an operational sheet in an expressions
+    # matrix would be answering a question the figure does not ask.
+    kind: str = "expression"
     pending: list[str] = field(default_factory=list)
 
     def render(self) -> str:
@@ -165,6 +169,10 @@ def _contingent(name: str, structure: str, monetizes: str, blocker: str,
 
 def all_sheets(premium: float, headroom_reading: str) -> list[TradeSheet]:
     return [
+        # Part 3 first: how the position is carried and how the leg is booked come before
+        # the expression, because both can make the trade impossible regardless of the view.
+        financing_margin_sheet(headroom_reading),
+        local_access_sheet(headroom_reading),
         convergence_rv(premium, headroom_reading),
         _contingent(
             "2. Local-access substitute (index synthetic)",
@@ -199,3 +207,151 @@ def all_sheets(premium: float, headroom_reading: str) -> list[TradeSheet]:
             "Naver route is terms-withheld.",
             "Estimated rebalance notional vs close-window premium changes."),
     ]
+
+
+# ================================================================================
+# Part-3-first sheets (S16 Block 5). Operational depth before the view.
+#
+# Both reuse TradeSheet rather than introducing a second sheet type -- the fields already
+# cover structure / hedge / residuals / cost / stress / constraints / monitor, and the only
+# thing these two need that the convergence sheet did not is a longer constraints list.
+#
+# PUBLIC-DATA HALVES ONLY. Anything that needs a firm's own borrow book, prime line or
+# booking entity is listed as a desk follow-up, not guessed at.
+# ================================================================================
+
+def _table_cell(regime: str, horizon: int) -> str:
+    """Cite the S4 metrics table by cell, so a hedge number traces to its evidence."""
+    return f"data/derived/s4/metrics_table.csv [{regime}, h={horizon}]"
+
+
+def financing_margin_sheet(headroom_reading: str) -> TradeSheet:
+    """Short-SKHY: the financing and margin-stress sheet. Part 3 first."""
+    h = _horizon()
+    return TradeSheet(
+        name="A. SHORT-SKHY FINANCING & MARGIN STRESS",
+        readiness=LIVE,
+        structure="Short 1 ADR (SKHY). Financing and margin treatment only -- this sheet "
+                  "prices CARRYING the position, not the view. Pair with the convergence RV "
+                  "sheet for the expression.",
+        monetizes="Nothing on its own. It states what holding the short costs and what it "
+                  "posts under stress.",
+        hedge=[
+            "Not a hedge sheet. The FX and beta legs live on the convergence RV sheet; the "
+            "residual premium notional it leaves unhedged (~18% of the ADR leg) is the "
+            "quantity margined here.",
+        ],
+        residual_exposures=[
+            "RECALL RISK is the binding one. The position must be financeable across the "
+            f"whole holding floor -- {h['expected_holding_period'].lower()}. A borrow "
+            "recalled inside that floor forces a close at whatever the premium is on the "
+            "day, which converts a convergence view into a liquidation.",
+            "Margin is marked to the OBSERVABLE premium, so the stress case is a realized "
+            "excursion rather than a modelled shock.",
+            skew_note(),
+        ],
+        cost_stack=[
+            ("conversion round trip", "0.07% of notional [424B4]"),
+            ("ADR borrow", "— desk quotes live —"),
+            ("financing spread on short proceeds", "— desk quotes live —"),
+            ("ACCRUAL BASIS", _accrual_basis()),
+            ("half-life evidence", _table_cell("one_way_constrained", 60)),
+        ],
+        stress="MARKED STRESS: pi 22.57% -> 51.60%, the realized week-one excursion. On a "
+               "$130 ADR leg that is ~$29/ADR of additional margin against a short, before "
+               "any convergence. Not a modelled shock -- it happened, in the first five "
+               "sessions of the programme's life.",
+        constraints=[
+            "Locate must survive the holding floor, not the trade date. A 220-day floor "
+            "against an overnight-recallable borrow is a maturity mismatch, and it is the "
+            "single most likely way this position ends early.",
+            "Short-sale regime: Korean short selling resumed 2025-03-31; Korea has twice "
+            "responded to sharp declines with bans. The ADR leg is US-listed and unaffected, "
+            "but the local hedge leg is not.",
+            "DESK FOLLOW-UP (firm half): term-borrow availability and rate on SKHY; whether "
+            "the prime line can commit borrow for >=12 months; haircut schedule on the "
+            "premium leg.",
+        ],
+        risks=[
+            "Unbounded above. No numeric deposit cap appears in any SEC filing, so there is "
+            "no level at which the margin requirement stops growing.",
+            "Financing cost is LINEAR in holding horizon and the horizon's upper tail is "
+            "open, so the cost is quoted as a floor and never as a point.",
+        ],
+        monitor="D5 headroom on ISIN US78392B2060. A deposit clearing there is the first "
+                "evidence the consent gate operates at all.",
+        monitor_reading=headroom_reading,
+        alternative="A defined-risk expression caps the margin path at the cost of the "
+                    "premium carry, if listed options on SKHY become available.",
+        pending=[
+            "Term-borrow rate and availability -- firm half, desk follow-up.",
+            "Haircut schedule -- firm half, desk follow-up.",
+        ],
+        kind="operational",
+    )
+
+
+def local_access_sheet(headroom_reading: str) -> TradeSheet:
+    """Long-000660: the access-regime sheet. Mechanics, not a view."""
+    return TradeSheet(
+        name="B. LONG-000660 ACCESS REGIME",
+        readiness=LIVE,
+        structure="Long 0.1 common shares (000660.KS) per ADR-equivalent. This sheet is "
+                  "about GETTING THE LEG ON as a non-resident, which is the part that "
+                  "actually gates the trade, not about the view.",
+        monetizes="Nothing on its own. It is the access half of any convergence expression.",
+        hedge=["FX: sell KRW forward against the KRW notional. Tenor follows the holding "
+               "floor, so the forward is a >=12m instrument, not a spot-adjacent one."],
+        residual_exposures=[
+            "SETTLEMENT MISMATCH. KRX settles T+2 and the ADR leg T+1, so a paired trade "
+            "carries a one-day funding gap on every rebalance. Small per turn, not small "
+            "over a 220-day floor.",
+            "The premium notional itself stays FX-exposed even with this leg hedged -- see "
+            "the convergence RV sheet's residual section.",
+        ],
+        cost_stack=[
+            ("KRX transaction tax + fees", "— desk quotes live —"),
+            ("FX hedge (forward points)", "— desk quotes live at >=12m tenor —"),
+            ("custody / omnibus", "— desk quotes live —"),
+            ("ACCRUAL BASIS", _accrual_basis()),
+        ],
+        stress="The long leg's stress is the mirror of the short's: the same 22.57 -> 51.60 "
+               "excursion is a MARK-UP here. It is stated because a paired position nets "
+               "them and an unpaired one does not.",
+        constraints=[
+            "INVESTMENT REGISTRATION CERTIFICATE. A non-resident needs an IRC to hold "
+            "Korean listed equity directly; it is obtained through a standing proxy, and it "
+            "is a prerequisite rather than a formality.",
+            "OMNIBUS vs SEGREGATED. Omnibus accounts reduce the per-account registration "
+            "burden but the beneficial-owner reporting still resolves to the underlying "
+            "holder, so the aggregation is operational, not regulatory.",
+            "BOOKING ENTITY is the live operational question: which entity holds the IRC "
+            "determines which entity can hold the leg, and a convergence trade booked "
+            "against an entity without one cannot be assembled at all. Framed here as a "
+            "question, because the answer is a firm fact.",
+            "SKHY is FORWARD-TEST ONLY in this repo (README section 8). Nothing on this "
+            "sheet is a forecast of the pair.",
+            "DESK FOLLOW-UP (firm half): which booking entity holds a Korean IRC; standing- "
+            "proxy arrangement and its custodian; whether omnibus is available for this "
+            "strategy or segregation is required.",
+        ],
+        risks=[
+            "Access risk is not price risk and does not net against it. If the leg cannot be "
+            "booked, the expression does not exist -- there is no partial version.",
+            "Korean short-sale regime changes affect the paired trade even when this leg is "
+            "the long one, because the pairing needs the other side.",
+        ],
+        monitor="Standing-proxy and IRC status at the booking entity, plus the Korean "
+                "short-sale regime notice board. Both are state, not price.",
+        monitor_reading=headroom_reading,
+        alternative="Index-synthetic local exposure avoids the IRC entirely but introduces "
+                    "basis to the name -- see the local-access substitute sheet, which is "
+                    "contingent on KOSPI200 data this programme has not landed.",
+        pending=[
+            "H3 POWER: at n=11 SKHY observations the minimum detectable close-window effect "
+            "is far larger than any plausible LETF rebalance impact; the design is not "
+            "decision-capable until roughly 60 sessions accumulate (~2026-10-02).",
+            "Booking entity / IRC / omnibus -- firm halves, desk follow-ups.",
+        ],
+        kind="operational",
+    )
