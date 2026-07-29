@@ -336,3 +336,86 @@ def g9_cost_and_skew(cost_rows, margin: dict):
                  "The negative skew is structural (G4).",
     )
     return fig, axes
+
+
+def g10_expression_readiness(sheets):
+    """G10 — why each expression is or is not constructible, as a dependency matrix.
+
+    The trade sheets render as prose, which is right for a client reading one of them and
+    wrong for a client comparing five. A reader asking "what would it take to trade #3?"
+    should not have to diff two paragraphs. So: expressions down the side, required inputs
+    across the top, and the blocking cells drawn as holes.
+
+    The design decision that matters is that a MISSING input is drawn, not omitted. An
+    all-present row and a two-holes row must be distinguishable at a glance, because the
+    difference between them is the difference between a trade and a wish.
+    """
+    inputs = [
+        ("premium\nseries", "D1"), ("FX\nspot", "D2"), ("convergence\nhorizon", "M3"),
+        ("beta\ncontext", "M5"), ("index\nfutures", "H2"), ("option\nsurfaces", "H1/H4"),
+        ("LETF\nAUM", "D4"),
+    ]
+    # Requirement matrix, keyed to the sheets in pipeline.hedging.sheets.all_sheets order.
+    # 2 = landed, 1 = landed but bounded-only, 0 = missing, None = not required.
+    REQ = [
+        [2, 2, 1, 0, None, None, None],      # 1 convergence RV      (live)
+        [2, 2, None, 0, 0, None, None],      # 2 local-access substitute
+        [2, 2, 1, None, 0, 0, None],         # 3 term-structure RV
+        [2, 2, None, None, None, 0, None],   # 4 volatility RV
+        [2, 2, None, None, None, None, 0],   # 5 flow-aware overlay
+    ]
+    # Sheet names already carry their ordinal; prepending another produced "1. 1. ...".
+    names = [s.name.split("(")[0].strip() for s in sheets]
+    live = [s.readiness.strip("[] ").lower().startswith("live") for s in sheets]
+
+    fig, ax = theme.figure(height=4.6)
+    nrow, ncol = len(REQ), len(inputs)
+    for r, row in enumerate(REQ):
+        y = nrow - 1 - r
+        for c, v in enumerate(row):
+            if v is None:
+                ax.plot(c, y, marker=".", color=theme.RULE, markersize=2)
+                continue
+            if v == 2:
+                ax.plot(c, y, marker="o", markersize=11, color=theme.MOSS,
+                        markeredgecolor=theme.MOSS)
+            elif v == 1:
+                # bounded-only: half-filled, because "we have a floor" is not "we have it"
+                ax.plot(c, y, marker="o", markersize=11, markerfacecolor=theme.PAPER,
+                        markeredgecolor=theme.MOSS, markeredgewidth=2.0)
+                ax.plot(c, y, marker="_", markersize=7, color=theme.MOSS, markeredgewidth=2.4)
+            else:
+                ax.plot(c, y, marker="o", markersize=11, markerfacecolor=theme.PAPER,
+                        markeredgecolor=theme.CLAY, markeredgewidth=1.4)
+                ax.plot(c, y, marker="x", markersize=6, color=theme.CLAY, markeredgewidth=1.6)
+        label_color = theme.TEXT if live[r] else theme.MUTED
+        ax.text(-0.62, y, names[r], ha="right", va="center", fontsize=theme.LABEL_SIZE,
+                color=label_color, fontfamily=theme.SERIF_STACK)
+        tag = "live" if live[r] else "contingent"
+        ax.text(ncol + 0.25, y, tag, ha="left", va="center", fontsize=theme.NOTE_SIZE,
+                color=theme.MOSS if live[r] else theme.CLAY, fontfamily=theme.SERIF_STACK)
+        # Rule stops short of the readiness tag — at full width it struck through the text.
+        ax.plot([-0.45, ncol - 0.55], [y, y], color=theme.RULE, linewidth=0.6, zorder=0)
+
+    for c, (label, src) in enumerate(inputs):
+        ax.text(c, nrow - 0.35, label, ha="center", va="bottom", fontsize=theme.NOTE_SIZE,
+                color=theme.MUTED, fontfamily=theme.SERIF_STACK, linespacing=1.3)
+        ax.text(c, nrow - 0.62, src, ha="center", va="bottom", fontsize=theme.NOTE_SIZE - 0.8,
+                color=theme.RULE, fontfamily=theme.SERIF_STACK)
+
+    ax.set_xlim(-3.0, ncol + 1.9); ax.set_ylim(-1.5, nrow + 0.6)
+    ax.axis("off")
+    ax.text(-2.9, -1.05,
+            "filled = landed     ·     open with bar = bounded only (floor, no ceiling)     ·"
+            "     open with cross = missing     ·     dot = not required",
+            fontsize=theme.NOTE_SIZE, color=theme.MUTED, fontfamily=theme.SERIF_STACK)
+    theme.finalize(
+        fig, kicker="expressions",
+        headline="One expression is constructible today; four wait on named inputs",
+        subtitle="Required inputs per expression. Nothing here is a view on which trade is "
+                 "better — only on which can be built from data this programme has landed.",
+        source="Repo-computed from pipeline.hedging.sheets and the D-source registry.",
+        footnote="The convergence horizon is drawn bounded-only: a 95% floor exists, an upper "
+                 "bound does not. Cost accrues against the floor.",
+    )
+    return fig, ax

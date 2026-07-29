@@ -216,6 +216,18 @@ that shows a client what it cannot yet price earns more trust than one that quie
 """)
 
 code(r'''
+fig, ax = figures.g10_expression_readiness(sheets)
+fig;
+''')
+
+md(r"""
+Two of the four contingent expressions are a **single input** away. The volatility RV needs
+only listed option surfaces for SKHY and 000660; the execution overlay needs only landed ETF
+assets under management. Neither is a modelling gap — both are sourcing gaps, and both are
+named in §6 with the route that would close them.
+""")
+
+code(r'''
 for sh in sheets[1:]:
     print(sh.render())
     print()

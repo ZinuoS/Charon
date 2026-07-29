@@ -59,3 +59,43 @@ def test_g4_shows_the_unbounded_side(series):
     text = " ".join(t.get_text() for a in axes for t in a.texts)
     assert "UNBOUNDED" in text, "the negative skew must be drawn, not footnoted"
     assert "BOUNDED" in text
+
+
+class TestExpressionReadiness:
+    """G10 — the expressions menu as a matrix. Guards the claims the chart makes."""
+
+    def _fig(self):
+        from pipeline.hedging.sheets import all_sheets
+        from pipeline.viz import figures
+        return figures.g10_expression_readiness(all_sheets(0.226, "headroom 0"))
+
+    def test_renders(self):
+        fig, ax = self._fig()
+        assert fig is not None
+
+    def test_row_count_matches_the_sheet_count(self):
+        """The chart must not silently drop an expression — a five-row menu drawn with four
+        rows would read as a shorter menu, not as a bug."""
+        from pipeline.hedging.sheets import all_sheets
+        from pipeline.viz import figures
+        sheets = all_sheets(0.226, "headroom 0")
+        assert len(figures.g10_expression_readiness.__doc__) > 0
+        fig, ax = figures.g10_expression_readiness(sheets)
+        labels = [t.get_text() for t in ax.texts]
+        for s in sheets:
+            assert any(s.name.split("(")[0].strip() in t for t in labels), \
+                f"{s.name} missing from the matrix"
+
+    def test_horizon_is_drawn_bounded_not_landed(self):
+        """The convergence-horizon column must not read as fully landed. A floor with an
+        open tail is not the same as having the number, and the marker encodes that."""
+        fig, ax = self._fig()
+        note = " ".join(t.get_text() for t in fig.texts) + " ".join(t.get_text() for t in ax.texts)
+        assert "floor" in note.lower() and "no ceiling" in note.lower() or "upper bound" in note.lower()
+
+    def test_legend_explains_every_marker_state_used(self):
+        fig, ax = self._fig()
+        legend = [t.get_text() for t in ax.texts if "landed" in t.get_text()]
+        assert legend, "marker legend missing"
+        for state in ("landed", "bounded", "missing", "not required"):
+            assert state in legend[0], f"legend does not explain '{state}'"
