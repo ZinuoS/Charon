@@ -26,14 +26,15 @@ from __future__ import annotations
 import argparse
 
 from ._puller import print_report, run_specs
-from .registry import D6_EXTRA_SERIES, D6_TSMC_SERIES
+from .registry import D6_EXTRA_SERIES, D6_TAIWAN_SERIES, D6_TSMC_SERIES
 
 SOURCE = "d6_comparators"
 
 TIERS = {
     "tsmc": D6_TSMC_SERIES,
     "extended": D6_EXTRA_SERIES,
-    "all": D6_TSMC_SERIES + D6_EXTRA_SERIES,
+    "taiwan": D6_TAIWAN_SERIES,
+    "all": D6_TSMC_SERIES + D6_EXTRA_SERIES + D6_TAIWAN_SERIES,
 }
 
 

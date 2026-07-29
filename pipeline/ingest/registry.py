@@ -85,6 +85,14 @@ class PairSpec:
     ratio_source: str
     confirmed: bool = False
     notes: str = ""
+    # Sample restrictions. These exist so an exclusion is DECLARED IN THE REGISTRY with its
+    # reason, rather than applied ad hoc at a call site where a later reader cannot see it.
+    # Both fields must be justified by a documented CORPORATE ACTION or listing event — never
+    # by how the resulting series looks, which would be selecting on the outcome.
+    sample_start: str | None = None
+    sample_end: str | None = None
+    sample_reason: str = ""
+    excluded: bool = False
 
 
 UTC = ZoneInfo("UTC")
@@ -335,7 +343,103 @@ D6_EXTRA_SERIES: tuple[SeriesSpec, ...] = (
 # Pairs
 # --------------------------------------------------------------------------------
 
+
+# ------------------------------------------------------------------------------------
+# D6 Taiwan cohort (S18) — every OTHER TWSE-listed company with a US ADR programme.
+#
+# Added as a COHORT, not as a selection. The regime label is assigned from the documented
+# re-issuance rule, which is market-wide, so either all of these qualify or none do.
+# Picking the two or three whose premiums looked most persistent would be selecting on the
+# outcome, which is exactly the error the pre-registration exists to prevent — so the
+# inclusion rule is mechanical: TWSE local line + US ADR + retrievable history.
+#
+# These share TSMC's regulator. They therefore reduce ISSUER-idiosyncratic noise in the
+# one_way_constrained estimate; they do NOT provide independent variation in the RULE.
+# That limitation is stated wherever the pooled estimate is reported.
+# ------------------------------------------------------------------------------------
+def _tw_local(series_id: str, symbol: str) -> SeriesSpec:
+    return SeriesSpec(
+        series_id=series_id, symbol=symbol, asset_class="local_equity", currency="TWD",
+        market="TWSE", timezone="Asia/Taipei", close_local=time(13, 30),
+        availability_lag=_STD_LAG,
+        availability_note="TWSE regular-session close 13:30 TPE; daily bar assumed knowable 13:45 TPE.",
+        units="TWD per common share", start=None, confirmed=False,
+        providers=("eodhd", "twse"),
+        provider_symbols={"eodhd": symbol, "twse": symbol.split(".")[0]},
+    )
+
+
+def _tw_adr(series_id: str, symbol: str) -> SeriesSpec:
+    return SeriesSpec(
+        series_id=series_id, symbol=symbol, asset_class="adr", currency="USD",
+        market="NYSE", timezone="America/New_York", close_local=time(16, 0),
+        availability_lag=_STD_LAG, availability_note="NYSE close 16:00 ET, +15min.",
+        units="USD per ADR", start=None, confirmed=False,
+        providers=("eodhd", "nasdaq"),
+        provider_symbols={"eodhd": f"{symbol}.US", "nasdaq": symbol},
+    )
+
+
+D6_TAIWAN_SERIES: tuple[SeriesSpec, ...] = (
+    _tw_adr("umc_adr_daily", "UMC"),      _tw_local("umc_local_daily", "2303.TW"),
+    _tw_adr("ase_adr_daily", "ASX"),      _tw_local("ase_local_daily", "3711.TW"),
+    _tw_adr("auo_adr_daily", "AUO"),      _tw_local("auo_local_daily", "2409.TW"),
+    _tw_adr("cht_adr_daily", "CHT"),      _tw_local("cht_local_daily", "2412.TW"),
+)
+
 PAIRS: tuple[PairSpec, ...] = (
+    # --- Taiwan cohort (S18). Ratios from each issuer's ADS terms; all unconfirmed
+    # pending a filing check, and each is sanity-checked against the implied ratio
+    # P_adr*FX/P_local, which flags a gross error without being used to TUNE the value.
+    PairSpec(
+        pair_id="umc", adr="umc_adr_daily", local="umc_local_daily", fx="usdtwd_spot_daily",
+        local_shares_per_adr=5.0,
+        ratio_source="UMC ADS terms: 1 ADS = 5 common shares.",
+        confirmed=False,
+        notes="TODO(ash): confirm against UMC 20-F / deposit agreement.",
+    ),
+    PairSpec(
+        pair_id="ase", adr="ase_adr_daily", local="ase_local_daily", fx="usdtwd_spot_daily",
+        local_shares_per_adr=2.0,
+        ratio_source="ASE Technology Holding ADS terms: 1 ADS = 2 common shares.",
+        confirmed=False,
+        sample_start="2018-05-02",
+        sample_reason=(
+            "2018 ASE Inc -> ASE Technology Holding share exchange. The provider's 3711.TW "
+            "series splices the predecessor 2311.TW history in UNADJUSTED: on 2018-04-30 the "
+            "local close steps 44.5 -> 80.3 while the implied ratio steps 4.0 -> 2.0, and the "
+            "constructed premium reaches +57,714%. A ratio spline would NOT fix it -- the "
+            "price step is 1.80x against a 2.0x ratio change, so splining injects a spurious "
+            "~10% level shift. Pre-exchange, the two legs are different securities."
+        ),
+        notes="TODO(ash): confirm the post-exchange ratio against the ASE 20-F.",
+    ),
+    PairSpec(
+        pair_id="auo", adr="auo_adr_daily", local="auo_local_daily", fx="usdtwd_spot_daily",
+        local_shares_per_adr=10.0,
+        ratio_source="AU Optronics ADS terms: 1 ADS = 10 common shares.",
+        confirmed=False,
+        excluded=True,
+        sample_end="2019-10-01",
+        sample_reason=(
+            "AU Optronics filed Form 25 on 2019-09-20 to delist its ADSs from the NYSE, "
+            "moving to a sponsored Level I OTC programme (AUOTY) and later deregistering. "
+            "The exchange-listed series therefore ends 2019-10-01. EXCLUDED rather than "
+            "truncated: an OTC ADR quote is thin and stale, so a premium built on it measures "
+            "quote staleness as much as mispricing. The 2002-2019 window is usable and is "
+            "retained in the registry for anyone who wants it, but it is out of the pooled "
+            "estimate because a delisted programme is no longer the object of study."
+        ),
+        notes="Landed and kept for the record; not pooled. See sample_reason.",
+    ),
+    PairSpec(
+        pair_id="cht", adr="cht_adr_daily", local="cht_local_daily", fx="usdtwd_spot_daily",
+        local_shares_per_adr=10.0,
+        ratio_source="Chunghwa Telecom ADS terms: 1 ADS = 10 common shares.",
+        confirmed=False,
+        notes="TODO(ash): confirm against CHT 20-F; CHT pays large annual dividends, so the "
+              "premium series needs a dividend-timing check the others may not.",
+    ),
     PairSpec(
         pair_id="skhy",
         adr="skhy_adr_daily",
@@ -398,7 +502,7 @@ PAIRS: tuple[PairSpec, ...] = (
 
 
 def all_series() -> tuple[SeriesSpec, ...]:
-    return D1_SERIES + D6_TSMC_SERIES + D6_EXTRA_SERIES
+    return D1_SERIES + D6_TSMC_SERIES + D6_EXTRA_SERIES + D6_TAIWAN_SERIES
 
 
 def series_by_id(series_id: str) -> SeriesSpec:

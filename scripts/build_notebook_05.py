@@ -100,8 +100,45 @@ matters:
 So extending the horizon did not turn an extrapolation into an estimate. It turned a false
 point into a **floor with an open tail** — which is what any quantity linear in holding
 horizon, financing cost above all, has to be quoted against.
+
+**S18 then took the constrained class from one pair to four.** S17 named single-pair
+dependence as the binding constraint, and it was: with only TSMC, "barrier regimes are
+persistent" and "TSMC is persistent" were the same statement.
+
+Membership is assigned from the **documented re-issuance rule, before any persistence is
+estimated.** All four Taiwanese pairs run on one ROC rule — a *revolving* facility, where
+re-issuance is permitted only within the scope of previously cancelled shares — which TSMC's
+FY2024 20-F states directly and which Chunghwa Telecom's FY2025 20-F goes further on, drawing
+the price conclusion itself. AU Optronics carries the same rule but is **excluded**: it
+delisted its ADSs from the NYSE in 2019, and a premium built on the thin OTC successor
+measures quote staleness as much as mispricing.
+
+Three things changed, and one did not:
+
+- The crossing became **identified** rather than underpowered — enough independent spans now
+  sit under it.
+- The 95% floor **rose from 143 to 220 trading days** (~7 months to ~10½). More evidence made
+  the constraint tighter *and* more demanding, not looser.
+- Per-pair ρ₁ runs 0.82–0.99 across the four, so the persistence **replicates** rather than
+  resting on one issuer.
+- **The open upper tail survived.** Roughly four times the data did not produce a finite upper
+  bound. That is now a robust result rather than a small-sample artefact.
+
+⚠️ **The limitation, stated where the estimate is:** these four share a regulator. Four pairs
+reduce *issuer*-idiosyncratic noise; they do not give independent variation in the *rule*. A
+second jurisdiction is the remaining gap — and India, the obvious candidate, turns out to be
+the wrong one: its headroom regime was repealed effective 15 December 2014.
 """)
 code(r'''
+from pipeline.convergence.jorda import REGIME_OF_PAIR
+from pipeline.measurement.premium import build_all_variants
+print("PER-PAIR, constrained class (pooled membership assigned from the rule, not the data)")
+print(f"{'pair':6s} {'n':>6s} {'mean pi':>9s} {'min':>8s} {'max':>8s}")
+for pid, rg in REGIME_OF_PAIR.items():
+    if rg != "one_way_constrained": continue
+    s_ = build_all_variants(pid)[0].series
+    print(f"{pid:6s} {len(s_):6d} {s_.mean():+8.2%} {s_.min():+8.2%} {s_.max():+8.2%}")
+print()
 for regime, r in res.items():
     print(f"{regime:22s} half-life {r.hl.describe()}")
     print(f"{'':22s} {r.hl.method}")

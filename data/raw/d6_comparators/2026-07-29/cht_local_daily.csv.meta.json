@@ -1,0 +1,38 @@
+{
+  "asset_class": "local_equity",
+  "availability_confirmed": false,
+  "availability_lag": "close 13:30:00 Asia/Taipei + 15min",
+  "availability_note": "TWSE regular-session close 13:30 TPE; daily bar assumed knowable 13:45 TPE.",
+  "close_local": "13:30:00",
+  "currency": "TWD",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-29T05:45:00+00:00",
+    "obs_date": "2026-07-29",
+    "observation_ts_utc": "2026-07-29T05:30:00+00:00"
+  },
+  "first_obs_date": "2000-10-31",
+  "last_obs_date": "2026-07-29",
+  "market": "TWSE",
+  "native_timezone": "Asia/Taipei",
+  "notes": "",
+  "provider": "eodhd",
+  "provider_chain": [
+    "eodhd",
+    "twse"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-07-29T10:21:21+00:00",
+  "request_params": {
+    "fmt": "json",
+    "from": "1990-01-01",
+    "period": "d",
+    "to": "2026-07-29"
+  },
+  "rows": 6399,
+  "series_id": "cht_local_daily",
+  "sha256": "1cacc53a4fb18d470ab6da815173881f755d4a3f7dc20111e016e7f9928c4854",
+  "source_url": "https://eodhd.com/api/eod/2412.TW",
+  "symbol": "2412.TW",
+  "transport": "eod_api_v1",
+  "units": "TWD per common share"
+}

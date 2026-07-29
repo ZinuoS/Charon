@@ -53,8 +53,29 @@ import numpy as np
 import pandas as pd
 
 # Proposed taxonomy at pair level (PROVISIONAL — pending ratification).
+#
+# S18: the constrained class goes from one pair to four. Membership is assigned from the
+# DOCUMENTED RE-ISSUANCE RULE, before any persistence is estimated — never from how the
+# resulting premium series behaves, which would be selecting on the outcome.
+#
+# The rule for all four is ROC law, and it is a REVOLVING facility rather than SKHY's
+# discretionary consent: 華僑及外國人投資證券管理辦法 Art. 31 permits domestic purchase for
+# re-issuance only "within the scope of the originally cancelled share count", and
+# Regulations Governing the Offering and Issuance of Overseas Securities by Issuers Art. 14
+# requires FSC effective registration for any follow-on issue outside that. TSMC's FY2024
+# 20-F Ex. 2(a)(1) states it directly; Chunghwa Telecom's FY2025 20-F goes further and draws
+# the price conclusion itself, which is why CHT is the citation of record for the mechanism.
+#
+# ⚠️ THE LIMITATION, STATED WHEREVER THE POOLED ESTIMATE IS: these four share a REGULATOR.
+# Four pairs reduce ISSUER-idiosyncratic noise; they do not provide independent variation in
+# the RULE. A second jurisdiction remains the binding gap (see docs/gate_reports/S18.md).
 REGIME_OF_PAIR = {
     "tsmc": "one_way_constrained",
+    "umc": "one_way_constrained",
+    "ase": "one_way_constrained",
+    "cht": "one_way_constrained",
+    # auo is the same rule but EXCLUDED: it delisted its ADSs from the NYSE in 2019 and
+    # moved to an OTC programme. See PairSpec.sample_reason.
     "baba": "fungible",
     # skhy is one_way_constrained too, but is FORWARD-TEST ONLY and never fitted.
 }
@@ -226,6 +247,19 @@ def estimate_regime(pi_series: list[pd.Series], regime: str, max_h: int = MAX_HO
     """
     fits: list[HorizonFit] = []
     total_obs = sum(len(s) for s in pi_series)
+
+    # WITHIN transformation before pooling (S18). Stacking raw LEVELS across pairs with
+    # different long-run means would let the between-pair dispersion masquerade as
+    # persistence: a constant offset is perfectly autocorrelated at every horizon, so the
+    # more pairs you add the more persistent the pooled premium looks, regardless of
+    # dynamics. Demeaning per pair removes that channel. It costs a small downward (Nickell)
+    # bias of order 1/T, negligible at T = 2,000-6,000.
+    #
+    # Measured on the S18 panel: pooling raw levels gave rho_1 = 0.9816 against 0.9798
+    # demeaned — small here because the four means are close, but the correction is not
+    # optional, since its size is a property of the panel and not of the estimator.
+    pi_series = [s - s.mean() for s in pi_series]
+
     for h in horizon_grid(max_h):
         xs, ys = [], []
         for pi in pi_series:

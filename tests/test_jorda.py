@@ -222,3 +222,50 @@ class TestPanelSemantics:
             assert col in df.columns, f"metrics table must expose {col}"
         row = df[df.regime == "one_way_constrained"].iloc[0]
         assert row["half_life_hi"] == "unbounded"
+
+
+# ---------------------------------------------------------------- S18: cohort pooling
+
+class TestCohortPooling:
+    def test_constrained_class_holds_more_than_one_pair(self):
+        """The S17 report named single-pair dependence as the binding constraint. This is
+        the test that stops it silently regressing to one."""
+        res = run_panel()["one_way_constrained"]
+        assert res.n_pairs >= 4, f"constrained class collapsed to {res.n_pairs} pair(s)"
+
+    def test_regime_membership_is_rule_based_not_outcome_based(self):
+        """Every pooled pair must be in REGIME_OF_PAIR — i.e. classified in the registry
+        ahead of estimation. A pair added after seeing its persistence would not be here."""
+        from pipeline.convergence.jorda import REGIME_OF_PAIR
+        assert {"tsmc", "umc", "ase", "cht"} <= set(REGIME_OF_PAIR)
+        assert REGIME_OF_PAIR.get("auo") is None, "delisted programme must not be pooled"
+
+    def test_pooling_demeans_within_pair(self):
+        """Levels pooled across pairs with different means let a constant offset — which is
+        perfectly autocorrelated at every horizon — masquerade as persistence. Two pairs that
+        are pure white noise around different means must NOT pool to high rho."""
+        import numpy as np
+        import pandas as pd
+        from pipeline.convergence.jorda import estimate_regime
+        rng = np.random.default_rng(20260729)
+        idx = pd.bdate_range("2010-01-01", periods=1500)
+        a = pd.Series(rng.normal(0.30, 0.01, len(idx)), index=idx)   # noise around +30%
+        b = pd.Series(rng.normal(0.00, 0.01, len(idx)), index=idx)   # noise around 0
+        rho1 = estimate_regime([a, b], "synthetic").horizons[0].rho
+        assert abs(rho1) < 0.2, (
+            f"pooled rho_1 = {rho1:.3f} on two white-noise series; the between-pair mean "
+            "difference is leaking in as persistence"
+        )
+
+    def test_adding_pairs_identified_the_crossing(self):
+        """Four pairs put enough independent spans under the crossing to lift it out of the
+        underpowered class. If this fails, the extra pairs are not doing the work claimed."""
+        hl = run_panel()["one_way_constrained"].hl
+        assert hl.support == "interpolated", f"support regressed to {hl.support}"
+        assert hl.n_eff_at_point >= IDENTIFIED_EFF_SPANS
+
+    def test_the_open_upper_tail_survived_four_times_the_data(self):
+        """The headline S17 finding, re-tested against a much larger panel. If quadrupling
+        the evidence had closed the tail, every 'quote a floor' claim downstream would need
+        rewriting — so this is the guard that says it did not."""
+        assert run_panel()["one_way_constrained"].hl.unbounded_above

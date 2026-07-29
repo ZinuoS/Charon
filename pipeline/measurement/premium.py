@@ -191,6 +191,12 @@ def build_variant(
         fx_series_id = pair.fx
         fx = _load_close(source, fx_series_id)
 
+    # Registry-declared sample restriction (corporate actions, delistings) applies FIRST and
+    # unconditionally; the `start` argument may only narrow further, never widen.
+    if getattr(pair, "sample_start", None):
+        adr, local, fx = (s[s.index >= pair.sample_start] for s in (adr, local, fx))
+    if getattr(pair, "sample_end", None):
+        adr, local, fx = (s[s.index <= pair.sample_end] for s in (adr, local, fx))
     if start:
         adr, local, fx = (s[s.index >= start] for s in (adr, local, fx))
 
@@ -231,6 +237,12 @@ def _build_native(pair: PairSpec, close_def: str, start: str | None) -> PremiumV
     adr = _load_close(source, pair.adr)
     local = _load_close(source, pair.local)
     fx = _load_close(source, pair.fx)
+    # Registry-declared sample restriction (corporate actions, delistings) applies FIRST and
+    # unconditionally; the `start` argument may only narrow further, never widen.
+    if getattr(pair, "sample_start", None):
+        adr, local, fx = (s[s.index >= pair.sample_start] for s in (adr, local, fx))
+    if getattr(pair, "sample_end", None):
+        adr, local, fx = (s[s.index <= pair.sample_end] for s in (adr, local, fx))
     if start:
         adr, local, fx = (s[s.index >= start] for s in (adr, local, fx))
     pi = compute_premium(adr, local, fx, pair.local_shares_per_adr)

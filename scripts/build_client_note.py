@@ -148,14 +148,27 @@ Each sheet below states structure, hedge, residual exposures, cost, stress, cons
 risk and the observable that monitors it.
 
 **On the holding period, which every cost line accrues against.** The research programme now
-measures it rather than extrapolating it, and the measurement has an unusual shape: the
-premium's half-life has a **floor of about 143 trading days (~7 months) at 95%, and no upper
-bound.** The upper edge of the confidence band never reaches half-decay at any horizon the
-data can estimate — so these data do not reject a premium that never halves. Financing cost
-is linear in holding period. **It is therefore quoted as a floor, never as a point**, and a
-financing line that can be withdrawn inside that floor is the binding risk on any convergence
-expression. §6 sets out what remains genuinely unquantified.
+measures it rather than extrapolating it, on a panel of four barrier-constrained pairs, and
+the measurement has an unusual shape: the premium's half-life has a **floor at 95%, and no
+upper bound.** The upper edge of the confidence band never reaches half-decay at any horizon
+the data can estimate — so these data do not reject a premium that never halves. Financing
+cost is linear in holding period. **It is therefore quoted as a floor, never as a point**, and
+a financing line that can be withdrawn inside that floor is the binding risk on any
+convergence expression. The current floor prints below, live from the estimate rather than
+transcribed. §6 sets out what remains genuinely unquantified.
 """)
+
+code(r'''
+from pipeline.hedging.ratios import sizing_horizon
+_h = sizing_horizon()
+print(f"Holding period   : {_h['expected_holding_period']}")
+print(f"  95% floor      : {_h['holding_period_floor_days']:.0f} trading days "
+      f"(~{_h['holding_period_floor_days']/21:.0f} months)")
+print(f"  first passage  : {_h['holding_period_point_days']:.0f} trading days   [{_h['support']}]")
+print(f"  95% ceiling    : {'NONE — unbounded' if _h['holding_period_ceiling_days'] is None else _h['holding_period_ceiling_days']}")
+print()
+print(f"Financed cost    : {_h['financed_cost_over_horizon']}")
+''')
 
 code(r'''
 from pipeline.hedging.sheets import all_sheets
@@ -321,19 +334,20 @@ Full research programme: **[00 — executive pitch](00_executive_pitch.ipynb)** 
 
 | Field | Fills from | Why not yet |
 |---|---|---|
-| Upper bound on holding period | — | **none exists at 95%.** ρ's upper band never crosses ½ at any estimable horizon; the floor (~143d) is quoted instead |
-| Precise holding period | more constrained pairs, or intraday resolution | first passage sits at ~331d but on ~6 independent spans — observed, not located |
+| Upper bound on holding period | — | **none exists at 95%**, and roughly four times the data did not produce one. ρ's upper band never crosses ½ at any estimable horizon, so the floor is quoted instead |
+| Independent regulatory variation | a constrained pair outside Taiwan | the four pooled pairs share one regulator, so they reduce issuer noise but not rule uncertainty. India was the obvious candidate; its headroom regime was repealed effective 15 Dec 2014 |
 | Financed cost over horizon | linear in the above | inherits the same gate |
 | Beta hedge ratio + interval | M5 single-name context layer | M5 not built; no Korea index proxy landed |
 | FX hedge points | SGX curve at the horizon tenor | tenor follows the holding period; deferred SGX months are exchange-marked, not executable |
 | LETF flow estimate | D4 issuer AUM | issuer pages are JS SPAs; the data-bearing route is terms-withheld |
 
-**What is usable now, and robust:** the persistence contrast. ρ₁ = 0.94 (t-HAC 129) for the
-barrier-constrained regime against 0.04 (insignificant) for the fungible control, on 2,328 and
-1,593 observations — and, since S17, a **measured floor** under the convergence horizon rather
-than an assumption. The premium mean-reverts slowly; it must be financeable for at least seven
-months, and possibly indefinitely. That is the fact this note relies on, and it is the fact a
-financing conversation should start from.
+**What is usable now, and robust:** the persistence contrast, now on four barrier-constrained
+pairs rather than one — ρ₁ ≈ 0.98 pooled across 15,853 observations, against 0.04
+(insignificant) for the fungible control, with per-pair ρ₁ running 0.82 to 0.99 so the result
+replicates rather than resting on a single issuer. Under it sits a **measured floor** on the
+convergence horizon rather than an assumption. The premium mean-reverts slowly; it must be
+financeable for the floor printed above, and possibly indefinitely. That is the fact this note
+relies on, and it is the fact a financing conversation should start from.
 
 ---
 

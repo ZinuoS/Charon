@@ -281,9 +281,9 @@ def g_convergence(results: dict):
     theme.finalize(
         fig, kicker="convergence",
         headline="The premium half-life has a floor, and no ceiling",
-        subtitle="Jordà local-projection persistence with 95% Newey–West bands. Markers mark "
-                 "horizons where at least 12 independent spans support the fit; beyond them the "
-                 "line continues but the evidence does not. The fungible control starts below ½.",
+        subtitle="Jordà local-projection persistence with 95% Newey–West bands, pooled within "
+                 "regime. Markers mark horizons carrying at least 12 independent spans; any "
+                 "unmarked stretch is drawn but not supported. The fungible control starts below ½.",
         source="Nasdaq; TWSE; EODHD; frankfurter/ECB; FRED. Repo-computed, HAC errors.",
         footnote="PROVISIONAL — regime labels are the proposed taxonomy, pending ratification. "
                  "SKHY excluded from all fits (forward test).",

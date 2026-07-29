@@ -13,12 +13,28 @@ extrapolated (docs/gate_reports/S16.md, Block 0).
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 from dataclasses import dataclass, field
 
 from .ratios import PENDING_M3, skew_note
 
 LIVE = "live"
 CONTINGENT = "contingent"
+
+
+
+@lru_cache(maxsize=1)
+def _horizon() -> dict:
+    """Holding-period bounds, fetched once. Sheets must never carry a literal horizon."""
+    from pipeline.hedging.ratios import sizing_horizon
+    return sizing_horizon()
+
+
+def _accrual_basis() -> str:
+    h = _horizon()
+    return (f"floor >={h['holding_period_floor_days']:.0f} trading days "
+            f"(~{h['holding_period_floor_days'] / 21:.0f}m); NO upper bound at 95%")
 
 
 @dataclass
@@ -87,7 +103,7 @@ def convergence_rv(premium: float, headroom_reading: str) -> TradeSheet:
             ("ADR borrow", "— desk quotes live —"),
             ("FX hedge (forward points)", "— desk quotes live at >=7m tenor —"),
             ("funding differential", "— desk quotes live —"),
-            ("ACCRUAL BASIS", "floor >=143 trading days (~7m); NO upper bound at 95%"),
+            ("ACCRUAL BASIS", _accrual_basis()),
         ],
         stress="Realized week-one excursion: pi 15.98% -> 51.60%, i.e. ~36pp marked "
                "against a short-premium position BEFORE any convergence. Not modelled.",
@@ -104,10 +120,13 @@ def convergence_rv(premium: float, headroom_reading: str) -> TradeSheet:
             "loss above. The upper barrier is discretionary, not a cap.",
             "Convergence may arrive via the LOCAL leg appreciating rather than the ADR "
             "falling — in which case a short-ADR expression captures none of it.",
-            "Persistence is high: rho_1 = 0.94 (t-HAC 129) on the comparator. The premium "
-            "mean-reverts slowly, so the position must be financeable for a long horizon — "
-            "at least ~143 trading days (7 months) at 95%, with no upper bound. A financing "
-            "line that can be pulled inside that floor is the binding risk on this trade.",
+            # Derived, never hardcoded: this line moved from 143d to 220d when the panel
+            # went from one constrained pair to four, and a literal would have silently
+            # gone stale in the one place a client reads it.
+            f"Persistence is high across the constrained comparator panel. The premium "
+            f"mean-reverts slowly, so the position must be financeable for a long horizon — "
+            f"{_horizon()['expected_holding_period'].lower()}. A financing line that can be "
+            f"pulled inside that floor is the binding risk on this trade.",
         ],
         monitor="D5 headroom on ISIN US78392B2060 (the capped programme) — the barrier-state "
                 "observable. A deposit clearing there is the first evidence consent operates.",
