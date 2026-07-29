@@ -57,3 +57,9 @@ check: test checksums coverage smoke
 
 clean-derived:
     rm -rf data/derived/smoke
+
+# ---------------------------------------------------------------- S4: validation
+
+# The hard gate. Nothing downstream is trustworthy while this is red.
+validate:
+    uv run python -m scripts.validate
