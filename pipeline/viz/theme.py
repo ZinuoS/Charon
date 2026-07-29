@@ -547,6 +547,63 @@ def finalize(
                  ha="left", va="top", fontfamily=SERIF_STACK, wrap=True)
 
 
+
+def annotate_barrier(ax, y: float, text: str, side: str = "below",
+                     color: str | None = None, x: float = 0.012) -> None:
+    """Label a barrier line, reserving data-space room so the label stays inside the axes.
+
+    Why this exists. A barrier at the very bottom of the data range gets labelled *below*
+    itself — which preserves the reading grammar (floor annotated from beneath, ceiling from
+    above) but puts the text outside the axes, on top of the x tick labels. G1 shipped with
+    exactly that collision: the OPEN block spanned figure-y [0.087, 0.128] while the tick
+    labels sat at [0.071, 0.093], with the axes floor at 0.110.
+
+    The fix is NOT figure-level padding. `finalize()` owns the chrome *outside* the axes, and
+    the tick labels are the axes' own furniture — padding the chrome moves both together and
+    the overlap survives. The room has to be made in DATA space, by extending the limit so
+    the barrier line sits far enough above the axes floor for its own label to fit under it.
+
+    So: measure the rendered text, convert to data units, expand the limit if short. Any
+    figure drawing a near-boundary barrier gets this for free instead of hand-tuning offsets
+    that break at the next figure size.
+    """
+    c = color or SEMANTIC["barrier"]
+    va = "top" if side == "below" else "bottom"
+    dy = -6 if side == "below" else 6
+    ann = ax.annotate(text, xy=(x, y), xycoords=("axes fraction", "data"),
+                      xytext=(0, dy), textcoords="offset points",
+                      fontsize=NOTE_SIZE, color=c, va=va, ha="left",
+                      fontfamily=SERIF_STACK)
+
+    fig = ax.get_figure()
+
+    # ITERATE, do not solve once. Expanding the limit changes how many data units a point is
+    # worth, so a requirement measured on the old scale is too small for the new one -- the
+    # first two attempts here each left the label a few thousandths of a figure-fraction
+    # below the axis line for exactly that reason. Measuring the RENDERED box after each
+    # adjustment converges in two or three passes and cannot be fooled by the scale change.
+    for _ in range(6):
+        fig.canvas.draw()                  # a text extent is only real once laid out
+        bb = ann.get_window_extent(fig.canvas.get_renderer())
+        ax_box = ax.get_window_extent(fig.canvas.get_renderer())
+        lo, hi = ax.get_ylim()
+        inv = ax.transData.inverted()
+
+        def _px_to_data(px: float) -> float:
+            return abs(inv.transform((0, px))[1] - inv.transform((0, 0))[1])
+
+        if side == "below":
+            short = (ax_box.y0 + 2.0) - bb.y0          # +2px breathing gap
+            if short <= 0:
+                break
+            ax.set_ylim(lo - _px_to_data(short), hi)
+        else:
+            short = bb.y1 - (ax_box.y1 - 2.0)
+            if short <= 0:
+                break
+            ax.set_ylim(lo, hi + _px_to_data(short))
+
+
 def obol(ax, x, y, size: float = 42.0, color: str | None = None) -> None:
     """A small coin glyph marking a conversion-fee annotation.
 

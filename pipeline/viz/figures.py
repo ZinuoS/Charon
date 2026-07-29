@@ -49,27 +49,26 @@ def g1_barrier_anatomy(pi: pd.Series, events: list[dict] | None = None, fee_pct:
 
     # Lower barrier — solid: it operates mechanically.
     ax.axhline(fee_pct, color=theme.BARRIER, linewidth=1.8, zorder=2)
-    ax.annotate(
-        f"OPEN — ADR cancellation, uncapped\nround trip ≈ ${FEE_PER_ADS * 2:.2f}/ADS ≈ {fee_pct:.2%} of price",
-        xy=(0.012, fee_pct), xycoords=("axes fraction", "data"), xytext=(0, -6),
-        textcoords="offset points", fontsize=theme.NOTE_SIZE, color=theme.BARRIER,
-        va="top", ha="left", fontfamily=theme.SERIF_STACK,
-    )
-
     # Upper barrier — long-dashed: discretionary, and with no number on file it has no
     # determinate height. Drawn above the realized max to say "not observed to bind here".
     ax.axhline(top, color=theme.BARRIER, linewidth=1.6, linestyle=(0, (9, 5)), zorder=2)
-    ax.annotate(
-        "DISCRETIONARY — primary ADS issuance at the Company's determination.\n"
-        "No numeric deposit cap appears in any SEC filing.",
-        xy=(0.012, top), xycoords=("axes fraction", "data"), xytext=(0, 6),
-        textcoords="offset points", fontsize=theme.NOTE_SIZE, color=theme.BARRIER,
-        va="bottom", ha="left", fontfamily=theme.SERIF_STACK,
-    )
 
     ax.plot(pi.index, pi.values, color=theme.INK, linewidth=1.9, marker="o", markersize=3.4, zorder=3)
     theme.pct_axis(ax)
     ax.set_ylim(min(-0.03, float(pi.min()) - 0.04), top * 1.16)
+
+    # Barrier labels LAST, and via the helper: each one measures itself and expands the
+    # limit if it would otherwise hang outside the axes onto the tick labels. Setting ylim
+    # afterwards would undo that, which is why the order here is load-bearing.
+    theme.annotate_barrier(
+        ax, fee_pct,
+        f"OPEN — ADR cancellation, uncapped\nround trip ≈ ${FEE_PER_ADS * 2:.2f}/ADS ≈ {fee_pct:.2%} of price",
+        side="below")
+    theme.annotate_barrier(
+        ax, top,
+        "DISCRETIONARY — primary ADS issuance at the Company's determination.\n"
+        "No numeric deposit cap appears in any SEC filing.",
+        side="above")
 
     theme.finalize(
         fig,

@@ -14,7 +14,7 @@ correction cannot land in one rendering and miss another.
 
 | Figure | Defect found | Class | Fix | Status |
 |---|---|---|---|---|
-| G1 | floor annotation collides with x-axis date ticks | collision | (see open, below) | ⚠ open |
+| G1 | floor annotation collides with x-axis date ticks | collision | `theme.annotate_barrier()` — measures the rendered label and expands the limit to make room | ✅ fixed |
 | G2 | schematic box fill was raw hex `#eceae5` | palette | given the meaning `inert_fill` | ✅ fixed |
 | G2 | both channels drawn in *series* hues, so barrier state was colour-coded twice | semantics | one `barrier` hue; linestyle carries binding vs discretionary | ✅ fixed |
 | G4 | left-panel title overprinted the t-stat annotation | collision | t-stats moved inside the axes, upper area | ✅ fixed |
@@ -28,20 +28,33 @@ correction cannot land in one rendering and miss another.
 | G_convergence | caption asserted ρ never crosses ½ — false after S17 extended the window | **stale claim** | redrawn with bands, crossing and floor annotated | ✅ fixed |
 | G_convergence | "floor 143d" label overprinted the fungible series | collision | re-anchored into the empty band below | ✅ fixed |
 
-**Count: 13 found, 12 fixed, 1 open.**
+**Count: 13 found, 13 fixed, 0 open.**
 
-## Open defect
+## The last defect, and why the first two attempts at it failed
 
-**G1 — floor annotation vs date ticks.** The `OPEN — ADR cancellation` block is anchored below
-the y=0.07% barrier line, which is at the very bottom of the data range, so it lands in the
-same band as the x tick labels. Fixing it properly means either moving the annotation above
-the line (where it would sit on the series) or giving `finalize()` a bottom-padding contract
-for below-axes annotations. The second is the right fix and is a theme-level change with
-blast radius across every figure, so it is **logged rather than rushed** at the end of a
-session. It is cosmetic and does not misstate anything.
+**G1 — floor annotation vs date ticks.** Measured: the `OPEN` block spanned figure-y
+[0.087, 0.128] while the tick labels sat at [0.071, 0.093], with the axes floor at 0.110. The
+label was hanging *outside* the axes.
 
-*The gate asked for zero open defects. Reporting one open rather than declaring zero is the
-honest count.*
+**The fix named in the first draft of this document was wrong.** It proposed a `finalize()`
+bottom-padding contract. `finalize()` owns the chrome *outside* the axes, but tick labels are
+the axes' own furniture — padding the chrome moves the annotation and the ticks together and
+the overlap survives. The room has to be made in **data space**.
+
+`theme.annotate_barrier(ax, y, text, side)` now does that, and it took three passes to get
+right:
+
+1. Reserve `text_height + pad` in data units → still 0.002 below the axis line. The 6pt
+   offset that pushes the label off the barrier line was not counted.
+2. Add the offset → still 0.004 below. **Expanding the limit changes how many data units a
+   point is worth**, so a requirement measured on the old scale is too small for the new one.
+3. Measure the *rendered* box, adjust, re-measure, up to six passes. Converges in two or
+   three and cannot be fooled by the scale change.
+
+Any figure drawing a near-boundary barrier now gets this for free, instead of hand-tuned
+offsets that break at the next figure size. Pinned by
+`TestAnnotationsStayInsideTheAxes`, which asserts the geometric property — no annotation
+outside its axes — rather than pixel values, so it survives font and size changes.
 
 ## Three of these were not cosmetic
 

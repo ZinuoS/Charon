@@ -2,7 +2,7 @@
 
 **Pricing a one-sided arbitrage barrier: the SK Hynix (SKHY) ADR premium as a reflected process.**
 
-> *Charon ferries in one direction, and the crossing costs an obol.* The SKHY conversion channel is a one-way crossing: ADR → local is unlimited; local → ADR is sealed behind an exhausted 2.5% quota. This repository studies what a Law-of-One-Price violation does when the arbitrage that should kill it can only push from one side.
+> *Charon ferries in one direction, and the crossing costs an obol.* The SKHY conversion channel is a one-way crossing: ADR → local cancellation is a holder right; local → ADR issuance requires the Company's consent against a level it sets and does not disclose. This repository studies what a Law-of-One-Price violation does when the arbitrage that should kill it can only push from one side.
 
 Built as a standing research program in constrained cross-listing relative value, covering deal structure, trading insights and execution.
 
@@ -187,7 +187,7 @@ Each stage ends with a written checkpoint; no stage begins before the prior gate
 
 | Stage | Deliverable | Gate |
 |---|---|---|
-| **S0** | Pre-registration freeze: `calls.yaml` with H1–H5 directions, frozen thresholds, resolution dates; committed and timestamped **before the 2026-07-29 KRX open** | Commit hash recorded |
+| **S0** | Pre-registration freeze — **closed 2026-07-29 05:20 UTC.** H5 registered (Class C, four-branch criterion); H1–H4 recorded exploratory (Class X); **Class P empty — no call predated the release on the record.** Partitioned by Amendment 001. | Frozen; commit hash in `docs/gate_reports/S0.md` |
 | **S1** | Ingestion: D1–D7 pullers, availability timestamps, raw/derived split | Golden checksums on raw pulls |
 | **S2** | M1 measurement layer + asynchronicity decomposition chart/note | Method note reviewed |
 | **S3** | D6 comparator panel assembled; TSMC premium history QA'd | Panel coverage report |
@@ -203,37 +203,37 @@ Each stage ends with a written checkpoint; no stage begins before the prior gate
 
 ```
 charon/
-├── README.md
+├── README.md                     # this file — the constitution (§11: author-only)
 ├── preregistration/
-│   ├── calls.yaml            # frozen H1–H5: direction, threshold, resolution date
-│   └── amendments/           # dated, append-only
+│   ├── calls.yaml                # FROZEN 2026-07-29; append-only thereafter
+│   └── amendments/               # dated, append-only (001 partitions the freeze)
 ├── data/
-│   ├── raw/                  # immutable, timestamped pulls (D1–D7)
-│   └── derived/              # pipeline-generated only
+│   ├── raw/                      # payloads GITIGNORED; sidecars + pull logs tracked
+│   └── derived/                  # pipeline-generated only
 ├── pipeline/
-│   ├── ingest/               # one puller per D-source, logged
-│   ├── measurement/          # M1: premium construction, async decomposition
-│   ├── regimes/              # M2
-│   └── convergence/          # M3
-├── hypotheses/
-│   ├── h1_term_structure/
-│   ├── h2_index_access/
-│   ├── h3_letf_loop/
-│   ├── h4_vol_decomposition/
-│   └── h5_quota_ledger/
-├── execution/                # §7 tables + memo source
-├── tests/
-│   └── golden/
-├── dashboard/                # SvelteKit or static; Attic-palette-adjacent theming TBD
-└── docs/
-    ├── deviations.md
-    └── confounds.md
+│   ├── ingest/                   # one puller per D-source; _http.py is the ONLY networked module
+│   ├── measurement/              # M1 premium construction, asynchrony decomposition
+│   ├── panel/                    # FX conventions, panel assembly
+│   ├── convergence/              # M3 Jordà local projections (h→400, half-life interval)
+│   ├── validation/               # purged/embargoed CV, forward-test guards
+│   ├── hedging/                  # S16 hedge ratios + trade sheets
+│   └── viz/                      # theme.py (chrome owner) + figures.py (G-series)
+├── hypotheses/                   # h1…h5; h5_quota_ledger is the live barrier-state monitor
+├── execution/                    # cost stack, margin stress
+├── notebooks/                    # 00 pitch · 01 client note · 02 anatomy · 05 engines
+├── scripts/                      # notebook builders, validators, intraday tracker
+├── docs/                         # gate reports S0–S19, research notes, regime taxonomy, deviations
+└── tests/                        # 430 passing; doctrine is enforced here, not asserted
 ```
 
----
+**The display medium is the repository itself.** There is no `dashboard/`: a reader arrives at
+GitHub, and the notebooks are the deliverable — committed *with outputs*, so figures and results
+render without running anything. Notebook numbering is deliberately sparse (00, 01, 02, 05)
+because the gaps are reserved for work that is specified but not landed, and a renumbering that
+hid the gaps would misrepresent coverage.
 
 ## 11. Session protocol
 
 Every working session opens by (1) reading this README, (2) checking `preregistration/calls.yaml` for anything now resolvable, and (3) stating which stage gate is active. Curation and threshold decisions are the author's alone; analysis sessions may propose, never ratify.
 
-*Freeze deadline for S0: before the Korea open, 2026-07-29 09:00 KST (2026-07-28 20:00 ET).*
+*S0 closed 2026-07-29 05:20 UTC. The pre-release freeze class (P) is **empty**: no call was committed before the 2026-07-10 listing, and Amendment 001 records that rather than backdating one. What is registered is H5 alone; H1–H4 are exploratory and are never presented as pre-registered forward tests. The honest history is the deliverable — see `preregistration/amendments/2026-07-29-partitioned-freeze.md`.*
