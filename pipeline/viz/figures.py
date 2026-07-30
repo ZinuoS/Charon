@@ -563,6 +563,20 @@ LAYMAN: dict[str, list[str]] = {
         "problems rather than research problems.",
         "Nothing here says which trade is better — only which can be built honestly now.",
     ],
+    "g16_netting": [
+        "Run the two legs as one position and the margin is about a third of running them "
+        "separately — that is the capital case for doing it through one desk.",
+        "But that saving is measured on ordinary days. On the days the gap actually jumps, it "
+        "shrinks to roughly a third of what it was.",
+        "So the capital relief is real and it is smallest exactly when you need it most.",
+    ],
+    "g17_capacity": [
+        "Both sides trade around eight billion dollars a day, so getting in and out is not the "
+        "problem: a billion-dollar position clears in about a day.",
+        "What limits size is borrowing the US shares to sell. We can show what is already on "
+        "loan; we cannot show what is still available.",
+        "Ask the desk for real borrow depth before sizing — that is the number that binds.",
+    ],
     "g15_breakeven": [
         "The gap is 22.6% today. If it closes, you make money; while you wait, you pay to hold "
         "the position.",
@@ -896,3 +910,132 @@ def g15_breakeven(surf, verdict, critical_bp, critical_bp_floor):
                  "pays is determined by numbers this repository does not hold.",
     )
     return fig, (a, b)
+
+
+def g16_netting(calm_stress, wrong_way: str):
+    """G16 — the netting case and its erosion, on one frame.
+
+    Two panels because the sell and the warning are the same measurement in two states, and
+    splitting them across figures is how the second one gets left out of a deck.
+
+    Stress is the top quintile of |Δπ| on the pair's OWN move distribution, not a date range:
+    the first version used SKHY's excursion dates for every pair, which gave TSMC four
+    arbitrary days and a ratio computed on n=4.
+    """
+    fig, (a, b) = theme.figure(ncols=2, height=4.8)
+    d = calm_stress.dropna(subset=["ratio"])
+    labels = list(d.regime_label)
+    cols = [theme.SEMANTIC["emphasis"], theme.SEMANTIC["warning"]][:len(d)]
+
+    a.bar(range(len(d)), d.ratio, color=cols, width=0.55)
+    for i, (r, n) in enumerate(zip(d.ratio, d.n)):
+        a.annotate(f"{1 - r:.0%}\nsaving", xy=(i, r), xytext=(0, 6), textcoords="offset points",
+                   ha="center", fontsize=theme.NOTE_SIZE + 1.5, color=theme.TEXT,
+                   fontfamily=theme.SERIF_STACK, linespacing=1.3)
+        a.annotate(f"n={n:,}", xy=(i, 0.02), ha="center", fontsize=theme.NOTE_SIZE,
+                   color=theme.PAPER, fontfamily=theme.SERIF_STACK)
+    a.axhline(1.0, color=theme.BARRIER, linewidth=1.4, linestyle=(0, (6, 4)))
+    a.annotate("no netting benefit", xy=(0.02, 1.0), xycoords=("axes fraction", "data"),
+               xytext=(0, 5), textcoords="offset points", fontsize=theme.NOTE_SIZE,
+               color=theme.BARRIER, fontfamily=theme.SERIF_STACK)
+    a.set_xticks(range(len(d)))
+    a.set_xticklabels([l.split("(")[0].strip() for l in labels], fontsize=8)
+    a.set_ylim(0, 1.2)
+    a.set_ylabel("pair risk ÷ sum of standalone risks", fontsize=8, color=theme.MUTED)
+    a.set_title("The benefit roughly halves when the premium moves",
+                loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+
+    # RIGHT: the vols the ratio is built from, so it is auditable rather than asserted.
+    x = np.arange(len(d))
+    for k, (lab, col) in enumerate((("vol_adr", theme.SEMANTIC["context"]),
+                                    ("vol_local_usd", theme.SEMANTIC["barrier"]),
+                                    ("vol_pair", theme.SEMANTIC["emphasis"]))):
+        b.bar(x + (k - 1) * 0.26, d[lab], width=0.24, color=col,
+              label=lab.replace("vol_", "").replace("_", " "))
+    b.set_xticks(x); b.set_xticklabels([l.split("(")[0].strip() for l in labels], fontsize=8)
+    b.set_ylabel("annualised vol", fontsize=8, color=theme.MUTED)
+    b.legend(fontsize=theme.NOTE_SIZE, frameon=False)
+    b.set_title("What the ratio is built from",
+                loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+
+    theme.finalize(
+        fig, kicker="capital",
+        headline="Cross-margining the pair saves most of the capital — until it is needed",
+        subtitle="Pair risk against two standalone tickets, on the deep comparator history. "
+                 "Stress is the top quintile of the pair's own premium moves, so both bars "
+                 "carry real sample size.",
+        source="Repo-computed from landed closes. VaR sketch is ILLUSTRATIVE at 95% one-tailed; "
+               "margin methodology is the desk's and the desk quotes actual schedules.",
+        # Short form, not a slice: wrong_way[:300] cut the sentence mid-word.
+        footnote="WRONG-WAY RISK: when the premium widens the short leg loses AND its borrow "
+                 "tightens, so recall risk peaks exactly when the position most needs holding. "
+                 "The netting benefit is smallest in that same state.",
+    )
+    return fig, (a, b)
+
+
+def g17_capacity(days, adv, borrow):
+    """G17 — how big, and how fast out.
+
+    The honest headline is a negative: at any plausible size, screen liquidity is not the
+    binding constraint. Both legs turn over roughly $8bn a day, so a $1bn position clears in
+    about a session. What binds is the short leg's borrow, and that is drawn as a separate
+    ceiling rather than folded into the same axis.
+    """
+    fig, ax = theme.figure(height=5.0)
+    ramp = [theme._ramp(theme.SEMANTIC["emphasis"], 0.55 - 0.55 * i / 2) for i in range(3)]
+
+    for p, col in zip(sorted(days.participation.unique()), ramp):
+        d = days[days.participation == p].sort_values("size_usd")
+        ax.plot(d.size_usd / 1e9, d.days_binding, color=col, linewidth=1.9, marker="o",
+                markersize=4)
+        theme.label_line_end(ax, d.size_usd.iloc[-1] / 1e9, d.days_binding.iloc[-1],
+                             f"{p:.0%} of ADV", col)
+
+    ax.axhline(1.0, color=theme.RULE, linewidth=1.0)
+    ax.annotate("one session", xy=(0.02, 1.0), xycoords=("axes fraction", "data"),
+                xytext=(0, 4), textcoords="offset points", fontsize=theme.NOTE_SIZE,
+                color=theme.MUTED, fontfamily=theme.SERIF_STACK)
+
+    if borrow.get("on_loan_usd"):
+        bn = borrow["on_loan_usd"] / 1e9
+        ax.axvline(bn, color=theme.SEMANTIC["warning"], linewidth=1.6, linestyle=(0, (7, 4)))
+        # Anchored low-right: at 0.55 of the y-range it sat on the participation line labels.
+        ax.annotate(f"on-loan book USD {bn:.0f}bn\n(indicator, NOT lendable depth —\n"
+                    "the desk quotes real depth)",
+                    xy=(bn, 1.0), xytext=(0.97, 0.06), textcoords="axes fraction",
+                    ha="right", va="bottom", fontsize=theme.NOTE_SIZE,
+                    color=theme.SEMANTIC["warning"], fontfamily=theme.SERIF_STACK,
+                    linespacing=1.4,
+                    arrowprops=dict(arrowstyle="-|>", color=theme.SEMANTIC["warning"],
+                                    linewidth=0.9, connectionstyle="arc3,rad=0.2"))
+
+    ax.set_xscale("log"); ax.set_yscale("log")
+    ax.set_xlabel("position size (US$bn, log)", fontsize=8, color=theme.MUTED)
+    ax.set_ylabel("sessions to unwind, binding leg (log)", fontsize=8, color=theme.MUTED)
+
+    row = days[(days.participation == 0.10)].sort_values("size_usd")
+    one_bn = row[np.isclose(row.size_usd, 1e9)]
+    if len(one_bn):
+        ax.annotate(f"a USD 1bn position unwinds in ~{one_bn.days_binding.iloc[0]:.1f} sessions "
+                    "at 10% of ADV",
+                    xy=(1.0, one_bn.days_binding.iloc[0]), xytext=(0.04, 0.90),
+                    textcoords="axes fraction", fontsize=theme.NOTE_SIZE, color=theme.MUTED,
+                    fontfamily=theme.SERIF_STACK,
+                    arrowprops=dict(arrowstyle="-|>", color=theme.RULE, linewidth=0.9,
+                                    connectionstyle="arc3,rad=0.15"))
+
+    # NEVER two "$" in one chrome string: matplotlib treats the pair as a mathtext delimiter
+    # and renders the span as italic maths. This subtitle came out as "8.8bnADV·0006608.3bn".
+    adv_txt = " · ".join(f"{r.leg.split()[0]} USD {r.adv_usd/1e9:.1f}bn ADV" for _, r in adv.iterrows())
+    theme.finalize(
+        fig, kicker="capacity",
+        headline="Screen liquidity is not the constraint here — borrow is",
+        subtitle=f"Sessions to exit at conventional participation rates. {adv_txt}. "
+                 "Participation bands are a quoting convention, not advice.",
+        source="Landed daily volume x close, both legs. KOFIA on-loan balance for the borrow line.",
+        footnote="SKHY ADV rests on 12 sessions — regime-fresh, not a cycle average. The "
+                 "borrow line is an ON-LOAN BALANCE, which is what is already out, not what "
+                 "can be sourced.",
+    )
+    return fig, ax
