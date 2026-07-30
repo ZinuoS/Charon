@@ -51,13 +51,19 @@ md(r"""
 ## 1. Track A — the parsimony anchor, on the tradeable target
 """)
 code(r'''
-a = s4_metrics_table(target="change")
-a[["regime","horizon","n","rmse","r2","hit_rate"]].round(4)
+# SAME SCOPE AS TRACK B. The first ledger quoted this at full N against Track B at N=200 --
+# two designs in one table, i.e. a comparison of sample sizes wearing a comparison of models.
+a = s4_metrics_table(target="change", max_train=200)
+a[["regime","horizon","n","rmse","r2","hit_rate","scope"]].round(4)
 ''')
 md(r"""
-**For the class the trade is in, R² is negative at every horizon** — worse than forecasting no
-move at all. Sign hit rate 53%. That is the capacity rule's own prediction, and it sets the bar
-Track B has to clear.
+Every metric here carries `N_train = 200 (capped; see DEV-004)`, h, and the fold scheme inline.
+**The full-N complexity grid was infeasible, not omitted:** c = 20 against N ≈ 18,000 demands
+360,000 features, so capping the training block is what makes a P ≫ N grid computable at the
+sample size §8's capacity rule was actually written for.
+
+R² is negative for the constrained class at every horizon — worse than forecasting no move.
+That is the capacity rule's own prediction, and it sets the bar Track B has to clear.
 
 ## 2. Track B — the complexity grid
 """)
@@ -94,17 +100,20 @@ looks like forecasting. So the benchmark is not zero — it is a **vol-managed u
 strategy on the same folds: always short the premium, sized 1/σ.
 """)
 code(r'''
-diag[["regime","horizon","track_b_alpha_vs_volmanaged","track_b_t_alpha",
-      "track_b_load_on_volmanaged","corr_track_b_sign_with_vol","turnover_track_b"]].round(4)
+diag[["regime","horizon","track_b_alpha_vs_volmanaged","track_b_t_alpha_naive",
+      "track_b_t_alpha_hac","track_b_t_alpha_nonoverlap","n_effective_blocks",
+      "turnover_track_b"]].round(4)
 ''')
 md(r"""
-**Track B's alpha against the vol-managed benchmark is negative and significantly so** (t ≈ −11).
-Its 60% hit rate is real — the placebo confirms it is label information, not leakage — but it is
-a hit rate on *small* moves while the losses arrive on *large* ones. Sign accuracy without
-magnitude does not pay.
+**Track B's alpha over the vol-managed benchmark is POSITIVE** (+0.0037), so the Nagel objection
+is faced and survived rather than fatal — the edge is not merely mechanical vol-sizing. But read
+the three t-columns together: **11.51 naive, 5.32 HAC, 4.08 non-overlapping.** The naive figure
+is inflated by roughly √h because h=20 returns overlap by 19 periods. **5.32 is the number to
+quote**; the naive one stays visible so the size of the correction is auditable.
 
-Sharpe is annualised as √(252/h), not √252: overlapping h-day returns are not independent, and
-the larger factor would inflate every number here by roughly √h. Turnover is reported.
+Sharpe is annualised √(252/h), not √252, for the same reason. Turnover is reported (0.21 per
+step), and it matters: an unquantified cost stack at that turnover can plausibly consume a +0.54
+gross Sharpe, which is why §5(b) refuses to call this tradeable.
 
 ### Permutation placebo — the full stop
 """)
@@ -121,61 +130,112 @@ j[["c","shrinkage","hit_rate_real","hit_rate_placebo","r2_real","r2_placebo"]].r
 ''')
 
 md(r"""
-### Market neutrality
+## 5. What this result does and does not invalidate
 
-FX beta of the strategy PnL is statistically detectable at h=20 for the constrained class
-(t = −7.4) but explains **0.4%** of PnL variance. This is not a covert currency position.
+The firewall, because a public artifact containing a strategy Sharpe invites exactly one
+misreading — that the project's case rests on it. It does not.
 
-**Local-market beta is not computed and not proxied.** No equity index is landed for any panel
-pair, and using the local leg as a proxy would be circular — it is one side of the premium being
-predicted. Reported absent rather than approximated.
+**(a) The structural thesis is untouched.** The barrier framework and the premium's documented
+persistence rest on **mechanism and measurement**: a deposit agreement that gates issuance, a
+cancellation right that does not, ρ₁ = 0.94 with a half-life floor of 220 trading days. Nothing
+in this notebook is an input to any of that. If every forecast here were deleted, the thesis
+would read identically.
 
-## 4. The ledger
+**(b) The tactical timing overlay is a gross, panel-only result and is reported as such.** A
++0.54 Sharpe at h=20, before any transaction cost, on the comparator panel — **SKHY is never
+fitted**. Borrow, funding and hedge points are undocumented and the trade sheets say so. At
+0.21 turnover per step an unquantified cost stack can plausibly consume this. **It is not a
+tradeable claim and it is not presented as one.**
+
+**(c) The client expressions are access and financing products, not signal products.** Their
+case is that the leg is hard to book and the position hard to finance — both true regardless of
+whether anything is forecastable. Nothing in §2 of the client note depends on (b).
 """)
+
+md(figures.layman_block("g14_magnitude_paradox"))
+
+md(r"""
+**One sentence a salesperson can repeat:** *the reason to do this trade is that the plumbing is
+one-way and the financing is hard, not that we think we can time it.*
+
+## 6. G14 — where the difference actually comes from
+""")
+
 code(r'''
-best = (grid[grid.regime == "one_way_constrained"]
-        .sort_values("hit_rate", ascending=False).head(1).iloc[0])
-a20 = s4_metrics_table(horizons=(20,), target="change").set_index("regime")
-d20 = diag[(diag.regime == "one_way_constrained") & (diag.horizon == 20)].iloc[0]
-pd.DataFrame([
-    {"": "OOS R² (Δln(1+π), h=20)", "Track A — parsimony": round(a20.loc["one_way_constrained","r2"], 3),
-     "Track B — complexity": round(best.r2, 3)},
-    {"": "sign hit rate", "Track A — parsimony": f"{a20.loc['one_way_constrained','hit_rate']:.1%}",
-     "Track B — complexity": f"{best.hit_rate:.1%}"},
-    {"": "strategy Sharpe (net of nothing)", "Track A — parsimony": round(d20.sharpe_track_a, 3),
-     "Track B — complexity": round(d20.sharpe_track_b, 3)},
-    {"": "alpha vs vol-managed benchmark", "Track A — parsimony": "—",
-     "Track B — complexity": f"{d20.track_b_alpha_vs_volmanaged:+.4f} (t={d20.track_b_t_alpha:.1f})"},
-    {"": "double descent observed?", "Track A — parsimony": "n/a", "Track B — complexity": "NO"},
-    {"": "placebo", "Track A — parsimony": "passes", "Track B — complexity": "passes"},
-    {"": "beats not trading?", "Track A — parsimony": "no", "Track B — complexity": "no"},
-]).set_index("")
+from pipeline.convergence.voc import magnitude_deciles
+dec = pd.read_csv(VOC / "magnitude_deciles.csv")
+fig, _ = figures.g14_magnitude_paradox(dec)
+fig;
 ''')
 
 md(r"""
-## 5. The ending the numbers support
+At the same N, the two tracks have **near-identical overall hit rates** (62.1% vs 62.2%). The
+Sharpe gap is built entirely in the top magnitude decile — 60.6% against 52.6% — and that decile
+carries most of the P&L. Being right about small moves is cheap.
 
-Three endings were available. **The second is the one the evidence writes:** complexity's
-apparent edge dies in the vol-timing decomposition, and we can say so with the literature's own
-tools rather than by preferring parsimony.
+## 7. The ledger
+""")
 
-Precisely, and with the parts that favour Track B stated first:
+code(r'''
+best = (grid[grid.regime == "one_way_constrained"]
+        .sort_values("hit_rate", ascending=False).head(1).iloc[0])
+a20 = s4_metrics_table(horizons=(20,), target="change", max_train=200).set_index("regime")
+d20 = diag[(diag.regime == "one_way_constrained") & (diag.horizon == 20)].iloc[0]
+r = "one_way_constrained"
+pd.DataFrame([
+    {"metric": "OOS R²", "Track A — shallow": round(a20.loc[r, "r2"], 3),
+     "Track B — complexity": round(best.r2, 3)},
+    {"metric": "sign hit rate", "Track A — shallow": f"{a20.loc[r,'hit_rate']:.1%}",
+     "Track B — complexity": f"{best.hit_rate:.1%}"},
+    {"metric": "strategy Sharpe (GROSS)", "Track A — shallow": round(d20.sharpe_track_a, 3),
+     "Track B — complexity": round(d20.sharpe_track_b, 3)},
+    {"metric": "vs unconditional (+0.04) / vol-managed (−0.02)",
+     "Track A — shallow": "beats both", "Track B — complexity": "beats both"},
+    {"metric": "alpha vs vol-managed, HAC t", "Track A — shallow": "—",
+     "Track B — complexity": f"{d20.track_b_alpha_vs_volmanaged:+.4f} (t={d20.track_b_t_alpha_hac:.2f})"},
+    {"metric": "double descent observed?", "Track A — shallow": "n/a",
+     "Track B — complexity": "NO"},
+    {"metric": "placebo", "Track A — shallow": "passes", "Track B — complexity": "passes"},
+    {"metric": "scope", "Track A — shallow": d20.scope, "Track B — complexity": d20.scope},
+]).set_index("metric")
+''')
 
-- **Track B genuinely beats Track A** on both metrics that are easy to quote — hit rate 62% vs
-  53%, Sharpe −0.36 vs −0.54. Complexity is not useless here.
-- **Neither track beats not trading.** Both Sharpes are negative; the unconditional strategy is
-  +0.04. An edge that loses money more slowly is not an edge.
-- **Track B's alpha over a vol-managed benchmark is negative at t ≈ −11.** What survives the
-  Nagel decomposition is nothing.
-- **The complexity dimension does no work.** Flat across a 500× range in P; the gains are
-  shrinkage and the nonlinear basis, both available inside the capacity rule.
+md(r"""
+**t-stat footnote.** The alpha's naive t is 11.51. Corrected for h=20 overlap it is **5.32**
+(Newey–West, lag h−1) and **4.08** on non-overlapping blocks (658 effective observations against
+13,146 overlapping ones). The naive figure is kept visible so the size of the correction is
+auditable rather than quietly absorbed; **5.32 is the number to quote.** The same audit was
+applied to both Sharpe standard errors.
 
-**So §8's capacity rule was right for this problem — and that is now shown, not assumed.** The
-deviation expires here. Making it standing would require an edge that survived; there isn't one.
+## 8. The ending the numbers support — and a correction
 
-**What this changes downstream: nothing, and that is the point.** The trade sheets already quote
-the horizon as a floor and claim no change-forecast skill. This experiment is why that restraint
-was correct.
+**This notebook previously reported the opposite conclusion, and the hardening pass caught it.**
+`strategy_diagnostics` computed `pnl = -sign(forecast) × Δπ` — a strategy that *faded its own
+signal*. Every Sharpe and alpha was the exact negative of the truth. The magnitude-decile table
+is what exposed it: P&L was negative in **every** decile including buckets with a 67% hit rate,
+which is arithmetically impossible for a strategy trading with its forecast. Recording it here
+because a result that reversed under its own diagnostic is worth more as a documented catch than
+as a quietly amended number.
+
+Two claims from the earlier version were also **scope artefacts**: "hit rate 62% vs 53%" and
+"neither beats not trading". Both dissolve once Track A is quoted at the same N_train = 200.
+
+**The corrected ending, closest to Block E's second:**
+
+- **Parsimony wins.** Track A Sharpe **+0.54** against Track B **+0.36**, same folds, same N.
+- **Both beat the benchmarks**, including the vol-managed one — so the Nagel objection is faced
+  and survived rather than fatal. Track B's alpha over it is positive at HAC t = 5.3.
+- **Complexity adds nothing, and the reason is visible.** Accuracy is identical overall; the
+  complex model gives back its edge precisely in the decile that pays.
+- **No double descent.** R² flat over a 500× range in P; three orders of magnitude come from
+  shrinkage; hit rate 0.61 at c = 0.1. **What helped was regularisation, not dimensionality.**
+
+**§8's capacity rule was right for this problem, and it is now shown rather than assumed.**
+DEV-004 expires here: the exception was granted to test whether complexity wins, and it does not.
+
+**What it changes downstream.** Not the expressions — see the firewall in §5. It does change the
+*methods* story, which is now a stronger one: the doctrine was challenged with the strongest
+published counter-argument, adjudicated on identical folds, and held.
 """)
 
 n = write(OUT)

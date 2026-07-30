@@ -101,12 +101,34 @@ def test_track_b_placebo_collapses():
     assert (p.hit_rate - 0.5).abs().max() < 0.03, f"placebo hit rate {p.hit_rate.max():.3f}"
 
 
-def test_track_b_edge_does_not_survive_the_vol_managed_benchmark():
-    """The session's verdict, pinned. Track B beats Track A but loses to mechanically shorting
-    at 1/sigma, and neither beats not trading. If this ever flips, the deviation is worth
-    re-opening — and it should fail loudly rather than be rediscovered."""
+def test_parsimony_beats_complexity_and_the_position_sign_is_right():
+    """The session's verdict, pinned — and REWRITTEN after a sign error.
+
+    The first version of this test asserted Track B's Sharpe and alpha were NEGATIVE. They were,
+    because `strategy_diagnostics` built `pnl = -sign(pred) * y`: a strategy that faded its own
+    forecast. The magnitude-decile table caught it — P&L was negative in every decile including
+    buckets with a 67% hit rate, which is arithmetically impossible for a strategy trading WITH
+    its signal.
+
+    TRIPWIRE INTENT: a red run here means **re-open DEV-004**, not "fix the test". The deviation
+    was granted on the premise that complexity did not win. If complexity starts winning, that
+    premise is stale and the exception needs re-argument.
+    """
     from pipeline.convergence.voc import strategy_diagnostics
     d = strategy_diagnostics("one_way_constrained", h=20)
-    assert d["sharpe_track_b"] > d["sharpe_track_a"], "complexity should beat parsimony on Sharpe"
-    assert d["sharpe_track_b"] < 0, "Track B Sharpe turned positive — re-open DEV-004"
-    assert d["track_b_alpha_vs_volmanaged"] < 0, "Track B alpha turned positive — re-open DEV-004"
+    # Sanity on the sign convention itself: a >55% hit rate trading WITH the signal cannot
+    # produce a negative Sharpe.
+    assert d["sharpe_track_a"] > 0 and d["sharpe_track_b"] > 0, \
+        "positive hit rates with negative Sharpe means the position sign is inverted again"
+    assert d["sharpe_track_a"] > d["sharpe_track_b"], \
+        "COMPLEXITY NOW BEATS PARSIMONY — re-open DEV-004 rather than adjusting this test"
+
+
+def test_alpha_t_is_reported_with_overlap_correction():
+    """t on h=20 overlapping returns must be HAC-corrected. The naive figure was 11.5; the
+    honest one is ~5.3. Both are kept so the size of the correction stays auditable."""
+    from pipeline.convergence.voc import strategy_diagnostics
+    d = strategy_diagnostics("one_way_constrained", h=20)
+    assert abs(d["track_b_t_alpha_hac"]) < abs(d["track_b_t_alpha_naive"]), \
+        "HAC t is not smaller than naive t — the overlap correction is not biting"
+    assert d["n_effective_blocks"] * 20 <= d["n"] * 1.05

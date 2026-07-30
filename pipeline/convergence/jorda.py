@@ -675,7 +675,8 @@ def _features_for(pair: str, families: tuple[str, ...]) -> pd.DataFrame:
 
 def s4_metrics_table(horizons=TABLE_HORIZONS, families: tuple[str, ...] = ("m5", "m6"),
                      use_features: bool = False, target: str = "level",
-                     shuffle_seed: int | None = None) -> pd.DataFrame:
+                     shuffle_seed: int | None = None,
+                     max_train: int | None = None) -> pd.DataFrame:
     """The S4 deliverable. Per regime class x horizon, out of fold, pooled row last.
 
     `families` fixes which columns are ALIGNED -- in BOTH arms of an ablation, so every arm
@@ -693,7 +694,8 @@ def s4_metrics_table(horizons=TABLE_HORIZONS, families: tuple[str, ...] = ("m5",
             rows.append({"regime": regime, "horizon": h,
                          **_score(*_oof_predictions(series, h, extra=extra,
                                                     use_extra=use_features, target=target,
-                                                    shuffle_seed=shuffle_seed))})
+                                                    shuffle_seed=shuffle_seed,
+                                                    max_train=max_train))})
     # Pooled LAST and labelled, because a pooled row read as a regime row is the single
     # easiest way to misreport a per-regime result.
     allpairs = [(p, s) for v in by_regime.values() for p, s in v]
@@ -703,9 +705,14 @@ def s4_metrics_table(horizons=TABLE_HORIZONS, families: tuple[str, ...] = ("m5",
         rows.append({"regime": "POOLED (all classes)", "horizon": h,
                      **_score(*_oof_predictions(allser, h, extra=allfx,
                                                 use_extra=use_features, target=target,
-                                                shuffle_seed=shuffle_seed))})
+                                                shuffle_seed=shuffle_seed,
+                                                max_train=max_train))})
     df = pd.DataFrame(rows)
     df.insert(0, "target", target)
+    # Scope travels WITH the number. The first ledger quoted Track A at full N against Track B
+    # at N=200 -- two designs in one table, which is a comparison of sample sizes wearing a
+    # comparison of model classes.
+    df["scope"] = f"N_train={'full' if max_train is None else max_train}, expanding walk-forward, embargo=h"
     df["PROVISIONAL"] = "panel: one regulator (constrained), one country (control)"
     return df
 

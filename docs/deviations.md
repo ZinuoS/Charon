@@ -197,8 +197,29 @@ diagnostics, making the exception standing is a separate ratification.
 `signed_by:` author (verbatim: "i sign dev-004, run track b")
 `signed_at:` 2026-07-29
 
-**Signed. Track B ran.** The exception remains scoped to this experiment and expires with it;
-making it standing is a separate ratification.
+**Signed. Track B ran. The exception EXPIRES HERE** — complexity did not win, so there is
+nothing to make standing.
+
+### The tripwire, and what a red run means
+
+`tests/test_s4_table.py::test_parsimony_beats_complexity_and_the_position_sign_is_right` asserts
+Track A's Sharpe exceeds Track B's. **If that test goes red, the correct response is to re-open
+this deviation — not to adjust the test.** The exception was granted to answer whether complexity
+wins; a red run says the answer changed and the argument needs making again.
+
+A second tripwire asserts both Sharpes are positive. That one catches a *code* fault rather than a
+research finding: positive hit rates with a negative Sharpe means the position sign is inverted,
+which is exactly the bug that produced this notebook's first, wrong verdict.
+
+### Correction on the record
+
+The first run of this experiment reported the opposite conclusion. `strategy_diagnostics` computed
+`pnl = -sign(forecast) x realised change` — a strategy that faded its own signal — so every Sharpe
+and alpha was the exact negative of the truth. It was caught by the magnitude-decile diagnostic:
+P&L was negative in every decile including buckets with a 67% hit rate, which cannot happen for a
+strategy trading with its forecast. Two further claims ("62% vs 53%", "neither beats not trading")
+were scope artefacts of quoting Track A at full N against Track B at N=200. All three are
+corrected in notebook 06 with the correction stated rather than absorbed.
 
 ### One design decision the author should see
 

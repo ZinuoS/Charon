@@ -563,6 +563,15 @@ LAYMAN: dict[str, list[str]] = {
         "problems rather than research problems.",
         "Nothing here says which trade is better — only which can be built honestly now.",
     ],
+    "g14_magnitude_paradox": [
+        "Both models call the direction right about six times in ten. That sounds like the "
+        "same model twice.",
+        "It isn't. Sort the days by how much the gap actually moved: almost all the money is "
+        "in the biggest days, and on those the complicated model is barely better than a coin "
+        "toss while the simple one holds up.",
+        "Being right about small moves is cheap. The simple model is right when the move is "
+        "worth something.",
+    ],
     "g13_complexity": [
         "We tried the fashionable answer: throw thousands of made-up features at the problem "
         "and let the maths sort it out.",
@@ -744,5 +753,63 @@ def g13_complexity(grid, regime="one_way_constrained", horizon=20):
                "to Track A by construction.",
         footnote="EXPERIMENT under docs/deviations.md DEV-004, signed 2026-07-29. Exceeds the "
                  "README §8 capacity rule by design; quarantined to data/derived/voc_experiment/.",
+    )
+    return fig, (a, b)
+
+
+def g14_magnitude_paradox(dec):
+    """G14 — where the money is, and where complexity stops being right.
+
+    The question this answers: two tracks with near-identical hit rates (62.1% vs 62.2% at the
+    same N) have Sharpes of +0.54 and +0.36. Where does the difference come from?
+
+    Sorting by realised |Δπ| answers it. P&L is monotone in magnitude — the largest decile
+    carries most of the result — and it is exactly there that the complex model's accuracy
+    collapses: 60.6% for the shallow track against 52.6% for the random-features one. Being
+    right on small moves is cheap; the decile that pays is the one complexity gets wrong.
+    """
+    fig, (a, b) = theme.figure(ncols=2, height=4.8)
+    cols = {"A": theme.SEMANTIC["emphasis"], "B": theme.SEMANTIC["warning"]}
+    names = {"A": "shallow", "B": "random feat."}   # short: the long forms clipped at the axis
+
+    for t, col in cols.items():
+        s = dec[dec.track == t].sort_values("decile")
+        a.plot(s.decile, s.hit_rate, color=col, linewidth=1.8, marker="o", markersize=4)
+        b.plot(s.decile, s.pnl_mean * 1e4, color=col, linewidth=1.8, marker="o", markersize=4)
+        theme.label_line_end(a, s.decile.iloc[-1], s.hit_rate.iloc[-1], names[t], col)
+
+    a.axhline(0.5, color=theme.RULE, linewidth=1.0)
+    a.set_ylabel("sign hit rate", fontsize=8, color=theme.MUTED)
+    b.axhline(0, color=theme.RULE, linewidth=1.0)
+    b.set_ylabel("mean P&L per observation (bp)", fontsize=8, color=theme.MUTED)
+    for ax in (a, b):
+        ax.set_xlabel("realised |Δπ| decile  (10 = largest moves)", fontsize=8, color=theme.MUTED)
+        ax.set_xticks(range(1, 11))
+
+    # The one takeaway: the gap opens in decile 10, and decile 10 is where the money is.
+    top = dec[dec.decile == dec.decile.max()].set_index("track")
+    a.axvspan(9.5, 10.5, color=theme.SEMANTIC["context"], alpha=0.12, zorder=0)
+    b.axvspan(9.5, 10.5, color=theme.SEMANTIC["context"], alpha=0.12, zorder=0)
+    a.annotate(f"the whole difference is here:\n{top.loc['A','hit_rate']:.1%} vs "
+               f"{top.loc['B','hit_rate']:.1%} on the largest moves",
+               xy=(10, top.loc["B", "hit_rate"]), xytext=(0.03, 0.06),
+               textcoords="axes fraction", ha="left", va="bottom",
+               fontsize=theme.NOTE_SIZE, color=theme.MUTED, fontfamily=theme.SERIF_STACK,
+               linespacing=1.45, arrowprops=dict(arrowstyle="-|>", color=theme.RULE,
+                                                 linewidth=0.9, connectionstyle="arc3,rad=-0.2"))
+    a.set_title("Accuracy rises with move size — until the top decile,\nwhere complexity gives it back",
+                loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+    b.set_title("P&L is monotone in move size:\nthe largest decile is the result",
+                loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+
+    theme.finalize(
+        fig, kicker="experiment — deviation-gated",
+        headline="Both models are right equally often; only one is right when it matters",
+        subtitle="Out-of-fold outcomes sorted by realised move size, identical folds, "
+                 "N_train=200, h=20. Hit rates are near-identical overall (62.1% vs 62.2%) — "
+                 "the Sharpe gap is built entirely in the top decile.",
+        source="Repo-computed. Track B method: Kelly, Malamud & Zhou (J. Finance 2024).",
+        footnote="EXPERIMENT under DEV-004. GROSS of transaction costs, on the comparator "
+                 "panel only — SKHY is never fitted. Not a claim about the live trade.",
     )
     return fig, (a, b)

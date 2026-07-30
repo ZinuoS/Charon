@@ -145,7 +145,15 @@ def convergence_rv(premium: float, headroom_reading: str) -> TradeSheet:
             f"{_horizon()['expected_holding_period'].lower()}. A financing line that can be "
             f"pulled inside that floor is the binding risk on this trade.",
         ],
-        monitor="D5 headroom on ISIN US78392B2060 (the capped programme) — the barrier-state "
+        monitor="TRIGGERS ARE MECHANISM-OBSERVABLES, NOT FORECASTS -- by demonstrated "
+                "preference, not default. Directional model timing was tested head-to-head "
+                "against an overparameterised alternative (notebook 06, DEV-004). The shallow "
+                "model won and produced a GROSS panel Sharpe of +0.54 at h=20 that survives a "
+                "vol-managed benchmark (HAC t=5.3) -- but it is pre-cost, at 0.21 turnover per "
+                "step, on the comparator panel with SKHY never fitted. An unquantified cost "
+                "stack can plausibly consume it, so entry and unwind reference observables "
+                "whose reading does not depend on that. "
+                "D5 headroom on ISIN US78392B2060 (the capped programme) — the barrier-state "
                 "observable. A deposit clearing there is the first evidence consent operates.",
         monitor_reading=headroom_reading,
         alternative="Clients expecting convergence via the local leg may consider a long-local "
