@@ -592,6 +592,14 @@ LAYMAN: dict[str, list[str]] = {
         "One thing we still cannot show you is what foreign investors are doing month to month — "
         "there is no clean public feed for it, so we say so rather than guess.",
     ],
+    "g23_hedge_menu": [
+        "Three things you can bolt on. Only one has a price today.",
+        "The currency hedge is standard — but be clear what it does not do: about a quarter of "
+        "your position is still exposed to the won afterwards, because the gap itself is a "
+        "dollar-versus-won number.",
+        "The one that would cap your downside needs listed options that do not exist for this "
+        "name yet. We will not make up a price for it.",
+    ],
     "g24_exit_tree": [
         "We are not telling you when to get out, so we agree the rules up front: five things to "
         "watch, three ways out.",
@@ -1556,3 +1564,81 @@ def g23_currents(kospi, fx, kr_rate, us_rate):
                ("gap", "foreign flows\n— no sanctioned route")],
     )
     return fig, (a, b, c)
+
+
+def g23_hedge_menu(fxh, fxs, beta, carry_bracket_bp):
+    """G23 — the hedge menu: what bolts on, what it removes, what it costs.
+
+    THIS PANEL WAS WRONGLY DEFERRED once. It was dropped because one of its three rows -- the
+    convexity overlay -- cannot be priced without a listed-option surface. That reasoning
+    dropped two rows that are presentable, including the FX one, which carries the project's
+    most substantive hedge result: a premium position is NOT FX-neutral even with the local leg
+    fully hedged, because the premium is itself a currency-exposed notional.
+
+    Three rows, three honest states: LANDED, PENDING, CONTINGENT. A menu that shows only the
+    priced row implies the others do not exist.
+    """
+    fig, (a, b) = theme.figure(ncols=2, height=4.6)
+    lo, hi = carry_bracket_bp["low"], carry_bracket_bp["high"]
+
+    rows = [
+        ("FX hedge\nsell KRW fwd vs the local leg", "LANDED",
+         f"removes the local leg's FX\nLEAVES {fxh['residual_as_pct_of_adr_leg']:.0%} of the ADR "
+         f"leg exposed\n(the premium is itself FX-exposed)",
+         f"in the {lo:.0f}–{hi:.0f}bp bracket", theme.SEMANTIC["emphasis"]),
+        ("Beta overlay\nvs a Korea market proxy", "PENDING",
+         "would remove residual market beta\nratio and interval need M5", "not quotable yet",
+         theme.SEMANTIC["barrier"]),
+        ("Convexity overlay\nlong straddle vs the short leg", "CONTINGENT",
+         "would cap the unbounded side\n— the one thing no other hedge does",
+         "no listed surface landed;\nthis repo will not price a synthetic one",
+         theme.SEMANTIC["warning"]),
+    ]
+    a.set_xlim(0, 10); a.set_ylim(0, 9.6); a.axis("off")
+    for i, (name, state, removes, cost, col) in enumerate(rows):
+        y = 6.4 - i * 3.1
+        a.add_patch(mpatches.FancyBboxPatch((0.15, y), 9.7, 2.7, boxstyle="round,pad=0.08",
+                    facecolor=theme.PAPER, edgecolor=col, linewidth=1.3))
+        a.text(0.45, y + 2.2, name, fontsize=7.8, color=theme.TEXT, va="top",
+               fontfamily=theme.SERIF_STACK, linespacing=1.4)
+        a.text(9.55, y + 2.25, state, fontsize=7.4, color=col, ha="right",
+               fontfamily=theme.SERIF_STACK)
+        a.text(0.45, y + 1.55, removes, fontsize=6.8, color=theme.MUTED, va="top",
+               fontfamily=theme.SERIF_STACK, linespacing=1.5)
+        a.text(0.45, y + 0.42, f"cost: {cost}", fontsize=6.6, color=col, va="bottom",
+               fontfamily=theme.SERIF_STACK, linespacing=1.4)
+    a.set_title("Three bolt-ons, three honest states", loc="left", fontsize=9.2,
+                color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+
+    # RIGHT: the FX finding, because it is the one a client gets wrong by default.
+    parts = [("ADR leg", fxh["adr_leg_usd_notional"], theme.SEMANTIC["context"]),
+             ("local, hedged", fxh["local_leg_usd_equivalent"], theme.SEMANTIC["emphasis"]),
+             ("residual", fxh["residual_premium_notional_usd"], theme.SEMANTIC["warning"])]
+    b.barh([2, 1, 0], [p[1] for p in parts], color=[p[2] for p in parts], height=0.55)
+    b.set_yticks([2, 1, 0]); b.set_yticklabels([p[0] for p in parts], fontsize=7.6)
+    b.annotate("still FX-exposed after the local-leg hedge", xy=(0, 0), xytext=(6, -22),
+               textcoords="offset points", fontsize=theme.NOTE_SIZE,
+               color=theme.SEMANTIC["warning"], fontfamily=theme.SERIF_STACK)
+    for i, (_, v, _) in zip([2, 1, 0], parts):
+        b.annotate(f"USD {v:,.0f}", xy=(v, i), xytext=(5, 0), textcoords="offset points",
+                   va="center", fontsize=7.4, color=theme.TEXT, fontfamily=theme.SERIF_STACK)
+    b.set_xlabel("per ADR-equivalent", fontsize=8, color=theme.MUTED)
+    b.set_title("Hedging the local leg does not make the pair FX-neutral",
+                loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+
+    theme.finalize(
+        fig, kicker="the hedge menu",
+        headline="One hedge is standard, one waits on a model, one waits on a market",
+        subtitle="What each bolt-on removes and what it costs. The FX row is the one clients "
+                 "assume is complete and is not.",
+        source="FX identity repo-derived and checked to −0.0; empirical sensitivity on 2,300+ "
+               "observations; carry bracket from the cost stack.",
+        footnote="FX explains only ~1.2% of daily premium variance — hedging it removes a real "
+                 "but secondary risk, not the position's main one.",
+        stats=[(f"{fxh['residual_as_pct_of_adr_leg']:.0%}", "of the ADR leg still\nFX-exposed after hedging"),
+               (f"{fxs['empirical_central_pct_pts']}pp", "premium move per 1% KRW\n(95% CI "
+                f"{fxs['empirical_range_pct_pts'][0]:.2f}–{fxs['empirical_range_pct_pts'][1]:.2f})"),
+               (f"{fxs['fx_share_of_daily_premium_variance']:.1%}", "of daily premium variance\nis FX"),
+               ("1 of 3", "hedges quotable today")],
+    )
+    return fig, (a, b)

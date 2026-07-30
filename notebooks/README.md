@@ -56,3 +56,5 @@ described as a pre-registered forward test unless the ledger says so on the reco
 is relative value against a one-sided barrier, and the figures say so — see G4, which puts
 the unbounded-loss side on the same page as the convergence expression.
 | **06** | [`06_complexity_ledger.ipynb`](06_complexity_ledger.ipynb) | Parsimony vs. complexity head-to-head under one harness. EXPERIMENT, deviation-gated (DEV-004). Verdict: complexity's edge dies in the vol-timing decomposition. | ✅ live, 1 figure |
+| **07** | [`07_macro_environment.ipynb`](07_macro_environment.ipynb) | The environment the premium stands on: regulatory state, index, won, funding differential — with the foreign-flows gap named. Describes, never calls. | ✅ live |
+| **08** | [`08_pitch_logic.ipynb`](08_pitch_logic.ipynb) | The argument in sentences: the chain, scenario P&L in return-on-margin, the hedge menu, exit discipline. Opens with where each part of the assignment is answered. | ✅ live |
