@@ -20,18 +20,10 @@ from pipeline.viz import figures  # noqa: E402
 OUT = ROOT / "notebooks" / "01_client_note.ipynb"
 md, code, write = notebook()
 
-#: One line per panel, in the register the desk approved. Any longer and it is a paragraph.
-LINE = {
-    1: "The gap is 22.6% and the trade that would normally close it runs one way only.",
-    2: "You hold one position; the registration, borrow, FX and booking chain sit on our side.",
-    3: "At today's level the carry has to stay under about 79bp a month for the base rate to pay.",
-    4: "A move that already happened would have called for 44 cents of margin per dollar.",
-    5: "Getting out is not the problem. Borrowing the US shares to sell is.",
-    6: "You receive a state report, because we tested model timing and it came back a draw.",
-}
+from scripts.export_client_pack import ORDER  # noqa: E402  (pack order + one-liners)
 
 md("# SK Hynix ADR premium — the package\n\n"
-   "**Six panels.** Access, capital, economics, risk, size, service. "
+   f"**{len(ORDER)} panels.** Environment, access, capital, economics, risk, size, exit, service. "
    "Research and sources: [00 — executive pitch](00_executive_pitch.ipynb).")
 
 code(r'''
@@ -40,24 +32,17 @@ import sys, pathlib
 ROOT = pathlib.Path.cwd().parent if pathlib.Path.cwd().name == "notebooks" else pathlib.Path.cwd()
 if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
 from pipeline.viz import theme
-from scripts.export_client_pack import panels
+from scripts.export_client_pack import ORDER, panels
 theme.apply()
 PANELS = dict(panels())
-list(PANELS)
+missing = [s for s, _ in ORDER if s not in PANELS]
+assert not missing, f"pack order references panels with no builder: {missing}"
+print(f"{len(ORDER)} panels, all with builders")
 ''')
 
-TITLES = {
-    1: "P1 · The situation", 2: "P2 · The structure", 3: "P3 · The economics",
-    4: "P4 · How it hurts", 5: "P5 · Size and exit", 6: "P6 · What you receive",
-}
-KEYS = {1: ["P1_situation"], 2: ["P2_structure"], 3: ["P3_economics"],
-        4: ["P4a_payoff", "P4b_margin_path"], 5: ["P5_size_and_exit"],
-        6: ["P6_what_you_receive"]}
-
-for n in range(1, 7):
-    md(f"## {TITLES[n]}\n\n{LINE[n]}")
-    for k in KEYS[n]:
-        code(f'fig, _ = PANELS["{k}"]()\nfig;')
+for stem, note in ORDER:
+    md(f"## {stem.split('_', 1)[0]} · {stem.split('_', 1)[1].replace('_', ' ')}\n\n{note}")
+    code(f'fig, _ = PANELS["{stem}"]()\nfig;')
 
 md(r"""
 ---
@@ -68,8 +53,8 @@ an **illustrative** parametric sketch; the desk quotes actual schedules. Base-ra
 measured on a comparator panel of four barrier-constrained pairs under one regulator — SKHY is
 **never fitted**. Directional model timing was tested (notebook 06) and the shallow model's edge
 is gross, pre-cost and panel-only; triggers are therefore mechanism-observables, not forecasts.
-H5 is a registered call with a 2026-10-31 resolution and is **not resolved here**. Public data
-throughout; every figure reproducible from this repository.
+Foreign-investor flows are a **named gap** — no sanctioned route. H5 is a registered call with a
+2026-10-31 resolution and is **not resolved here**. Public data throughout.
 """)
 
 n = write(OUT)
