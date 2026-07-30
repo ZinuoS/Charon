@@ -570,6 +570,13 @@ LAYMAN: dict[str, list[str]] = {
         "shrinks to roughly a third of what it was.",
         "So the capital relief is real and it is smallest exactly when you need it most.",
     ],
+    "g18_margin_path": [
+        "In the first week of this thing existing, the gap went from 16% to 52%. That is not a "
+        "scenario, it happened.",
+        "Carrying the position through that would have needed roughly 44 cents of margin for "
+        "every dollar of position — and about 60 if the two legs were margined separately.",
+        "Running it as one position helps. It does not make the call small.",
+    ],
     "g17_capacity": [
         "Both sides trade around eight billion dollars a day, so getting in and out is not the "
         "problem: a billion-dollar position clears in about a day.",
@@ -1039,3 +1046,67 @@ def g17_capacity(days, adv, borrow):
                  "can be sourced.",
     )
     return fig, ax
+
+
+def g18_margin_path(path, peak):
+    """G18 — the realised excursion replayed as a margin call.
+
+    The chart that carries the stress honesty and the netting sell at once: the pair calls for
+    less than two standalone tickets, and it still calls for a great deal. A client trusts the
+    desk that shows this before being asked.
+
+    The price path is real. The margining is a parametric sketch and says so — but the sketch
+    is applied to sigmas measured INSIDE the window, because the question is what margin does
+    when vol is high, not what a calm-period model would have asked for.
+    """
+    fig, (a, b) = theme.figure(ncols=2, height=4.8)
+
+    a.plot(path.index, path.premium, color=theme.INK, linewidth=2.0, marker="o", markersize=3.5)
+    theme.pct_axis(a)
+    a.set_ylabel("premium", fontsize=8, color=theme.MUTED)
+    a.set_title("The move that did happen", loc="left", fontsize=9.2, color=theme.TEXT,
+                fontfamily=theme.SERIF_STACK, pad=8)
+    a.annotate(f"{peak['premium_start']:.1%} → {peak['premium_peak']:.1%}\n"
+               f"in {peak['sessions']} sessions",
+               xy=(path.premium.idxmax(), path.premium.max()), xytext=(-10, -30),
+               textcoords="offset points", ha="right", fontsize=theme.NOTE_SIZE,
+               color=theme.MUTED, fontfamily=theme.SERIF_STACK, linespacing=1.4)
+    theme.thin_date_ticks(a, 4)
+
+    b.fill_between(path.index, path.total_standalone_pct * 100, color=theme.SEMANTIC["warning"],
+                   alpha=0.22, linewidth=0)
+    b.plot(path.index, path.total_standalone_pct * 100, color=theme.SEMANTIC["warning"],
+           linewidth=1.9)
+    b.plot(path.index, path.total_pair_pct * 100, color=theme.INK, linewidth=2.1)
+    theme.label_line_end(b, path.index[-1], path.total_standalone_pct.iloc[-1] * 100,
+                         "two tickets", theme.SEMANTIC["warning"])
+    theme.label_line_end(b, path.index[-1], path.total_pair_pct.iloc[-1] * 100,
+                         "one netted pair", theme.INK)
+    b.set_ylabel("margin required (% of notional)", fontsize=8, color=theme.MUTED)
+    b.set_title("What it called for, both ways", loc="left", fontsize=9.2, color=theme.TEXT,
+                fontfamily=theme.SERIF_STACK, pad=8)
+    b.annotate(f"peak call {peak['peak_total_pair_pct']:.0%} of notional\n"
+               f"USD {peak['peak_total_pair_usd']/1e6:.0f}m on a USD "
+               f"{peak['notional_usd']/1e6:.0f}m position\n"
+               f"vs {peak['peak_total_standalone_pct']:.0%} unnetted",
+               xy=(path.total_pair_pct.idxmax(), path.total_pair_pct.max() * 100),
+               xytext=(0.04, 0.06), textcoords="axes fraction", ha="left", va="bottom",
+               fontsize=theme.NOTE_SIZE, color=theme.TEXT, fontfamily=theme.SERIF_STACK,
+               linespacing=1.5, arrowprops=dict(arrowstyle="-|>", color=theme.RULE,
+                                                linewidth=0.9, connectionstyle="arc3,rad=0.2"))
+    theme.thin_date_ticks(b, 4)
+
+    theme.finalize(
+        fig, kicker="stress",
+        # "first five sessions" over-specified: the peak lands on session 4 of a 12-session
+        # window, so the claim is about the RUN, not a session count.
+        headline=f"A move that already happened called for {peak['peak_total_pair_pct']:.0%} of notional",
+        subtitle="The realised 16%→52% run, replayed as a margin path. Netting cuts the peak "
+                 f"call to {peak['pair_vs_standalone']:.0%} of the unnetted version — real "
+                 "relief, and still a large number.",
+        source="Price path is realised, from landed closes. Margining is an ILLUSTRATIVE "
+               "parametric sketch; the desk quotes actual schedules.",
+        footnote="WRONG-WAY RISK: borrow on the short leg tends to tighten as the premium widens, "
+                 "so the call and the recall risk arrive together.",
+    )
+    return fig, (a, b)

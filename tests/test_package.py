@@ -57,3 +57,48 @@ class TestCapacity:
         overstate a number the desk actually quotes."""
         b = C.borrow_ceiling()
         assert "not lendable depth" in b["caveat"].lower() or b.get("available") is False
+
+
+class TestPackageSheets:
+    def _s(self):
+        from pipeline.hedging.sheets import all_sheets
+        return {x.name: x for x in all_sheets(0.226, "headroom 0")}
+
+    def test_packages_come_first(self):
+        from pipeline.hedging.sheets import all_sheets
+        names = [x.name for x in all_sheets(0.226, "headroom 0")]
+        assert names[0].startswith("PACKAGE A") and names[1].startswith("PACKAGE B")
+
+    def test_package_a_names_the_critical_carry_and_calls_the_view_the_clients(self):
+        """The sheet must not imply the desk holds the convergence view. Above the critical
+        carry, entering IS a faster-than-base-rate view, and the sheet says whose it is."""
+        r = self._s()["PACKAGE A. CONVERGENCE ACCESS"].render()
+        assert "CRITICAL CARRY" in r
+        assert "client's view" in r or "client's to bring" in r
+
+    def test_package_a_shows_both_netting_numbers(self):
+        """Calm without stress would be the sell without the warning."""
+        r = self._s()["PACKAGE A. CONVERGENCE ACCESS"].render().lower()
+        assert "calm" in r and ("stress" in r or "quintile" in r)
+
+    def test_bracketed_costs_are_labelled_bracketed_not_quoted(self):
+        r = self._s()["PACKAGE A. CONVERGENCE ACCESS"].render()
+        assert r.count("BRACKETED") >= 3, "hatched components must be visibly bracketed"
+
+    def test_package_b_cites_the_registered_call_without_resolving_it(self):
+        r = self._s()["PACKAGE B. EVENT-CONDITIONAL STANDBY"].render()
+        assert "Class C" in r and "2026-10-31" in r
+        for banned in ("confirmed", "refuted", "resolves as"):
+            assert banned not in r.lower(), f"sheet resolves H5: '{banned}'"
+
+    def test_convexity_variant_is_contingent_and_unpriced(self):
+        r = self._s()["PACKAGE B. EVENT-CONDITIONAL STANDBY"].render()
+        assert "CONTINGENT" in r and "will not price" in r
+
+    def test_numbers_are_derived_not_literal(self):
+        """Every quoted figure comes from the package modules, so none can go stale."""
+        import inspect
+        from pipeline.hedging import sheets
+        src = inspect.getsource(sheets.package_convergence_access)
+        assert "_pkg_numbers()" in src
+        assert "954" not in src and "43.6" not in src, "a literal figure crept into the sheet"

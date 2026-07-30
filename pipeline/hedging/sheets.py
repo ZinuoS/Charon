@@ -192,6 +192,9 @@ def all_sheets(premium: float, headroom_reading: str) -> list[TradeSheet]:
     return [
         # Part 3 first: how the position is carried and how the leg is booked come before
         # the expression, because both can make the trade impossible regardless of the view.
+        # Packages first: what the pitch sells. Then the operational halves, then expressions.
+        package_convergence_access(headroom_reading),
+        package_event_standby(headroom_reading),
         financing_margin_sheet(headroom_reading),
         local_access_sheet(headroom_reading),
         convergence_rv(premium, headroom_reading),
@@ -379,4 +382,148 @@ def local_access_sheet(headroom_reading: str) -> TradeSheet:
             "Booking entity / IRC / omnibus -- firm halves, desk follow-ups.",
         ],
         kind="operational",
+    )
+
+
+# ================================================================================
+# S21 package sheets. What the pitch actually sells: not a view, a package.
+#
+# The VoC null (notebook 06) is why these exist in this shape. Directional timing was tested
+# against the strongest published counter-argument and the shallow model won -- but only gross,
+# pre-cost, on the panel, with SKHY never fitted. So the sheets sell access, financing and
+# capital efficiency, which are true regardless, and name the client's view as the client's.
+# ================================================================================
+
+def _pkg_numbers() -> dict:
+    """Live numbers from the package modules, so a sheet cannot quote a stale figure."""
+    from pipeline.package.breakeven import critical_carry_bp, verdict
+    from pipeline.package.margin_path import peak_call
+    from pipeline.package.netting import calm_vs_stress
+    v = verdict()
+    ns = calm_vs_stress("tsmc").set_index("regime_label")
+    calm = ns[ns.index.str.startswith("calm")].iloc[0]
+    stress = ns[ns.index.str.startswith("stress")].iloc[0]
+    return {"crit_bp": critical_carry_bp(), "est_hl": v["estimated_half_life_days"],
+            "floor_hl": v["estimated_floor_days"],
+            "calm_saving": 1 - calm.ratio, "stress_saving": 1 - stress.ratio,
+            "peak": peak_call()}
+
+
+def package_convergence_access(headroom_reading: str) -> TradeSheet:
+    """Package sheet A — the convergence-access package."""
+    n = _pkg_numbers()
+    return TradeSheet(
+        name="PACKAGE A. CONVERGENCE ACCESS",
+        readiness=LIVE, kind="operational",
+        structure="Total-return swap on the local leg through the desk booking chain (removes "
+                  "the client-side IRC and standing-proxy requirement), sourced ADR borrow for "
+                  "the short leg, FX hedge executed alongside, and the two legs "
+                  "CROSS-MARGINED as one position rather than two tickets.",
+        monetizes="Access and capital efficiency. The convergence view, if the client holds one, "
+                  "is the client's to bring -- see the breakeven line below.",
+        hedge=["FX: sell KRW forward against the local leg's KRW notional, tenor following the "
+               "holding floor (>=12m), not spot-adjacent.",
+               f"Cross-margining: pair risk runs {n['calm_saving']:.0%} below two standalone "
+               f"tickets in calm conditions and {n['stress_saving']:.0%} below in the top "
+               "quintile of premium moves. Both numbers, always."],
+        residual_exposures=[
+            f"BREAKEVEN IS THE WHOLE ECONOMICS. At today's premium the all-in carry must stay "
+            f"under ~{n['crit_bp']:.0f}bp/yr ({n['crit_bp']/12:.0f}bp/month) for the estimated "
+            f"base rate ({n['est_hl']:.0f}d half-life, 95% floor {n['floor_hl']:.0f}d) to pay. "
+            "Above that, entering is a faster-than-base-rate view -- the client's view, stated "
+            "as such, not ours.",
+            f"MARGIN UNDER STRESS. The realised 16%->52% run implies a peak call of "
+            f"{n['peak']['peak_total_pair_pct']:.0%} of notional netted, against "
+            f"{n['peak']['peak_total_standalone_pct']:.0%} unnetted. Illustrative margining; "
+            "the desk quotes real schedules.",
+            skew_note(),
+        ],
+        cost_stack=[
+            ("conversion round trip", "0.07% of notional [424B4]"),
+            ("local borrow (public state)", _borrow_reading()),
+            ("ADR borrow", "— desk quotes live — BRACKETED in the breakeven"),
+            ("FX forward points", "— desk quotes live at >=12m — BRACKETED"),
+            ("funding differential", "— desk quotes live — BRACKETED"),
+            ("ACCRUAL BASIS", _accrual_basis()),
+            ("CRITICAL CARRY", f"{n['crit_bp']:.0f}bp/yr — above this the linear trade is "
+                               "negative-carry to base rate"),
+        ],
+        stress=f"MARKED: pi 15.98% -> 51.60%, realised. Peak margin "
+               f"{n['peak']['peak_total_pair_usd']/1e6:.0f}m USD on a 100m USD position.",
+        constraints=[
+            "LIFECYCLE. Entry: TRS booked, borrow located, FX struck. Financing: accrues against "
+            f"a holding floor of >={n['floor_hl']:.0f} sessions with no upper bound. Margin: see "
+            "the excursion above. Unwind: sell both legs, OR cancel ADRs through the open "
+            "barrier (uncapped, a holder right) if the local line is the better exit.",
+            "Screen liquidity is NOT the binding constraint: both legs turn ~USD 8bn/day, so a "
+            "USD 1bn position clears in ~1.2 sessions at 10% of ADV. BORROW DEPTH binds, and "
+            "the public figure is an on-loan balance, not lendable depth.",
+            "SIZING IS A RISK BUDGET, not a signal. Directional timing was tested (notebook 06) "
+            "and the shallow model's edge is gross, pre-cost, panel-only with SKHY never fitted.",
+            "DESK FOLLOW-UP (firm halves): term-borrow level and stability; funding spreads; "
+            "margin schedule for the netted pair; which entity holds the Korean IRC.",
+        ],
+        risks=[
+            "Unbounded above -- no numeric deposit cap on file, so no level at which the margin "
+            "requirement stops growing.",
+            "WRONG-WAY: borrow tightens as the premium widens, so the call and the recall risk "
+            "arrive together, and the netting benefit is thinnest in exactly that state.",
+        ],
+        monitor="D5 headroom on ISIN US78392B2060 for the barrier state; KOFIA 000660 lending "
+                "for the borrow state. Mechanism-observables, not forecasts.",
+        monitor_reading=f"{headroom_reading}  ·  borrow: {_borrow_reading()}",
+        alternative="See PACKAGE B: the same structure held un-initiated behind observable "
+                    "triggers, for a client who wants the access without the carry today.",
+        pending=["Four of five cost components are BRACKETED, not quoted. The breakeven's "
+                 "sensitivity to each is in the desk brief."],
+    )
+
+
+def package_event_standby(headroom_reading: str) -> TradeSheet:
+    """Package sheet B — the event-conditional standby. Where the VoC verdict points."""
+    n = _pkg_numbers()
+    return TradeSheet(
+        name="PACKAGE B. EVENT-CONDITIONAL STANDBY",
+        readiness=LIVE, kind="operational",
+        structure="PACKAGE A, fully documented and un-initiated. Booking chain agreed, borrow "
+                  "indicated, FX line open -- nothing funded until an observable trigger fires. "
+                  "The client pays no carry to wait.",
+        monetizes="Optionality on the barrier state changing, without paying the carry that "
+                  f"makes PACKAGE A a faster-than-base-rate view above ~{n['crit_bp']/12:.0f}bp/month.",
+        hedge=["Nothing is hedged until initiation; on trigger, PACKAGE A's construction applies "
+               "unchanged."],
+        residual_exposures=[
+            "The standby carries NO market risk and NO carry. Its cost is readiness -- the desk "
+            "holds capacity, and what that is worth is a desk conversation.",
+            "Trigger risk runs the other way: an observable can fire on a move already made. "
+            "These are state changes, not forecasts, and a state change is visible only once it "
+            "has happened.",
+        ],
+        cost_stack=[("standby / readiness", "— desk quotes live —"),
+                    ("on initiation", "PACKAGE A's stack in full")],
+        stress="Un-initiated: none. On initiation it inherits PACKAGE A's excursion mark.",
+        constraints=[
+            "TRIGGERS, all mechanism-observables: (1) a DART issuance disclosure indicating the "
+            "Company has moved its deposit level; (2) D5 headroom CREATION on US78392B2060 -- "
+            "currently pinned at 0, so any print is information; (3) a Korean borrow-regime "
+            "shift, e.g. a short-sale rule change.",
+            "PRE-COMMITTED EVIDENCE PATH: H5 is a registered Class C call in "
+            "preregistration/calls.yaml, frozen 2026-07-29, resolution 2026-10-31, with a "
+            "four-branch criterion including an explicit INDETERMINATE branch. The call was "
+            "written before the window opened and is not resolved here.",
+            "DESK FOLLOW-UP (firm halves): what standby capacity costs; how long an indication "
+            "holds.",
+        ],
+        risks=["On initiation, PACKAGE A's risks in full, including the unbounded upside on the "
+               "premium and the wrong-way borrow dynamic.",
+               "Waiting has its own cost: the premium can converge without any trigger firing, "
+               "in which case the standby expires unused and the carry saved was the return."],
+        monitor="The three triggers above, plus the H5 ledger's own status.",
+        monitor_reading=headroom_reading,
+        alternative="A convexity-capped variant -- long the premium's floor, capped above -- "
+                    "would suit a skew-averse client better than either linear package. It is "
+                    "CONTINGENT: no listed SKHY or 000660 option surface is landed (H1/H4 "
+                    "probes), and this repo will not price a synthetic one.",
+        pending=["Convexity-capped variant: contingent on an option surface landing.",
+                 "Standby pricing: firm half."],
     )

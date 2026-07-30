@@ -582,6 +582,24 @@ def annotate_barrier(ax, y: float, text: str, side: str = "below",
             ax.set_ylim(lo, hi + _px_to_data(short))
 
 
+
+def stat_callout(ax, stats, y: float = 0.5, fontsize: float = 26.0) -> None:
+    """Large-type numbers with small labels, spread across an axes. For the client pack.
+
+    The pack's composition rule is that a PM reads numbers and labels, not paragraphs — so a
+    figure that needs three facts states them at this size rather than in a caption nobody
+    scans. `stats` is a list of (value, label) pairs; the axes is expected to be a blank strip.
+    """
+    ax.axis("off")
+    n = max(len(stats), 1)
+    for i, (value, label) in enumerate(stats):
+        x = (i + 0.5) / n
+        ax.text(x, y + 0.16, str(value), ha="center", va="center", fontsize=fontsize,
+                color=SEMANTIC["emphasis"], fontfamily=SERIF_STACK)
+        ax.text(x, y - 0.22, label, ha="center", va="center", fontsize=NOTE_SIZE + 0.5,
+                color=MUTED, fontfamily=SERIF_STACK, linespacing=1.4)
+
+
 def obol(ax, x, y, size: float = 42.0, color: str | None = None) -> None:
     """A small coin glyph marking a conversion-fee annotation.
 

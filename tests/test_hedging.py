@@ -112,9 +112,14 @@ class TestTradeSheets:
         return all_sheets(0.2257, "headroom 0; sealed by observation")
 
     def _convergence(self):
-        """By NAME. These assertions are about the convergence expression specifically, and
-        indexing into all_sheets() made them break the moment the order changed."""
-        return next(s for s in self._sheets() if "CONVERGENCE" in s.name.upper())
+        """The convergence EXPRESSION specifically.
+
+        Matched on kind + name, not on the substring "CONVERGENCE" alone: once PACKAGE A
+        ("CONVERGENCE ACCESS") existed, a substring match silently retargeted every assertion
+        here onto a different sheet. Indexing broke on reorder; loose substrings break on new
+        neighbours. `kind == "expression"` is the property that actually distinguishes it."""
+        return next(s for s in self._sheets()
+                    if s.kind == "expression" and "convergence" in s.name.lower())
 
     def test_every_sheet_declares_readiness(self):
         from pipeline.hedging.sheets import LIVE, CONTINGENT
@@ -135,14 +140,16 @@ class TestTradeSheets:
         not short a one-sided barrier and a skew note there would be wrong. It is required
         to carry its own risk section instead, asserted below."""
         for s in self._sheets():
-            if "ACCESS" in s.name.upper():
+            if "000660" in s.name:          # long the cheap leg: not short a one-sided barrier
                 continue
             joined = " ".join(s.residual_exposures + s.risks)
             assert "skew" in joined.lower() or "unbounded" in joined.lower(), \
                 f"{s.name} lacks the negative-skew warning"
 
     def test_the_access_sheet_still_states_its_own_risk(self):
-        access = next(s for s in self._sheets() if "ACCESS" in s.name.upper())
+        # The long-000660 sheet, not PACKAGE A ("CONVERGENCE ACCESS") -- anchored on the
+        # instrument, which is unambiguous.
+        access = next(s for s in self._sheets() if "000660" in s.name)
         assert any("access risk" in r.lower() for r in access.risks), \
             "access sheet is exempt from the skew guard, so it must name its own risk"
 
@@ -195,12 +202,14 @@ class TestPartThreeSheets:
         r = "headroom 0 on US78392B2060"
         return [financing_margin_sheet(r), local_access_sheet(r)]
 
-    def test_part_three_sheets_come_first(self):
-        """Operational depth before the view: a client who cannot book the leg or fund the
-        short does not need the expression."""
+    def test_operational_sheets_precede_every_expression(self):
+        """Operational depth before the view: a client who cannot book the leg or fund the short
+        does not need the expression. Asserted as an ORDERING PROPERTY rather than by naming
+        slots 0 and 1, which broke when the two package sheets were inserted ahead of them."""
         from pipeline.hedging.sheets import all_sheets
-        names = [s.name for s in all_sheets(0.226, "headroom 0")]
-        assert "FINANCING" in names[0] and "ACCESS" in names[1]
+        kinds = [s.kind for s in all_sheets(0.226, "headroom 0")]
+        assert "expression" in kinds and "operational" in kinds
+        assert kinds.index("expression") > max(i for i, k in enumerate(kinds) if k == "operational")
 
     def test_horizon_is_derived_not_literal(self):
         """These sheets quote a holding floor. It moved 143d -> 220d once already."""
