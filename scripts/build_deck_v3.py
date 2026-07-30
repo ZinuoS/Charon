@@ -118,7 +118,7 @@ def build_slides(n) -> tuple[list[Slide], list[Slide]]:
                f"and {n['peak_saving']:.0f}% at the peak of the worst week this pair has "
                f"seen. Capacity is roughly {n['days_1bn']:.1f} sessions for $1bn at 10% "
                f"participation.",
-               "Risk considerations are slide 09, sized for the PM's own assessment."],
+               "Risk considerations are slide 08, sized for the PM's own assessment."],
               ["S01a_anchor"],
               [(econ_head, "all-in carry, per year"),
                (f"{n['capital_saved']:.0f}%", "capital saved,\nordinary days"),
@@ -196,6 +196,10 @@ def build_slides(n) -> tuple[list[Slide], list[Slide]]:
                f"conditions under which the offset thins.",
                f"**Capacity.** Roughly {n['days_1bn']:.1f} sessions to build $1bn at 10% "
                f"participation.",
+               "**Entry.** We build the pair over multiple sessions at agreed participation, "
+               "and the borrow is arranged before the first ticket rather than after it.",
+               "**Financing.** Two legs: the local leg through the booking chain, the ADR leg "
+               "borrowed. Both reprice on the agreed schedule.",
                "**Monitoring.** Monthly: the gap, the valve, and three registered items that "
                "either happened or did not."],
               ["P4b_margin_path", "P5_size_and_exit"],
@@ -226,26 +230,7 @@ def build_slides(n) -> tuple[list[Slide], list[Slide]]:
                ("3", "paths shown,\nnone forecast")],
               f"Carry is a {econ_note}. The breakeven surface is appendix A6."),
 
-        Slide("08", "execution_lifecycle",
-              "Entry, financing, and the three ways out",
-              ["**Entry.** We build the pair over multiple sessions at agreed participation. "
-               "The borrow is arranged before the first ticket, not after it.",
-               "**Financing.** Two legs: the local leg financed through the booking chain, "
-               "the ADR leg borrowed. Both are repriced on the agreed schedule.",
-               "**Unwind, route one — trade out.** Sell the spread in the market. Fast, and "
-               "the usual path.",
-               "**Unwind, route two — cancellation.** Deliver the ADR, receive local shares, "
-               "sell them. Slower, and it exists precisely because it always works.",
-               "**Unwind, route three — recall.** If the borrow is recalled we route to "
-               "cancellation, because that is the leg cancellation extinguishes.",
-               "Exit rules are agreed at entry, not improvised at the exit."],
-              ["P9_exit_discipline"],
-              [("3", "unwind routes"),
-               ("holder right", "cancellation is\nnot discretionary"),
-               ("agreed at entry", "the exit rules")],
-              "Exit tree in appendix A5. Booking-entity and standby terms are ours to quote."),
-
-        Slide("09", "risk_considerations",
+        Slide("08", "risk_considerations",
               "Risk considerations — for the PM's assessment",
               ["**The payoff is asymmetric.** Gain is capped by the cost floor. Loss is not "
                "capped by anything on file, because the ceiling is the Company's decision.",
@@ -256,15 +241,20 @@ def build_slides(n) -> tuple[list[Slide], list[Slide]]:
                "event that would mark the position against you on the way there.",
                "**Sizing, not stops.** A stop tight enough to bound loss fires on most "
                "winners. We size the position instead, and the appendix shows the work.",
+               "**Three ways out, agreed at entry.** Trade the spread out in the market, the "
+               "usual path. Deliver the ADR and sell the local shares, slower and it always "
+               "works. If the borrow is recalled we route to cancellation, because that is "
+               "the leg cancellation extinguishes.",
                "This slide is here because the analysis exists, and the position sizing is "
                "yours to set."],
               ["P4a_payoff", "P8d_lab_stops"],
               [(f"{n['excursion']:.0f}pts", f"realised move against,\nin {n['excursion_sessions']} sessions"),
                (f"{n['max_mae']:.0f}pts", f"worst in {n['lab_years']} years\nof the comparable"),
                ("uncapped", "the loss side"),
-               ("sizing", "the control that\nactually works")],
+               ("3", "unwind routes,\nagreed at entry")],
               "Excursion from exchange closes. Distributions, stop analysis and the exit "
-              "tree are appendices A2 and A5."),
+              "tree are appendices A2 and A5. Booking-entity and standby terms are ours "
+              "to quote."),
     ]
 
     appendix = [
