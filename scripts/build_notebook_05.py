@@ -1,6 +1,5 @@
 """Generate notebooks/05_hypothesis_engines.ipynb. uv run python -m scripts.build_notebook_05"""
 from __future__ import annotations
-import json
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 import sys as _sys
@@ -9,9 +8,9 @@ _sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 # cannot drift apart (Block 4: one source of truth).
 from pipeline.viz import figures  # noqa: E402
 OUT = ROOT / "notebooks" / "05_hypothesis_engines.ipynb"
-cells=[]
-md=lambda s: cells.append({"cell_type":"markdown","metadata":{},"source":s.strip().splitlines(True)})
-code=lambda s: cells.append({"cell_type":"code","execution_count":None,"metadata":{},"outputs":[],"source":s.strip().splitlines(True)})
+from scripts._nb import notebook  # nbformat does the JSON; see scripts/_nb.py
+
+md, code, write = notebook()
 
 md(r"""
 # Hypothesis engines — status, results, and what each can honestly claim
@@ -249,5 +248,5 @@ is stated rather than smoothed.
 """)
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
-OUT.write_text(json.dumps({"cells":cells,"metadata":{"kernelspec":{"display_name":"Python 3","language":"python","name":"python3"},"language_info":{"name":"python","version":"3.12"}},"nbformat":4,"nbformat_minor":5}, indent=1)+"\n")
-print(f"wrote {OUT.relative_to(ROOT)} ({len(cells)} cells)")
+n = write(OUT)
+print(f"wrote {OUT.relative_to(ROOT)} ({n} cells)")

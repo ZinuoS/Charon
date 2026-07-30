@@ -8,25 +8,14 @@ a diff and cannot drift from the modules it calls. Regenerate with:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
+
+from scripts._nb import notebook  # nbformat does the JSON; see scripts/_nb.py
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OUT = REPO_ROOT / "notebooks" / "02_premium_anatomy.ipynb"
 
-cells: list[dict] = []
-
-
-def md(src: str) -> None:
-    cells.append({"cell_type": "markdown", "metadata": {}, "source": src.strip().splitlines(True)})
-
-
-def code(src: str) -> None:
-    cells.append({
-        "cell_type": "code", "execution_count": None, "metadata": {},
-        "outputs": [], "source": src.strip().splitlines(True),
-    })
-
+md, code, write = notebook()
 
 # ==============================================================================
 md(r"""
@@ -580,12 +569,5 @@ print("is NOT endorsed or certified by the Federal Reserve Bank of St. Louis.")
 
 # ==============================================================================
 OUT.parent.mkdir(parents=True, exist_ok=True)
-OUT.write_text(json.dumps({
-    "cells": cells,
-    "metadata": {
-        "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
-        "language_info": {"name": "python", "version": "3.12"},
-    },
-    "nbformat": 4, "nbformat_minor": 5,
-}, indent=1) + "\n")
-print(f"wrote {OUT.relative_to(REPO_ROOT)}  ({len(cells)} cells)")
+n = write(OUT)
+print(f"wrote {OUT.relative_to(REPO_ROOT)}  ({n} cells)")

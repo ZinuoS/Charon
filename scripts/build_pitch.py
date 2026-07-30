@@ -5,9 +5,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "notebooks" / "00_executive_pitch.ipynb"
-cells: list[dict] = []
-md = lambda s: cells.append({"cell_type":"markdown","metadata":{},"source":s.strip().splitlines(True)})
-code = lambda s: cells.append({"cell_type":"code","execution_count":None,"metadata":{},"outputs":[],"source":s.strip().splitlines(True)})
+from scripts._nb import notebook  # nbformat does the JSON; see scripts/_nb.py
+
+md, code, write = notebook()
 
 md(r"""
 # The SK Hynix ADR premium: a barrier that is a decision, not a mechanism
@@ -511,5 +511,5 @@ resolve whatever is frozen on its stated date.
 """)
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
-OUT.write_text(json.dumps({"cells":cells,"metadata":{"kernelspec":{"display_name":"Python 3","language":"python","name":"python3"},"language_info":{"name":"python","version":"3.12"}},"nbformat":4,"nbformat_minor":5}, indent=1)+"\n")
-print(f"wrote {OUT.relative_to(ROOT)} ({len(cells)} cells)")
+n = write(OUT)
+print(f"wrote {OUT.relative_to(ROOT)} ({n} cells)")

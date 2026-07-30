@@ -1,7 +1,6 @@
 """Generate notebooks/04_regimes_convergence.ipynb. uv run python -m scripts.build_notebook_04"""
 from __future__ import annotations
 
-import json
 from pathlib import Path
 import sys as _sys
 
@@ -10,11 +9,9 @@ _sys.path.insert(0, str(ROOT))
 from pipeline.viz import figures  # noqa: E402  (layman blocks: one source of truth)
 
 OUT = ROOT / "notebooks" / "04_regimes_convergence.ipynb"
-cells = []
-md = lambda s: cells.append({"cell_type": "markdown", "metadata": {},
-                             "source": s.strip().splitlines(True)})
-code = lambda s: cells.append({"cell_type": "code", "execution_count": None, "metadata": {},
-                               "outputs": [], "source": s.strip().splitlines(True)})
+from scripts._nb import notebook  # nbformat does the JSON; see scripts/_nb.py
+
+md, code, write = notebook()
 
 md(r"""
 # Regimes and convergence — the per-regime metrics table
@@ -165,8 +162,5 @@ Regenerate everything here with `just s4`. Research programme:
 **[02 anatomy](02_premium_anatomy.ipynb)** · **[05 engines](05_hypothesis_engines.ipynb)**.
 """)
 
-OUT.write_text(json.dumps({"cells": cells, "metadata": {
-    "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
-    "language_info": {"name": "python", "version": "3.12"}},
-    "nbformat": 4, "nbformat_minor": 5}, indent=1) + "\n")
-print(f"wrote {OUT.relative_to(ROOT)} ({len(cells)} cells)")
+n = write(OUT)
+print(f"wrote {OUT.relative_to(ROOT)} ({n} cells)")

@@ -183,3 +183,23 @@ class TestNotebookFreshness:
             f"builders share no cell-helper names: {helpers}. A snippet written for one "
             "will NameError or silently skip in the other."
         )
+
+
+def test_no_builder_hand_rolls_notebook_json():
+    """Notebook assembly goes through scripts/_nb.py, which validates against the schema.
+
+    Five builders each had their own `cells = []` plus md/code closures plus a `json.dumps`
+    with the schema version typed out, and the copies had already drifted. The reason that
+    matters beyond duplication: `json.dumps` does not validate, so a malformed cell produced
+    a file that looked fine on disk and failed later inside nbconvert.
+    """
+    from pathlib import Path
+    builders = sorted((Path(__file__).resolve().parents[1] / "scripts").glob("build_*.py"))
+    assert builders, "no builders found — the glob is wrong, not the repo"
+    for b in builders:
+        src = b.read_text()
+        assert 'json.dumps({"cells"' not in src, f"{b.name} hand-rolls notebook JSON"
+        assert '"nbformat": 4' not in src and '"nbformat":4' not in src, \
+            f"{b.name} types out the schema version; use scripts._nb.notebook()"
+        assert "from scripts._nb import notebook" in src, \
+            f"{b.name} does not use the shared notebook helper"
