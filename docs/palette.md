@@ -144,3 +144,42 @@ When the new anchors land, the ramps re-derive programmatically and this report 
 advisory, not a veto: if a supplied pair fails deuteranopia, the failing pair is *named* along
 with wherever linestyle or direct labelling already disambiguates it, and the author's choice
 stands.
+
+---
+
+## 2026-07-30 — red / grey becomes the shipped palette
+
+Author instruction, and the clean-room rule is explicitly overridden for it. Two things are
+worth recording precisely, because "override the restriction" is not the same as "stop
+checking".
+
+**Provenance.** The hexes below are DERIVED in this repository, by searching a red-and-grey
+scheme against `palette_report()`. They are not any firm's brand values and nothing was
+copied from another project. If exact brand hexes are wanted, they replace these values in
+`_PALETTES["red_grey"]` and the check below is re-run.
+
+**Why the check still matters more here.** Red and grey collapse the hue axis, which is the
+axis a colour-vision-deficient reader has least access to. The categorical separations
+therefore have to be carried by lightness and saturation, and picking these by eye lands the
+closest pair at delta-E 9-12 — under the 20 floor, and invisible until it is on a slide in
+front of someone. Chosen by search instead:
+
+| condition | closest pair | delta-E | floor |
+|---|---|---|---|
+| normal | emphasis \| warning | 26.9 | 20 |
+| deuteranopia | emphasis \| warning | 25.5 | 20 |
+| protanopia | emphasis \| warning | 22.6 | 20 |
+
+| meaning | hex | role |
+|---|---|---|
+| emphasis | `#B01B22` | the subject; used for nothing else |
+| constrained | `#E08A76` | lighter desaturated red — separates on lightness |
+| fungible | `#5C636E` | cool dark grey — the control class |
+| barrier | `#101113` | near-black, as before |
+| warning | `#6D0F16` | oxblood: darker and flatter than emphasis |
+| context | `#9B9B95` | neutral, recedes next to both anchors |
+| inert_fill | `#EAE8E4` | schematic surfaces |
+
+The Okabe-Ito research palette is retained whole in `_PALETTES["okabe_ito"]`. Flipping
+`theme.PALETTE` and re-running the builds renders every figure in it — that is what "both
+palettes" means operationally.

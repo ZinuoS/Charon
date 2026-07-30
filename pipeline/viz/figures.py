@@ -1459,7 +1459,7 @@ def g21_chain(critical_carry_bp_mo: float | None = None):
         ("THE STRUCTURE", "one pair booked\nthrough the desk,\ncross-margined", theme.SEMANTIC["emphasis"]),
         ("IS IT VIABLE?", f"carry under ~{_crit_bp_mo(critical_carry_bp_mo):.0f}bp/mo\nand "
          "the base rate pays.\nAbove, it is your view", theme.SEMANTIC["emphasis"]),
-        ("CAN IT SURVIVE?", "64% capital saved,\nexits in ~1 session,\nbarrier monitored daily", theme.SEMANTIC["emphasis"]),
+        ("CAN IT SURVIVE?", "63% capital saved on\ncalm days, 0% on the\nworst 20%. Exits ~1 session", theme.SEMANTIC["emphasis"]),
         ("WHAT HURTS", "44% peak margin call,\nloss unbounded above,\nborrow tightens into it", theme.SEMANTIC["warning"]),
         ("WHY TRUST IT", "we tested timing and\nit came back a draw.\nTriggers are observables", theme.SEMANTIC["barrier"]),
     ]

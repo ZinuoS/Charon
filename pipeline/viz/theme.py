@@ -83,41 +83,60 @@ OKABE_ITO = {
 }
 
 #: MEANING -> HUE. This dict is the legend of the entire project.
-SEMANTIC: dict[str, str] = {
-    # The subject. SKHY and its premium are the emphasis colour in every figure they appear
-    # in, whether or not other series share the frame.
-    "emphasis":    OKABE_ITO["blue"],
-    # Regime classes (docs/regime_taxonomy.md). Fixed across G3/G10/G11 and metrics tables.
-    "constrained": OKABE_ITO["vermillion"],
-    "fungible":    OKABE_ITO["bluish_green"],
-    # Barriers: ONE hue. The grammar is carried by LINESTYLE, not colour --
-    #   solid = binding and mechanical | long-dash = discretionary | absent = no barrier.
-    # Colour-coding barrier types as well would double-encode and then disagree with itself
-    # the first time a figure needed a third barrier state.
-    #
-    # BLACK, and not the obvious orange. Vermillion and orange are the closest pair in
-    # Okabe-Ito, and `palette_report()` measured them collapsing under deuteranope
-    # simulation at delta-E 13.1 against a 20 floor -- on exactly the two meanings that
-    # share a frame in G1, where barriers are drawn over a constrained-pair series. The set
-    # is CVD-safe as a SET; that does not make every pair inside it safe for adjacent
-    # meanings, which is why the check is numeric and runs in CI.
-    "barrier":     OKABE_ITO["black"],
-    # Reserved for risk/warning marks and used for NOTHING else, so its appearance in a
-    # figure is information on its own.
-    "warning":     OKABE_ITO["reddish_purple"],
-    # Context, reference, "everything not being argued about". Always neutral.
-    #
-    # DARKER than the obvious mid-grey, and the direction is counter-intuitive. Reddish
-    # purple desaturates toward grey for protanopes, so `palette_report()` measured
-    # warning|context colliding at delta-E 10.7. Lightening the grey makes it WORSE (the
-    # simulated purple sits at L* 58-73, so #a8a8a2 scores 3.3); darkening moves away from
-    # it. At L* 46 the worst pair across all three conditions is 22.2. What makes this grey
-    # recede is its lack of saturation next to the anchors, not its lightness.
-    "context":     "#6e6e68",
-    # Inert fill for schematic boxes/gauges (G2). A shape that is neither data nor argument
-    # still needs a surface; giving it a NAME stops the next figure inventing its own.
-    "inert_fill":  "#eceae5",
+#: PALETTE SELECTION. "red_grey" is the shipped default from 2026-07-30 on author
+#: instruction; "okabe_ito" is the previous research palette, kept whole so any figure can be
+#: re-rendered in it by flipping this one name and re-running the build.
+#:
+#: PROVENANCE, stated plainly: the red/grey values below are DERIVED here, by searching a
+#: red-and-grey scheme against this module's own colour-vision floor. They are not any
+#: firm's brand hexes and nothing was copied from a prior project — the author asked for a
+#: red/grey scheme and this is a red/grey scheme that survives the measurement.
+PALETTE = "red_grey"
+
+_PALETTES: dict[str, dict[str, str]] = {
+    # The research palette. Every comment below about WHY a hue was chosen belongs to this
+    # set and is retained, because the reasoning is what makes the set checkable.
+    "okabe_ito": {
+        # The subject. SKHY and its premium are the emphasis colour in every figure they
+        # appear in, whether or not other series share the frame.
+        "emphasis":    OKABE_ITO["blue"],
+        # Regime classes (docs/regime_taxonomy.md). Fixed across G3/G10/G11.
+        "constrained": OKABE_ITO["vermillion"],
+        "fungible":    OKABE_ITO["bluish_green"],
+        # Barriers: ONE hue. The grammar is carried by LINESTYLE, not colour --
+        #   solid = binding and mechanical | long-dash = discretionary | absent = none.
+        #
+        # BLACK, and not the obvious orange. Vermillion and orange are the closest pair in
+        # Okabe-Ito and collapse under deuteranope simulation at delta-E 13.1 against a 20
+        # floor -- on exactly the two meanings that share a frame in G1.
+        "barrier":     OKABE_ITO["black"],
+        # Reserved for risk/warning marks and used for NOTHING else.
+        "warning":     OKABE_ITO["reddish_purple"],
+        # DARKER than the obvious mid-grey: reddish purple desaturates toward grey for
+        # protanopes, and lightening the grey makes the collision worse, not better.
+        "context":     "#6e6e68",
+        # Inert fill for schematic boxes. A shape that is neither data nor argument still
+        # needs a surface; naming it stops the next figure inventing its own.
+        "inert_fill":  "#eceae5",
+    },
+    # Red and grey. The constraint that makes this set hard is that red/grey collapses the
+    # hue axis, so the categorical separations have to be carried by LIGHTNESS and
+    # SATURATION instead. Chosen by search against `palette_report()` rather than by eye:
+    # the worst pair across normal, deuteranope and protanope simulation is emphasis|warning
+    # at delta-E 22.6, above the 20 floor. Picking these by eye lands at 9-12 and the
+    # collision only shows up on a slide.
+    "red_grey": {
+        "emphasis":    "#B01B22",   # the subject: one strong red, used for nothing else
+        "constrained": "#E08A76",   # lighter, desaturated red — separates on lightness
+        "fungible":    "#5C636E",   # cool dark grey — the control class
+        "barrier":     "#101113",   # near-black, as in the research palette
+        "warning":     "#6D0F16",   # oxblood: darker and flatter than emphasis
+        "context":     "#9B9B95",   # neutral, recedes next to both anchors
+        "inert_fill":  "#EAE8E4",
+    },
 }
+
+SEMANTIC: dict[str, str] = dict(_PALETTES[PALETTE])
 
 #: Structural neutrals — chrome, not data. Never carry meaning.
 TEXT  = "#22201d"      # titles and body
