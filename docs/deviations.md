@@ -153,3 +153,48 @@ by a session and applied on instruction, with author review owed. **The author h
 confirmed the H5 values and ratified Amendment 001 (2026-07-29).** The owed review is
 discharged; the ledger stands as the author's registered call. The README §0–§5 corrections
 remain the one item still awaiting the author's wording confirmation.
+
+---
+
+## DEV-004 (DRAFTED, UNSIGNED) — capacity-rule exception for a Virtue-of-Complexity track
+
+**Status: AWAITING AUTHOR SIGNATURE. Track B has NOT run.**
+
+### What is requested
+
+README §8's capacity rule caps model complexity: regularized linear, RF depth ≤ 4, leaf ≥ 5,
+permutation importance only. It exists because this panel's effective N is small.
+
+A Virtue-of-Complexity track (Kelly, Malamud & Zhou, *The Virtue of Complexity in Return
+Prediction*, Journal of Finance 2024) **violates that cap by construction**: random Fourier
+features with P ≫ N, ridge across a complexity grid c = P/N spanning well below to well above
+1, under heavy shrinkage. Exceeding the cap is not incidental to the method — it is the method.
+
+### Scope, if signed
+
+* **Track B only**, quarantined to `data/derived/voc_experiment/`, bannered
+  `EXPERIMENT — deviation-gated`.
+* **No new data.** Identical input set to Track A, so the comparison isolates model class
+  rather than information.
+* **Identical folds.** Same purge, same embargo, fold indices asserted equal by test.
+* **Nothing reaches a client-facing artifact.** Notebooks 00 and 01 are untouched.
+
+### Rationale
+
+The parsimony prior in §8 is a prior, not a result. KMZ 2024 is a serious published claim that
+it is wrong in this asset class. Adjudicating it by identical-fold comparison plus the
+literature's own critique diagnostics — Nagel's vol-timing decomposition, permutation placebo,
+market-neutrality audit — is stronger than either asserting the prior or abandoning it. **The
+comparison is the deliverable; the winner is whichever the numbers name.**
+
+### Expiry
+
+**This experiment only. Not a standing licence.** If complexity wins and survives the
+diagnostics, making the exception standing is a separate ratification.
+
+### Signature
+
+`signed_by:` _(author — unsigned as of 2026-07-29)_
+`signed_at:` _(pending)_
+
+**Until both fields are filled, Track B does not run.** That is a stop, not a workaround.

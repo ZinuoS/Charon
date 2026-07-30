@@ -1,5 +1,8 @@
 # The palette — semantic assignments
 
+**RATIFIED 2026-07-29.** Semantic assignments, geometry, and the colour-vision floor are
+settled. The `public` variant below is the only palette in this repository.
+
 **One rule: a meaning owns a hue, everywhere.** No figure may introduce a colour the project
 has not already assigned a meaning to. Adding a colour means adding a meaning here first.
 
@@ -82,3 +85,29 @@ the distinction is a new *meaning*: add it to `SEMANTIC`, add a row here, and le
 *(That test was itself broken on first write — it stripped comments with `line.split("#")[0]`,
 which truncated `facecolor="#eceae5"` to `facecolor="` and deleted the very thing it searched
 for. It now tokenizes. A lint test that cannot fail is worse than no lint test.)*
+
+---
+
+## A firm-branded scale is deliberately NOT in this repo
+
+Asked for on 2026-07-29. It is not committed, and the reason is this repo's own constitution
+rather than preference:
+
+* **README §0** excludes desk and firm names from **all committed files** — the rule that had
+  the firm name stripped from line 7.
+* **README §8** bars firm data and firm code from the repository *"under any circumstances."*
+* The repository is **public**. Brand hexes are a firm asset, and an internal deck template is
+  firm material.
+
+**The supported route already exists.** `PRESENTATION_PALETTE` reads its anchor from the
+environment or a gitignored `.env`, is **absent publicly**, and falls back to `public` with no
+error. `make deck` exports every figure under it at deck resolution.
+
+```bash
+# not committed; not in the repo; supplied by the author at render time
+PRESENTATION_PALETTE="#RRGGBB,#RRGGBB,#RRGGBB" uv run python -m scripts.render_audit
+```
+
+`tests/test_chrome_lint.py` asserts no presentation hex appears in any committed file, so this
+separation is enforced rather than remembered. Hand me the hexes directly if you want the deck
+built under them; they will not be written to disk inside the repo.

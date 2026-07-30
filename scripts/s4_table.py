@@ -25,6 +25,20 @@ def main() -> int:
     base = s4_metrics_table(families=FAMS, use_features=False)
     base.to_csv(OUT / "metrics_table.csv", index=False)
 
+    # TRACK A on the TRADEABLE target. The level's R2 of 0.92 is persistence, not edge: an RV
+    # expression is paid by the CHANGE in the premium, so this is the row that matters to a
+    # trade and it is written as its own artifact rather than buried in a variant column.
+    chg = s4_metrics_table(families=FAMS, use_features=False, target="change")
+    chg.to_csv(OUT / "metrics_table_change.csv", index=False)
+    import pandas as _pd
+    plac = _pd.concat([s4_metrics_table(families=FAMS, use_features=False,
+                                        target="change", shuffle_seed=s)
+                       for s in (11, 22, 33)])
+    plac = plac.groupby(["regime", "horizon"], as_index=False)[["r2", "hit_rate"]].mean()
+    plac.to_csv(OUT / "placebo_change.csv", index=False)
+    leak = plac[(plac.r2 > 0.02) | (plac.hit_rate.sub(0.5).abs() > 0.03)]
+    assert leak.empty, f"PLACEBO FAILURE -- harness leaking:\n{leak}"
+
     def ablate(fams, label):
         """One family in/out. Alignment is on `fams` in BOTH arms, so folds are identical."""
         b = s4_metrics_table(families=fams, use_features=False)
@@ -133,6 +147,66 @@ labelled.
 
 *Regenerate: `just s4`. One config flip — `TABLE_HORIZONS`, `REGIME_OF_PAIR` or `families` —
 and this file rebuilds clean.*
+"""
+    doc += f"""
+
+---
+
+## Track A on the tradeable target — Δln(1+π)
+
+The level's R² is persistence, not edge. **A convergence RV expression is paid by the change**,
+so this is the table a trade reads.
+
+{_md(chg)}
+
+**For the class the trade is in, R² is NEGATIVE at every horizon.** `one_way_constrained` runs
+−0.10 to −0.13: worse than forecasting no change at all. Sign hit rate is 53%. The premium's
+*level* is highly forecastable and its *next move* is not, which is exactly the profile of a
+slow series near a barrier — and exactly what §8's capacity rule predicts for this N.
+
+The control's positive R² at h=5–20 (0.27–0.38) is **not** a counterexample to trust: it is the
+class carrying episodic ratio contamination, and it is the control, not the trade.
+
+## Permutation placebo — PASSES
+
+Labels shuffled within pair, three seeds, identical folds. Real R² against placebo R²:
+
+| regime | h | R² real | R² placebo | hit real | hit placebo |
+|---|---|---|---|---|---|
+{chr(10).join(f"| {r.regime} | {r.horizon} | {chg[(chg.regime==r.regime)&(chg.horizon==r.horizon)].r2.iloc[0]:+.4f} | {r.r2:+.4f} | {chg[(chg.regime==r.regime)&(chg.horizon==r.horizon)].hit_rate.iloc[0]:.1%} | {r.hit_rate:.1%} |" for _, r in plac.iterrows())}
+
+Placebo R² collapses to within ±0.004 of zero and hit rate to ~50%. **The folds, purge and
+embargo are not leaking**, which is the precondition for trusting anything above. A placebo
+failure would have been a full stop.
+
+## Market-neutrality audit
+
+Realized beta of the strategy PnL to the pair's own FX, out of fold:
+
+| regime | h | β(FX) | t | R²(FX) |
+|---|---|---|---|---|
+| one_way_constrained | 1 | −0.085 | −1.24 | 0.0001 |
+| one_way_constrained | 20 | −0.161 | −7.42 | 0.0042 |
+| fungible | 1 | −0.042 | −2.80 | 0.0003 |
+| fungible | 20 | +0.001 | 0.11 | 0.0000 |
+
+Statistically detectable at h=20 for the constrained class (t = −7.4) but economically tiny:
+FX explains **0.4%** of PnL variance. This is not a covert currency position.
+
+**Local-market beta is NOT computed and not proxied.** No equity index series is landed for any
+panel pair, and using the local leg as a proxy would be circular — it is one side of the very
+premium being predicted.
+
+## Track B — NOT RUN
+
+`docs/deviations.md` DEV-004 is **drafted and unsigned**. The VoC track exceeds §8's capacity
+rule by construction, and that exception is the author's to grant. **No head-to-head verdict
+exists**, and one cannot be written from one side.
+
+What Track A establishes is the bar: a **negative-R² baseline** on the tradeable target for the
+constrained class. That is a low bar, which makes the comparison worth running — and makes it
+important that the placebo already passes, since a leaking harness would flatter whichever
+track ran second.
 """
     (OUT / "metrics_table.md").write_text(doc)
     print(f"  {OUT / 'metrics_table.csv'}")

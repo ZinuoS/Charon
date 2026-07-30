@@ -64,3 +64,21 @@ def test_m5_features_are_per_pair_local_not_000660():
     assert list(f.columns) == ["rv20", "dd60"]
     assert f.rv20.dropna().gt(0).all(), "realized vol must be positive"
     assert f.dd60.dropna().le(1e-9).all(), "drawdown vs rolling max cannot be positive"
+
+
+def test_change_target_is_a_different_and_harder_problem():
+    """The level's R² is persistence. An RV expression is paid by the CHANGE, and for the
+    class the trade is in that R² is negative — worse than forecasting no move. If this ever
+    flips positive, something either improved or leaked, and both deserve a look."""
+    lvl = s4_metrics_table(horizons=(20,), target="level").set_index("regime")
+    chg = s4_metrics_table(horizons=(20,), target="change").set_index("regime")
+    assert lvl.loc["one_way_constrained", "r2"] > 0.5
+    assert chg.loc["one_way_constrained", "r2"] < 0.0
+
+
+def test_permutation_placebo_collapses():
+    """The full-stop diagnostic. Shuffled labels must destroy performance; if they do not,
+    the folds leak and nothing downstream can be trusted."""
+    p = s4_metrics_table(horizons=(20,), target="change", shuffle_seed=11)
+    assert p.r2.max() < 0.02, f"placebo R² {p.r2.max():.4f} — harness is leaking"
+    assert (p.hit_rate - 0.5).abs().max() < 0.05

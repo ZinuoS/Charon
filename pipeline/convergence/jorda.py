@@ -496,9 +496,19 @@ TABLE_HORIZONS = (1, 5, 20, 60)   # named constant; short end is where coefficie
 
 
 def _oof_predictions(pi_series: list[pd.Series], h: int, n_splits: int = 5,
-                     extra: list[pd.Series] | None = None, use_extra: bool = True
+                     extra: list[pd.Series] | None = None, use_extra: bool = True,
+                     target: str = "level", shuffle_seed: int | None = None
                      ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Out-of-fold (actual, predicted) for pi_{t+h} ~ pi_t, pooled across a regime's pairs.
+    """Out-of-fold (actual, predicted), pooled across a regime's pairs.
+
+    ``target="level"``  -> pi_{t+h} ~ pi_t. High R2, and it is mostly persistence.
+    ``target="change"`` -> ln(1+pi_{t+h}) - ln(1+pi_t). **This is the tradeable target.** A
+    convergence RV expression is paid by the CHANGE, not by the level, so the level's R2 of
+    0.92 is not an edge -- it is the statement that a slow series stays where it is.
+
+    ``shuffle_seed`` permutes the labels WITHIN each pair, for the permutation placebo. Real
+    performance must collapse toward zero under it; if it does not, the harness leaks and
+    nothing downstream is trustworthy.
 
     Embargo = h. Training labels overlap the test block by h periods, so without it the
     fit sees its own test window through the label and the metrics come out flattering.
@@ -507,7 +517,8 @@ def _oof_predictions(pi_series: list[pd.Series], h: int, n_splits: int = 5,
 
     acts, preds, levels = [], [], []
     for idx, pi in enumerate(pi_series):
-        cols = {"x": pi, "y": pi.shift(-h)}
+        y_raw = (np.log1p(pi.shift(-h)) - np.log1p(pi)) if target == "change" else pi.shift(-h)
+        cols = {"x": pi, "y": y_raw}
         zcols = []
         if extra is not None:
             e = extra[idx]
@@ -521,6 +532,10 @@ def _oof_predictions(pi_series: list[pd.Series], h: int, n_splits: int = 5,
         feats = ["x"] + (zcols if use_extra else [])
         X = df[feats].to_numpy(float)
         y = df["y"].to_numpy(float)
+        if shuffle_seed is not None:
+            # Within-pair permutation. Shuffling ACROSS pairs would also destroy the pair
+            # structure, so a collapse would not isolate label information.
+            y = np.random.default_rng(shuffle_seed + idx).permutation(y)
         for split in expanding_walk_forward(len(df), n_splits=n_splits, embargo=h):
             tr, te = split.train, split.test
             if len(tr) < 30 or len(te) == 0:
@@ -532,7 +547,9 @@ def _oof_predictions(pi_series: list[pd.Series], h: int, n_splits: int = 5,
             beta = np.linalg.solve(A.T @ A + RIDGE_LAMBDA * np.eye(A.shape[1]), A.T @ (y[tr] - mu_y))
             preds.append((X[te] - mu_x) @ beta + mu_y)
             acts.append(y[te])
-            levels.append(X[te, 0])          # pi_t, for sign-of-change scoring
+            # For the change target the label already IS the change, so the sign baseline is
+            # zero; for the level target it is pi_t.
+            levels.append(np.zeros(len(te)) if target == "change" else X[te, 0])
     if not acts:
         return np.array([]), np.array([]), np.array([])
     return np.concatenate(acts), np.concatenate(preds), np.concatenate(levels)
@@ -651,7 +668,8 @@ def _features_for(pair: str, families: tuple[str, ...]) -> pd.DataFrame:
 
 
 def s4_metrics_table(horizons=TABLE_HORIZONS, families: tuple[str, ...] = ("m5", "m6"),
-                     use_features: bool = False) -> pd.DataFrame:
+                     use_features: bool = False, target: str = "level",
+                     shuffle_seed: int | None = None) -> pd.DataFrame:
     """The S4 deliverable. Per regime class x horizon, out of fold, pooled row last.
 
     `families` fixes which columns are ALIGNED -- in BOTH arms of an ablation, so every arm
@@ -668,7 +686,8 @@ def s4_metrics_table(horizons=TABLE_HORIZONS, families: tuple[str, ...] = ("m5",
             extra = [feat_of[p].reindex(s.index) for p, s in by_regime[regime]]
             rows.append({"regime": regime, "horizon": h,
                          **_score(*_oof_predictions(series, h, extra=extra,
-                                                    use_extra=use_features))})
+                                                    use_extra=use_features, target=target,
+                                                    shuffle_seed=shuffle_seed))})
     # Pooled LAST and labelled, because a pooled row read as a regime row is the single
     # easiest way to misreport a per-regime result.
     allpairs = [(p, s) for v in by_regime.values() for p, s in v]
@@ -677,8 +696,10 @@ def s4_metrics_table(horizons=TABLE_HORIZONS, families: tuple[str, ...] = ("m5",
     for h in horizons:
         rows.append({"regime": "POOLED (all classes)", "horizon": h,
                      **_score(*_oof_predictions(allser, h, extra=allfx,
-                                                use_extra=use_features))})
+                                                use_extra=use_features, target=target,
+                                                shuffle_seed=shuffle_seed))})
     df = pd.DataFrame(rows)
+    df.insert(0, "target", target)
     df["PROVISIONAL"] = "panel: one regulator (constrained), one country (control)"
     return df
 

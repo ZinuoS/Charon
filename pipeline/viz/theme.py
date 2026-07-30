@@ -33,7 +33,8 @@ ubiquitous UI faces: those read as template.
 
 Palette
 -------
-Constants are exposed at module top as ``TODO(ash: ratify)`` — final aesthetic calls are
+Palette and geometry RATIFIED 2026-07-29 (``docs/palette.md``). Colour is semantic: a meaning
+owns a hue, verified colour-blind-safe by measurement rather than assertion. Remaining
 the author's (README §11). The current set is a muted ink-and-clay pair plus a neutral
 gray for context series, chosen to stay legible in greyscale print and to avoid
 red/green, which carries unwanted directional meaning in a finance chart.
@@ -150,8 +151,10 @@ def regime_color(regime: str) -> str:
     return REGIME_COLORS.get(regime, SEMANTIC["context"])
 
 
-#: TODO(ash: ratify) — standard geometry. One size for single charts keeps the notebook
-#: visually consistent; small-multiples override height only.
+#: RATIFIED 2026-07-29 — standard geometry. One size for single charts keeps the notebook
+#: visually consistent; small-multiples override height only. 9.5x5.2 at 150 DPI renders
+#: legibly at GitHub's content width without horizontal scroll, which is the medium the
+#: repo actually publishes through.
 FIGSIZE = (9.5, 5.2)
 DPI = 150
 
