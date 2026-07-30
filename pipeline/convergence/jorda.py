@@ -1,4 +1,4 @@
-"""M3 — convergence dynamics via Jordà local projections. PROVISIONAL until taxonomy ratified.
+"""M3 — convergence dynamics via Jordà local projections, and the S4 metrics table.
 
 README §6 M3: conditional half-life of π per capacity regime via Jordà local projections
 across h = 1…H with an exponential half-life fit, on the D6 comparator panel, everything
@@ -40,9 +40,11 @@ shallow — ridge-regularized linear, no tree depth, no interaction search. A ri
 λ→0 is OLS; a small λ stabilises the tiny-sample regime fits without changing the
 large-sample ones materially.
 
-Quarantine: every result carries ``provisional=True`` because the regime *labels* are the
-author's proposed taxonomy, not ratified. SKHY is scored (its persistence measured on its
-12 points) but never enters a fit — enforced by the validation layer's forward-test guard.
+Quarantine: every result carries ``provisional=True``, but note what it now refers to. The
+regime *labels* were ratified 2026-07-29 (``docs/regime_taxonomy.md``); what remains
+provisional is the **panel** — the constrained class is four issuers under one regulator and
+five of six controls are Brazilian (``PANEL_CAVEATS``). SKHY is scored but never enters a fit,
+enforced by the validation layer's forward-test guard.
 """
 
 from __future__ import annotations
@@ -490,8 +492,6 @@ def metrics_table(results: dict[str, ConvergenceResult], horizons=(1, 5, 20)) ->
 # agreement is a model fitted to its own answer key.
 # ================================================================================
 
-_PAIR_OF_SERIES: list[str] = []      # order matches _regime_series() insertion order
-
 TABLE_HORIZONS = (1, 5, 20, 60)   # named constant; short end is where coefficients are identified
 
 
@@ -595,17 +595,19 @@ def _fx_trend(pair: str, window: int = 20) -> pd.Series:
     return (fx / fx.shift(window) - 1.0)
 
 
-def _regime_series() -> dict[str, list[pd.Series]]:
+def _regime_series() -> dict[str, list[tuple[str, pd.Series]]]:
     from pipeline.measurement.premium import build_all_variants
     from pipeline.validation.splitters import assert_no_forward_test_instrument
 
-    out: dict[str, list[pd.Series]] = {}
+    # Returns (pair, series) pairs. An earlier version appended pair names to a module-level
+    # list that the caller cleared -- two functions coupled by side effect, and calling this
+    # twice without clearing silently doubled it.
+    out: dict[str, list[tuple[str, pd.Series]]] = {}
     fitted = []
     for pair, regime in REGIME_OF_PAIR.items():
         if pair in FORWARD_TEST_PAIRS:
             continue
-        out.setdefault(regime, []).append(build_all_variants(pair)[0].series)
-        _PAIR_OF_SERIES.append(pair)
+        out.setdefault(regime, []).append((pair, build_all_variants(pair)[0].series))
         fitted.append(pair)
     assert_no_forward_test_instrument(fitted)      # structural guard: no SKHY in any fit
     return out
@@ -621,39 +623,30 @@ def _features_for(pair: str, families: tuple[str, ...]) -> pd.DataFrame:
     return pd.concat(parts, axis=1) if parts else pd.DataFrame()
 
 
-def s4_metrics_table(horizons=TABLE_HORIZONS, with_macro: bool = False,
-                     families: tuple[str, ...] = ("m5", "m6"),
-                     use_features: bool | None = None) -> pd.DataFrame:
+def s4_metrics_table(horizons=TABLE_HORIZONS, families: tuple[str, ...] = ("m5", "m6"),
+                     use_features: bool = False) -> pd.DataFrame:
     """The S4 deliverable. Per regime class x horizon, out of fold, pooled row last.
 
-    `families` fixes which columns are ALIGNED -- always both, so every arm of an ablation
-    scores one sample. `use_features` decides whether they enter X. `with_macro` is the old
-    two-arm switch, kept because callers and the notebook use it.
+    `families` fixes which columns are ALIGNED -- in BOTH arms of an ablation, so every arm
+    scores one sample. `use_features` alone decides whether they enter X.
     """
-    if use_features is None:
-        use_features = with_macro
-    _PAIR_OF_SERIES.clear()
     by_regime = _regime_series()
-    # Alignment is ALWAYS on the macro column so both arms of the ablation see one sample;
-    # `use_extra` alone decides whether it is a feature.
-    feat_of = {p: _features_for(p, families) for p in _PAIR_OF_SERIES}
-    pairs_by_regime, i = {}, 0
-    for regime in sorted(by_regime, key=lambda r: list(by_regime).index(r)):
-        pairs_by_regime[regime] = _PAIR_OF_SERIES[i:i + len(by_regime[regime])]
-        i += len(by_regime[regime])
+    feat_of = {p: _features_for(p, families)
+               for v in by_regime.values() for p, _ in v}
 
     rows = []
     for regime in sorted(by_regime):
         for h in horizons:
-            series = by_regime[regime]
-            extra = [feat_of[p].reindex(s.index) for p, s in zip(pairs_by_regime[regime], series)]
+            series = [s for _, s in by_regime[regime]]
+            extra = [feat_of[p].reindex(s.index) for p, s in by_regime[regime]]
             rows.append({"regime": regime, "horizon": h,
                          **_score(*_oof_predictions(series, h, extra=extra,
                                                     use_extra=use_features))})
     # Pooled LAST and labelled, because a pooled row read as a regime row is the single
     # easiest way to misreport a per-regime result.
-    allser = [s for v in by_regime.values() for s in v]
-    allfx = [feat_of[p].reindex(s.index) for p, s in zip(_PAIR_OF_SERIES, allser)]
+    allpairs = [(p, s) for v in by_regime.values() for p, s in v]
+    allser = [s for _, s in allpairs]
+    allfx = [feat_of[p].reindex(s.index) for p, s in allpairs]
     for h in horizons:
         rows.append({"regime": "POOLED (all classes)", "horizon": h,
                      **_score(*_oof_predictions(allser, h, extra=allfx,

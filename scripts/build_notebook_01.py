@@ -48,9 +48,11 @@ because the conversion channel is **one-way**:
 - **ADR → local** is uncapped and fast. If the premium goes negative, buy the ADR,
   cancel it, sell the local share. This makes the premium a *reflected* process near
   conversion cost **from below**.
-- **local → ADR** is bounded by a **2.5% quota that was fully exhausted at the
-  offering**. With headroom at zero, nothing structurally caps the premium **from
-  above**.
+- **local → ADR** requires the **Company's prior consent** against a level it sets and
+  does not disclose. No numeric deposit cap appears in any SEC filing; the board's 2.50%
+  figure is a cap on *primary issuance*, sized so the controlling shareholder stays above
+  a 20% statutory floor (MRFTA). So nothing on the record caps the premium **from above**,
+  and the ceiling is a corporate decision rather than an exhausted quota.
 
 Three consequences organise everything downstream:
 
@@ -59,8 +61,9 @@ Three consequences organise everything downstream:
    state-dependent upper drift.
 2. **Every short-premium expression is short a barrier that does not exist** — negatively
    skewed by construction, not by bad luck.
-3. **The barrier's state is observable**, via quota headroom, which turns regime
-   modelling into a data problem rather than a latent-variable guess.
+3. **The barrier's state is partly observable**, via KSD programme headroom — though that
+   series measures the issuance ceiling, not the operative consent gate, so it bounds the
+   question rather than answering it.
 
 This notebook does none of that modelling. It does the thing that has to be right first:
 **construct π correctly, and quantify how much of it is measurement rather than
@@ -308,7 +311,7 @@ chg = (np.log(ecb.loc[shared]).diff() - np.log(noon.loc[shared]).diff()).dropna(
 
 fig, ax = theme.figure(height=4.6)
 ax.plot(lvl.index, lvl.values, color=theme.GRAY, linewidth=0.9)
-ax.plot(chg.index, chg.values, color=theme.CLAY, linewidth=0.9, alpha=0.85)
+ax.plot(chg.index, chg.values, color=theme.INK, linewidth=0.9, alpha=0.85)
 theme.bp_axis(ax)
 theme.headline(
     ax,
@@ -319,7 +322,7 @@ theme.headline(
 # Both series end near 0bp, so anchor the labels at separated fixed heights rather than
 # at the (colliding) endpoints.
 ax.annotate("day-over-day change gap", xy=(1.0, 0.66), xycoords="axes fraction",
-            xytext=(4, 0), textcoords="offset points", color=theme.CLAY,
+            xytext=(4, 0), textcoords="offset points", color=theme.INK,
             fontsize=theme.LABEL_SIZE, va="center", ha="left", fontfamily=theme.SERIF_STACK)
 ax.annotate("level gap", xy=(1.0, 0.42), xycoords="axes fraction",
             xytext=(4, 0), textcoords="offset points", color=theme.GRAY,
@@ -457,7 +460,7 @@ fig, (a1, a2) = theme.figure(ncols=2, figsize=(11.5, 4.6))
 for ax in (a1, a2):
     ax.grid(axis="y"); ax.grid(axis="x", visible=False); ax.set_axisbelow(True)
 
-a1.plot(sk.series.index, sk.series.values, color=theme.CLAY, linewidth=1.8, marker="o", markersize=3)
+a1.plot(sk.series.index, sk.series.values, color=theme.INK, linewidth=1.8, marker="o", markersize=3)
 theme.pct_axis(a1); a1.set_ylim(-0.05, 0.55)
 a1.set_title("SKHY -- 12 trading days", loc="left", fontsize=10.5,
              color=theme.TEXT, fontfamily=theme.SERIF_STACK)

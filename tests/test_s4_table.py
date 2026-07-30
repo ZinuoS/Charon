@@ -16,8 +16,8 @@ def test_ablation_arms_score_identical_samples():
     the in/out arms scored different samples -- RMSE 'improved' while R2 fell, which is only
     possible when the sample moves. Alignment now always includes the column; only its use
     as a feature is toggled."""
-    a = s4_metrics_table(horizons=(1, 20), with_macro=False)
-    b = s4_metrics_table(horizons=(1, 20), with_macro=True)
+    a = s4_metrics_table(horizons=(1, 20), use_features=False)
+    b = s4_metrics_table(horizons=(1, 20), use_features=True)
     j = a.merge(b, on=["regime", "horizon"], suffixes=("_a", "_b"))
     assert (j.n_a == j.n_b).all(), "ablation arms are not on identical folds"
 
@@ -39,9 +39,10 @@ def test_constrained_class_is_forecastable_and_the_control_is_not():
 
 def test_skhy_never_enters_a_fit():
     from pipeline.convergence.jorda import FORWARD_TEST_PAIRS, _regime_series
-    for series in _regime_series().values():
-        for s in series:
-            assert len(s) > 100, "a 12-point series would be SKHY leaking into the panel"
+    for members in _regime_series().values():
+        for pair, series in members:
+            assert pair not in FORWARD_TEST_PAIRS, f"{pair} is forward-test-only"
+            assert len(series) > 100, "a 12-point series would be SKHY leaking into the panel"
     assert "skhy" in FORWARD_TEST_PAIRS
 
 
