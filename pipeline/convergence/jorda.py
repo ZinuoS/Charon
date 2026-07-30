@@ -613,6 +613,29 @@ def _regime_series() -> dict[str, list[tuple[str, pd.Series]]]:
     return out
 
 
+def _utilization_feature(pair: str) -> pd.DataFrame:
+    """Borrow-utilization state, for whichever pairs have lending data landed.
+
+    Today that is 000660 alone, i.e. SKHY, which never enters a fit — so this returns an empty
+    frame for every fitted pair and the family is un-ablatable rather than merely untested.
+    `pipeline.measurement.utilization.ablation_status()` computes that, and
+    tests/test_utilization.py fails the day it stops being true.
+
+    Wired in anyway, so that landing TWSE SBL or B3 BTB makes the ablation a one-word change
+    to `families` instead of a new code path.
+    """
+    if pair not in _LENDING_COVERAGE:
+        return pd.DataFrame()
+    from pipeline.measurement.utilization import utilization_state
+    u = utilization_state()
+    return pd.DataFrame({"borrow_pctile": u["balance_pctile"],
+                         "net_lending": u["net_lending_shares"]})
+
+
+#: Pairs whose borrow data is landed. D3 is 000660 only; extend as sources land.
+_LENDING_COVERAGE = {"skhy"}
+
+
 def _features_for(pair: str, families: tuple[str, ...]) -> pd.DataFrame:
     """Concatenate the requested feature families for one pair. Empty frame if none."""
     parts = []
@@ -620,6 +643,10 @@ def _features_for(pair: str, families: tuple[str, ...]) -> pd.DataFrame:
         parts.append(_m5_features(pair))
     if "m6" in families:
         parts.append(_fx_trend(pair).rename("fx_trend20").to_frame())
+    if "util" in families:
+        u = _utilization_feature(pair)
+        if not u.empty:
+            parts.append(u)
     return pd.concat(parts, axis=1) if parts else pd.DataFrame()
 
 

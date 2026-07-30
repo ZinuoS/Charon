@@ -25,7 +25,7 @@ testable and inside the quarantine.
 | candidate | reason |
 |---|---|
 | listing-era dummy | **collinear.** Within a pair it is constant over the sample, so the train-only centring in `_oof_predictions` absorbs it entirely. It contributes nothing by construction, not by measurement |
-| lending utilization state | **UNBLOCKED 2026-07-29** — D3 landed (`skhynix_lending_daily`, 4,095 rows from 2010). Not yet built into M5, and the M6/M5 ablation result is the prior: it must earn its place under identical folds like everything else |
+| lending utilization state | **BUILT 2026-07-29, and UN-ABLATABLE.** See below |
 | beta / correlation to a Korea proxy | **no index series in-repo.** Logged as a probe; not pulled mid-session |
 
 ## Ablation result — cut, and worse than M6
@@ -57,3 +57,41 @@ plausibly **when** the barrier binds (a state question) rather than how persiste
 is (answered by the table). Utilization states are the strongest candidate and are **no longer gated** — D3 landed
 2026-07-29. Building them is the next honest increment, and they go through the same
 identical-folds ablation that cut rv20/dd60 and fx_trend20.
+
+## Utilization state — built, and the ablation is vacuous
+
+`pipeline/measurement/utilization.py`. Balance percentile against its own trailing
+1,250-session history, terciled, plus net lending flow. Current reading: **16th percentile —
+`low`**, net **+1.02m shares** over five sessions.
+
+**It is not an M5 panel feature, and it cannot be one.** D3 covers **000660 only**; 000660 is
+SKHY's local leg; SKHY is forward-test-only and never enters a fit. So the family reaches
+**zero fitted pairs**.
+
+The ablation was **run rather than skipped**, through the same harness that cut `rv20`/`dd60`
+and `fx_trend20`:
+
+| regime | h | Δrmse | Δr² |
+|---|---|---|---|
+| fungible | 1 | 0.0 | 0.0 |
+| fungible | 20 | 0.0 | 0.0 |
+| one_way_constrained | 1 | 0.0 | 0.0 |
+| one_way_constrained | 20 | 0.0 | 0.0 |
+| POOLED | 1 | 0.0 | 0.0 |
+
+**Exactly zero, not approximately.** Toggling a family that reaches no fitted pair cannot move
+a metric. That is the finding: not "untested", but "there is no fold structure to test it in".
+A non-zero delta would mean the feature was leaking somewhere it should not be, which is why
+`tests/test_utilization.py` asserts the zeros rather than the intent.
+
+**Where it earns its place instead.** It is a barrier-state observable, the same kind of thing
+H5's headroom monitor is — regime is a rule, binding-ness is a state. Its live consumer is the
+financing sheet's `BORROW STATE` line, the public half of a borrow question whose other half
+the desk quotes. And the current reading is worth reading carefully: a `low` percentile is
+**not reassurance**. It says borrow is plentiful today, on a series that contains no forward
+commitment at all — the tenor question against a 220-day holding floor is untouched by it.
+
+**Route to a real ablation:** lending data for the panel pairs — TWSE SBL for the Taiwanese
+four, B3 BTB for the Brazilian five. Both need `approved:` marks, which are the author's. The
+`util` family is already wired into `_features_for`, so landing either makes the ablation a
+one-word change to `families` rather than a new code path.

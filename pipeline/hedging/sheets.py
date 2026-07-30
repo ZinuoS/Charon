@@ -37,6 +37,19 @@ def _accrual_basis() -> str:
             f"(~{h['holding_period_floor_days'] / 21:.0f}m); NO upper bound at 95%")
 
 
+
+def _borrow_reading() -> str:
+    """Public half of the borrow question. Degrades to a stated absence, never to silence."""
+    try:
+        from pipeline.measurement.utilization import current
+        u = current()
+        return (f"on-loan balance {u['balance_shares']:,} sh, {u['balance_pctile']:.0%} of its own "
+                f"1,250-session history ({u['state']}); net {u['net_lending_5d']:+,} sh over 5d "
+                f"[{u['as_of']}]")
+    except Exception:
+        return "D3 lending not landed — run `just ingest-d3`"
+
+
 @dataclass
 class TradeSheet:
     name: str
@@ -242,6 +255,9 @@ def financing_margin_sheet(headroom_reading: str) -> TradeSheet:
             "quantity margined here.",
         ],
         residual_exposures=[
+            f"BORROW STATE (public half): {_borrow_reading()}. A LOW reading is not "
+            "reassurance -- it says borrow is plentiful today, on a series with no forward "
+            "commitment in it. The tenor question is the firm half.",
             "RECALL RISK is the binding one. The position must be financeable across the "
             f"whole holding floor -- {h['expected_holding_period'].lower()}. A borrow "
             "recalled inside that floor forces a close at whatever the premium is on the "
@@ -252,6 +268,7 @@ def financing_margin_sheet(headroom_reading: str) -> TradeSheet:
         ],
         cost_stack=[
             ("conversion round trip", "0.07% of notional [424B4]"),
+            ("local borrow (public state)", _borrow_reading()),
             ("ADR borrow", "— desk quotes live —"),
             ("financing spread on short proceeds", "— desk quotes live —"),
             ("ACCRUAL BASIS", _accrual_basis()),
@@ -278,9 +295,9 @@ def financing_margin_sheet(headroom_reading: str) -> TradeSheet:
             "Financing cost is LINEAR in holding horizon and the horizon's upper tail is "
             "open, so the cost is quoted as a floor and never as a point.",
         ],
-        monitor="D5 headroom on ISIN US78392B2060. A deposit clearing there is the first "
-                "evidence the consent gate operates at all.",
-        monitor_reading=headroom_reading,
+        monitor="D5 headroom on ISIN US78392B2060 for the barrier state, and KOFIA 000660 "
+                "lending balance for the borrow state. Two different constraints, two feeds.",
+        monitor_reading=f"{headroom_reading}  ·  borrow: {_borrow_reading()}",
         alternative="A defined-risk expression caps the margin path at the cost of the "
                     "premium carry, if listed options on SKHY become available.",
         pending=[
