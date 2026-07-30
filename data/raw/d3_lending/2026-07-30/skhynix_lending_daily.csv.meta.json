@@ -4,7 +4,7 @@
   "last_obs_date": "2026-07-29",
   "native_timezone": "Asia/Seoul",
   "provider": "https://freesis.kofia.or.kr/meta/getMetaDataList.do",
-  "pulled_at_utc": "2026-07-30T01:53:52+00:00",
+  "pulled_at_utc": "2026-07-30T02:18:01+00:00",
   "rationale": "D3 lending leg. Endpoint and payload recovered by running the eXBuilder6 SPA in a browser and reading its own XHR; docs/data_sources.md D3-b previously recorded the payload format as un-reverse-engineerable.",
   "rows": 4095,
   "series_id": "skhynix_lending_daily",

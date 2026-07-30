@@ -75,6 +75,18 @@ ingest-d3:
     uv run python -m pipeline.ingest.d3_lending
 
 # Perishable daily captures (TWSE SBL lendable supply, SEIBro DR headroom).
-# No date inside these payloads: an uncaptured day is lost permanently.
+# No date inside these payloads, so an uncaptured day is lost permanently -- but NOT on the
+# pitch path: TWSE SBL feeds only the utilization row-counter, and the cross-pair ablation it
+# was for needs ~60 sessions. Run it when convenient; nothing in the pitch depends on it.
 snapshot:
     uv run python -m pipeline.ingest.snapshot_daily
+
+# ---------------------------------------------------------------- pitch day
+
+# Everything the pitch reads, refreshed in dependency order. This is the ONLY thing that has
+# to run on the morning: fresh borrow state -> table -> notebooks -> gate.
+#
+# Deliberately not a launchd job. It is one command on one morning; a scheduled job for that
+# is more moving parts than the thing it automates.
+pitch-refresh:
+    uv run python -m scripts.pitch_refresh

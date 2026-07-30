@@ -104,8 +104,11 @@ than a percentile. But `當日` means today: the payload has four fields and **n
 snapshot, so history begins the day capture begins. Capture began **2026-07-30**; one
 observation exists.
 
-**59 more sessions to the fold minimum → runnable ≈ 2026-10-26** (business days plus a 6%
-allowance for Taiwanese holidays; `lending_readiness()` computes the current count).
+**59 more sessions to the fold minimum.** The pitch is **2026-08-04**, four trading days out,
+so at most five observations exist by then against sixty needed: **the cross-pair ablation is
+not reachable before the pitch, and is not on its critical path.** It is a post-pitch item if
+it is anything. `lending_readiness()` reports the live count; the guard test tells you when it
+clears.
 
 **B3 BTB is left unresolved deliberately, and not for budget.** Brazilian utilization without
 Taiwanese history would give the feature to the *fungible class alone*, where it is
@@ -113,8 +116,13 @@ Taiwanese history would give the feature to the *fungible class alone*, where it
 in the other measures the class, not the variable. It is worth landing only once the
 constrained side has history.
 
-**What has to happen, in order:** `just snapshot` daily (the capture is perishable — an
-uncaptured day is unrecoverable), then when `lending_readiness()["ready"]` includes the
-Taiwanese pairs, add them to `_LENDING_COVERAGE` and run `families=("util",)`. A test compares
-the hardcoded set against what is landed and fails on divergence, so this does not depend on
-anyone remembering.
+**What has to happen, in order:** `just snapshot` on whatever days are convenient — the
+capture is perishable, so a missed day is unrecoverable, but **nothing before the pitch depends
+on it**; TWSE SBL currently feeds only the row-counter. Then when
+`lending_readiness()["ready"]` includes the Taiwanese pairs, add them to `_LENDING_COVERAGE`
+and run `families=("util",)`. A test compares the hardcoded set against what is landed and
+fails on divergence, so this does not depend on anyone remembering.
+
+**Not scheduled.** A launchd job for a series with no consumer on the critical path is
+infrastructure earning nothing. `just pitch-refresh` is the command that matters, and it does
+not touch TWSE SBL.
