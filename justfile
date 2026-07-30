@@ -69,3 +69,7 @@ validate:
 # The per-regime metrics table. Regenerates from landed data; no network.
 s4:
     uv run python -m scripts.s4_table
+
+# D3 — securities-lending balances for 000660 (KOFIA FreeSIS).
+ingest-d3:
+    uv run python -m pipeline.ingest.d3_lending

@@ -306,8 +306,12 @@ harder (t = +10.9) than the ceiling pulls (t = −5.0).
 - **Upper-barrier corporate action.** Because the ceiling is a Company determination, it opens
   by *decision*, disclosable through Korean regulatory filings. This is a monitorable event
   class, not a market variable — and it is the single event that would most change the thesis.
-- **Measurement risk.** A quoted premium carries ~25bp of definitional ambiguity depending on
-  close definition, and the FX fix choice moves day-over-day changes by ~27bp on average.
+- **Measurement risk.** Two things, and only one is understood. The **FX fix choice** moves
+day-over-day premium changes by ~27bp on average — measured, and the reason this note uses the
+ECB reference rate. Separately, a **24.6bp cross-source disagreement** was observed in one
+session between a recorded figure and two providers' prints; close definition is the leading
+hypothesis and is **untested**, because only one close series per leg is landed. Reported as
+unexplained rather than attributed.
 
 ---
 

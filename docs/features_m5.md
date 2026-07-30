@@ -25,7 +25,7 @@ testable and inside the quarantine.
 | candidate | reason |
 |---|---|
 | listing-era dummy | **collinear.** Within a pair it is constant over the sample, so the train-only centring in `_oof_predictions` absorbs it entirely. It contributes nothing by construction, not by measurement |
-| lending utilization state | **D3 not landed** |
+| lending utilization state | **UNBLOCKED 2026-07-29** — D3 landed (`skhynix_lending_daily`, 4,095 rows from 2010). Not yet built into M5, and the M6/M5 ablation result is the prior: it must earn its place under identical folds like everything else |
 | beta / correlation to a Korea proxy | **no index series in-repo.** Logged as a probe; not pulled mid-session |
 
 ## Ablation result — cut, and worse than M6
@@ -54,5 +54,6 @@ rather than left to a reader comparing columns.
 
 M5 becomes worth rebuilding when there is a question the premium level cannot answer — most
 plausibly **when** the barrier binds (a state question) rather than how persistent the premium
-is (answered by the table). Utilization states are the strongest candidate and remain gated on
-unlanded D3.
+is (answered by the table). Utilization states are the strongest candidate and are **no longer gated** — D3 landed
+2026-07-29. Building them is the next honest increment, and they go through the same
+identical-folds ablation that cut rv20/dd60 and fx_trend20.

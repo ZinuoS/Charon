@@ -140,16 +140,27 @@ class FragileHttpClient:
     rng: random.Random = field(default_factory=lambda: random.Random(20260728))
     _sleep: Any = time.sleep  # injectable for tests
 
-    def get(self, url: str, params: dict | None = None, timeout: int = 30) -> bytes:
+    def get(self, url: str, params: dict | None = None, timeout: int = 30,
+            json_body: dict | None = None) -> bytes:
         """Fetch ``url``, honouring cache, single-flight, spacing and backoff.
+
+        ``json_body`` switches the verb to POST and sends it as JSON. It lives on ``get``
+        rather than in a sibling ``post`` because everything that matters here — the cache,
+        the per-host lock, the spacing, the 4xx-is-not-a-throttle rule — is the same for both
+        verbs, and a second method would have been 50 lines of copied retry logic waiting to
+        drift out of step with this one.
 
         Raises :class:`RateLimited` if the provider throttles through every attempt, and
         :class:`ProviderError` on any other terminal transport failure. Neither is
         swallowed: a puller that absorbs an outage produces a short series that looks
         like a real one.
         """
+        # The body is part of the cache identity. Keying on url+params alone would serve one
+        # query's response to a different query against the same endpoint -- and this whole
+        # module exists because a cache that lies is worse than no cache.
+        cache_key = params if json_body is None else {**(params or {}), "__body": json_body}
         if self.use_cache:
-            cached = cache_read(url, params)
+            cached = cache_read(url, cache_key)
             if cached is not None:
                 return cached
 
@@ -161,13 +172,18 @@ class FragileHttpClient:
             for attempt in range(self.max_attempts):
                 self._space(host)
                 try:
-                    resp = requests.get(url, params=params, headers=headers, timeout=timeout)
+                    if json_body is None:
+                        resp = requests.get(url, params=params, headers=headers, timeout=timeout)
+                    else:
+                        resp = requests.post(url, params=params, json=json_body, timeout=timeout,
+                                             headers={**headers,
+                                                      "Content-Type": "application/json; charset=UTF-8"})
                     if resp.status_code in RATE_LIMIT_STATUSES:
                         raise RateLimited(f"HTTP {resp.status_code} from {host}")
                     resp.raise_for_status()
                     payload = resp.content
                     if self.use_cache:
-                        cache_write(url, params, payload)
+                        cache_write(url, cache_key, payload)
                     return payload
                 except RateLimited as exc:
                     last_error = exc

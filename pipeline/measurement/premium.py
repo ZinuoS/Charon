@@ -40,7 +40,8 @@ default would put a noise floor into the series that nobody could decompose afte
 So both are **config axes**: every variant is computed where its inputs exist, stored
 side by side, and every artifact records which pair it used. Notebook F6 plots all four.
 
-Neither default is chosen here — both are ``TODO(ash: ratify)`` (README §11).
+Both defaults RATIFIED 2026-07-29: ``frankfurter`` on measured freshness and coverage,
+``primary_official`` as a description of the landed data (``consolidated`` is an empty slot).
 
 No network. Reads only what ingestion wrote to ``data/raw/``.
 """
@@ -75,10 +76,39 @@ FX_LEGS: dict[str, str] = {
 #: available, rather than the axis being retrofitted later.
 CLOSE_DEFS: tuple[str, ...] = ("primary_official", "consolidated")
 
-#: Neither default is chosen in code. README §11 reserves measurement definitions to the
-#: author; a default here would become the de-facto decision.
-DEFAULT_FX_LEG = "TODO(ash: ratify)"
-DEFAULT_CLOSE_DEF = "TODO(ash: ratify)"
+# ---------------------------------------------------------------- RATIFIED 2026-07-29
+#
+# Both defaults chosen on measured evidence, not preference, and both reversible in one line.
+#
+# FX LEG = "frankfurter" (ECB reference rate). The two legs disagree by 0.19% on the level
+# and ~27bp on day-over-day changes, so the choice is material. frankfurter wins on the two
+# things that can be measured rather than argued:
+#   * FRESHNESS  -- frankfurter last obs 2026-07-28 against FRED 2026-07-24. FRED H.10 is a
+#     weekly release, so it lags the equity legs by up to four sessions and would truncate
+#     every joint series to its own staleness.
+#   * COVERAGE   -- 13 observations against 11 inside the SKHY window, on a pair with 13
+#     sessions of history. Losing two of thirteen to a slower fix is not acceptable.
+# FRED stays landed as the reconciliation partner; it is what makes the fix-timing component
+# of confound C2 measurable instead of assumed.
+DEFAULT_FX_LEG = "frankfurter"
+
+# CLOSE DEFINITION = "primary_official", and this one is a DESCRIPTION OF THE LANDED DATA
+# rather than a choice between alternatives.
+#
+# Be precise about what is and is not settled here. `consolidated` is a declared but
+# EMPTY slot: both labels currently read the same column, so `build_variant(..., "consolidated")`
+# returns a series identical to `primary_official`. Ratifying a "choice" between two labels
+# that produce identical output would be theatre.
+#
+# What that means for the 24.6bp gap this axis exists for: the gap was OBSERVED once, between
+# a recorded figure and two providers' prints in the same session. Close definition is the
+# LEADING HYPOTHESIS for it (docs/proposed_readme_patch.md) and remains untested, because the
+# repo holds one close series per leg. Any caption attributing the 25bp to close definition is
+# over-claiming; the honest statement is unexplained cross-source disagreement of that size.
+#
+# tests/test_m1_measurement.py asserts the two labels still agree. That test FAILS the day a
+# consolidated series lands -- which is exactly when this ratification needs revisiting.
+DEFAULT_CLOSE_DEF = "primary_official"
 
 PAIR_SOURCE = {"skhy": "d1_prices"}
 DEFAULT_SOURCE = "d6_comparators"

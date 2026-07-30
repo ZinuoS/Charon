@@ -462,8 +462,35 @@ approved: TODO(ash)     # requires your KRX credentials AND runs against ToS Art
   장내파생상품 — though the last is **KOSPI200 선물 only**.
 - **[V] KOFIA carries no FX data of any kind.** A grep of the complete 109 KB sitemap for
   외환|환율|스왑|선물환|NDF|통화|달러|FX returned **zero matches**. Ruled out for D2.
-- **[U]** It is an eXBuilder6 SPA and the XHR payload format could not be
-  reverse-engineered. A puller may not be feasible without further work.
+- **[V] RESOLVED 2026-07-29 — payload recovered, puller landed.** The earlier note read
+  "eXBuilder6 SPA and the XHR payload format could not be reverse-engineered." It was
+  recovered not by guessing servlet names (five guesses all returned the same 2,661-byte
+  error page) but by **loading the SPA in a browser and reading the request it sends**:
+
+  ```
+  POST https://freesis.kofia.or.kr/meta/getMetaDataList.do
+  {"dmSearch": {"tmpV1": "D",          # frequency, D = daily
+                "tmpV45": "YYYYMMDD",  # from
+                "tmpV46": "YYYYMMDD",  # to
+                "tmpV72": "000660",    # issue code; "" = whole market
+                "tmpV40": "1000000", "tmpV41": "1",
+                "OBJ_NM": "STATSCU0100000140BO"}}
+  ```
+
+  Columns: `TMPV1` date · `TMPV2` issue name · `TMPV3` new lending (sh) · `TMPV4` repaid (sh)
+  · `TMPV5` balance (sh) · `TMPV6` balance value (**unit unverified**, see below).
+
+  **Two traps, both live:** the response is **not always valid JSON** — when an aggregate
+  overflows its column the server emits digits then bare `######`, unquoted — and the last
+  two rows are `합계`/`평균`, not dates. Both handled in `KofiaAdapter`; both pinned by
+  `tests/test_d3_lending.py`.
+
+  **`[U]` remaining:** the value column's unit. `tmpV40=1000000` implies 백만원, but 14.3m
+  shares against a 20.1m figure implies ~1.4m KRW/share where SK Hynix trades near 400k. It
+  is landed as `balance_value_unverified_unit` rather than asserted. TODO(ash).
+
+  **Landed:** `pipeline/ingest/d3_lending.py`, `just ingest-d3` — 4,095 daily rows for
+  000660, 2010-01-04 to 2026-07-29.
 
 ```yaml
 source: kofia_freesis_lending
@@ -511,6 +538,17 @@ README §4 D4 assumed they did; that assumption is now verified rather than hope
   listings are reported "effectively off the table" and delisting is under discussion.
   Combined market cap was ₩13.02tn on 2026-07-08. **This is a live D7 event stream, not
   background colour** — a delisting would terminate the H3 sample.
+
+### D4 status note — 2026-07-29
+
+The browser-XHR technique that resolved D3-b was tried on the issuer side and **did not
+get as far**: navigation to the Samsung/KODEX product page was **denied at the origin gate**
+in this environment, so the SPA never ran and no XHR was observable. Recorded so the next
+session does not repeat it as if it were untried.
+
+D4 therefore remains blocked on the same fork as before: the only route verified to carry AUM
+is the Naver JSON API (below), whose terms are withheld, and the two issuer pages that are
+`approved: yes` were established to carry no fund data in static HTML.
 
 ### D4-a. Naver Finance ETF list — free, no auth, verified live
 

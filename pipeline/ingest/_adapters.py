@@ -25,6 +25,9 @@ Both are strictly better provenance than the aggregator this repo started on.
 
 from __future__ import annotations
 
+import re
+import datetime as _dt
+
 import io
 import json
 from datetime import date, datetime, timedelta
@@ -402,3 +405,65 @@ class EodhdAdapter:
 
 
 ADAPTERS["eodhd"] = EodhdAdapter()
+
+
+class KofiaAdapter:
+    """KOFIA FreeSIS securities-lending (대차거래) — D3-b.
+
+    `docs/data_sources.md` D3-b carried `[U] It is an eXBuilder6 SPA and the XHR payload
+    format could not be reverse-engineered.` Resolved 2026-07-29 by loading the SPA in a
+    browser and reading the request it actually sends, rather than guessing servlet names
+    (five guesses all returned the same 2661-byte error page).
+
+        POST /meta/getMetaDataList.do
+        {"dmSearch": {"tmpV1": "D",            # frequency: D daily
+                      "tmpV45": "YYYYMMDD",    # from
+                      "tmpV46": "YYYYMMDD",    # to
+                      "tmpV72": "000660",      # issue code; "" = whole market
+                      "tmpV40": "1000000", "tmpV41": "1",
+                      "OBJ_NM": "STATSCU0100000140BO"}}
+
+    Response columns, confirmed against the rendered table:
+        TMPV1 date (YYYYMMDD) · TMPV2 issue name · TMPV3 new lending (shares)
+        TMPV4 repaid (shares) · TMPV5 balance (shares) · TMPV6 balance (value)
+
+    Two traps, both real:
+
+    *   **The response is not always valid JSON.** When an aggregate overflows its column
+        width the server emits the digits followed by bare ``######`` — unquoted — so
+        ``json.loads`` fails partway through. Repaired to ``null`` before parsing.
+    *   **The last two rows are 합계 and 평균** (total and mean), not dates. Left in, they
+        would enter a time series as two observations with garbage timestamps.
+    """
+
+    URL = "https://freesis.kofia.or.kr/meta/getMetaDataList.do"
+    OBJ = "STATSCU0100000140BO"
+    AGGREGATE_ROWS = ("합계", "평균")
+    _MASKED = re.compile(rb"(:\s*)\d*#+")
+
+    def fetch(self, issue_code: str = "", start: str = "20100101",
+              end: str | None = None) -> tuple[list[dict], dict]:
+        end = end or _dt.date.today().strftime("%Y%m%d")
+        body = {"dmSearch": {"tmpV40": "1000000", "tmpV41": "1", "tmpV1": "D",
+                             "tmpV45": start, "tmpV46": end,
+                             "tmpV72": issue_code, "OBJ_NM": self.OBJ}}
+        raw = DEFAULT_CLIENT.get(self.URL, json_body=body)
+        payload = json.loads(self._MASKED.sub(rb"\1null", raw).decode("utf-8"))
+        rows = [r for r in payload.get("ds1", []) if r.get("TMPV1") not in self.AGGREGATE_ROWS]
+        return rows, {"url": self.URL, "params": body}
+
+    @staticmethod
+    def to_frame(rows: list[dict]) -> "pd.DataFrame":
+        import pandas as pd
+        df = pd.DataFrame([{
+            "date": _dt.datetime.strptime(r["TMPV1"], "%Y%m%d").date(),
+            "issue_name": r["TMPV2"],
+            "new_lending_shares": r["TMPV3"],
+            "repaid_shares": r["TMPV4"],
+            "balance_shares": r["TMPV5"],
+            # TODO(ash): confirm the unit. tmpV40=1000000 implies 백만원, but 14.3m shares
+            # against a 20.1m figure implies ~1.4m KRW/share where SK Hynix trades near
+            # 400k. Landed unparsed rather than asserted wrong.
+            "balance_value_unverified_unit": r["TMPV6"],
+        } for r in rows])
+        return df.sort_values("date").reset_index(drop=True)

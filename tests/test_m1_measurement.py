@@ -36,11 +36,13 @@ FX = _s(dict(zip(DAYS, [1000.0, 1010.0, 1005.0, 1020.0])))
 
 
 class TestConfigAxesAreDeclared:
-    def test_neither_default_is_chosen_in_code(self):
-        """A default here would silently become the measurement decision, which README
-        §11 reserves to the author."""
-        assert "TODO(ash: ratify)" in premium.DEFAULT_FX_LEG
-        assert "TODO(ash: ratify)" in premium.DEFAULT_CLOSE_DEF
+    def test_both_defaults_are_ratified_members_of_their_axis(self):
+        """Was the inverse of this until 2026-07-29: it asserted NEITHER default was chosen,
+        because an unratified default would silently become the measurement decision. Both are
+        now ratified on measured evidence, so the guard becomes that they are real options
+        rather than free text."""
+        assert premium.DEFAULT_FX_LEG in premium.FX_LEGS
+        assert premium.DEFAULT_CLOSE_DEF in premium.CLOSE_DEFS
 
     def test_yahoo_snapshot_is_not_an_fx_option(self):
         """Dropped deliberately: its snapshot instant was never documented, which is the
@@ -205,3 +207,44 @@ class TestComparatorsShareTheCodePath:
 
     def test_skhy_absent_from_the_comparator_list(self):
         assert "skhy" not in comparators.COMPARATOR_PAIRS
+
+
+class TestRatifiedDefaults:
+    """RATIFIED 2026-07-29. These tests guard the reasoning, not the taste."""
+
+    def test_fx_leg_default_is_the_fresher_series(self):
+        """frankfurter was chosen because FRED H.10 is a weekly release and lags. If that
+        ever inverts, the ratification is stale and this fails rather than quietly shipping
+        a default chosen on last year's coverage."""
+        from pipeline.measurement.premium import DEFAULT_FX_LEG, FX_LEGS, _load_close
+        assert DEFAULT_FX_LEG in FX_LEGS
+        chosen = _load_close("d1_prices", FX_LEGS[DEFAULT_FX_LEG])
+        for name, sid in FX_LEGS.items():
+            if name == DEFAULT_FX_LEG:
+                continue
+            other = _load_close("d1_prices", sid)
+            assert chosen.index[-1] >= other.index[-1], \
+                f"{name} is now fresher than the ratified default {DEFAULT_FX_LEG}"
+
+    def test_close_def_labels_still_agree_so_the_choice_is_still_inert(self):
+        """`consolidated` is a declared but EMPTY slot: both labels read the same column, so
+        DEFAULT_CLOSE_DEF describes the landed data rather than choosing between options.
+
+        This test FAILS the day a real consolidated series lands — which is exactly when the
+        ratification needs revisiting, and when the 24.6bp gap becomes testable instead of
+        merely hypothesised."""
+        from pipeline.ingest.registry import PAIRS
+        from pipeline.measurement.premium import CLOSE_DEFS, DEFAULT_CLOSE_DEF, build_variant
+        assert DEFAULT_CLOSE_DEF in CLOSE_DEFS
+        spec = next(p for p in PAIRS if p.pair_id == "skhy")
+        a = build_variant(spec, "frankfurter", "primary_official").series
+        b = build_variant(spec, "frankfurter", "consolidated").series
+        assert a.equals(b), (
+            "close_def is no longer inert — a consolidated series has landed. Revisit "
+            "DEFAULT_CLOSE_DEF and test the 24.6bp gap instead of hypothesising it."
+        )
+
+    def test_no_ratify_todo_survives_in_the_measurement_layer(self):
+        from pathlib import Path
+        src = (Path(__file__).resolve().parents[1] / "pipeline" / "measurement" / "premium.py").read_text()
+        assert "TODO(ash: ratify)" not in src
