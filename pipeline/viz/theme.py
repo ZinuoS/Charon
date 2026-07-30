@@ -483,6 +483,7 @@ def finalize(
     source: str | None = None,
     footnote: str | None = None,
     kicker: str | None = None,
+    stats: list[tuple] | None = None,
 ) -> None:
     """Place every piece of figure chrome, once, without collisions.
 
@@ -514,8 +515,23 @@ def finalize(
         fig.text(0.0, y, tracked, fontsize=KICKER_SIZE, color=MUTED,
                  ha="left", va="bottom", fontfamily=SERIF_STACK)
 
+    # Client-pack stat callouts, in the chrome band beneath the source line. They live HERE
+    # rather than in a composition layer because the panel then IS the figure -- one file, no
+    # assembler -- and finalize already owns every other piece of chrome. A separate composer
+    # would be a second thing that has to agree with this one about spacing.
+    stat_drop = 0.0
+    if stats:
+        n = len(stats)
+        for i, (value, label) in enumerate(stats):
+            x = (i + 0.5) / n
+            fig.text(x, -0.085, str(value), ha="center", va="center", fontsize=21,
+                     color=SEMANTIC["emphasis"], fontfamily=SERIF_STACK)
+            fig.text(x, -0.155, label, ha="center", va="center", fontsize=NOTE_SIZE,
+                     color=MUTED, fontfamily=SERIF_STACK, linespacing=1.35)
+        stat_drop = 0.20
+
     # Bottom block, laid out downward from just under the axes.
-    y = -0.02
+    y = -0.02 - stat_drop
     if source:
         fig.text(0.0, y, f"Source: {source}", fontsize=NOTE_SIZE, color=MUTED,
                  ha="left", va="top", fontfamily=SERIF_STACK)

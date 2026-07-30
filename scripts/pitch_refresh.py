@@ -58,6 +58,7 @@ def main() -> int:
             "--execute", "--inplace", "--ExecutePreprocessor.timeout=3000",
             f"notebooks/{nb}.ipynb"])
 
+    _run("client pack panels", [sys.executable, "-m", "scripts.export_client_pack"])
     _run("social card", [sys.executable, "-m", "scripts.make_social_card"])
 
     # Cell-level errors do not fail nbconvert, so they are checked explicitly. A notebook that

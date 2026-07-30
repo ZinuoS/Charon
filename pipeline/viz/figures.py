@@ -1110,3 +1110,104 @@ def g18_margin_path(path, peak):
                  "so the call and the recall risk arrive together.",
     )
     return fig, (a, b)
+
+
+def g2c_ops_asymmetry(pkg):
+    """G2c — the plumbing map rewritten from the client's chair.
+
+    G2 answers "can this be arbitraged?" for a researcher. A PM asks a different question:
+    *what do I have to do, and what do you do?* Same mechanism, opposite framing — so this is a
+    separate render rather than a variant of G2, because a figure that tries to answer both
+    questions answers neither at a glance.
+
+    Left column is what the client faces. Right column is what the desk absorbs. The asymmetry
+    between the two column heights IS the product.
+    """
+    fig, ax = theme.figure(height=5.4)
+    ax.set_xlim(0, 10); ax.set_ylim(0, 10); ax.axis("off")
+
+    you = ["one ticket", "one margin call", "one monthly report"]
+    weabsorb = ["KRX investment registration + standing proxy",
+                "local leg booked via total-return swap",
+                "ADR borrow sourced and rolled",
+                "FX hedge struck and rolled at ≥12m",
+                "two legs cross-margined as one position",
+                "daily barrier + borrow monitoring"]
+
+    for x0, title, items, col in ((0.4, "YOU FACE", you, theme.SEMANTIC["emphasis"]),
+                                  (5.2, "WE ABSORB", weabsorb, theme.SEMANTIC["context"])):
+        ax.text(x0, 9.4, title, fontsize=10.5, color=col, fontfamily=theme.SERIF_STACK)
+        ax.plot([x0, x0 + 4.4], [9.15, 9.15], color=col, linewidth=1.4)
+        for i, it in enumerate(items):
+            y = 8.5 - i * 1.32
+            ax.add_patch(mpatches.FancyBboxPatch(
+                (x0, y - 0.42), 4.4, 0.86, boxstyle="round,pad=0.06",
+                facecolor=theme.PAPER, edgecolor=col, linewidth=1.1))
+            ax.text(x0 + 0.22, y, it, fontsize=8.4, va="center", color=theme.TEXT,
+                    fontfamily=theme.SERIF_STACK)
+
+    # The count asymmetry, in the empty space under the shorter column. A zero-length arrow
+    # between the columns rendered as a stray dash, and the label at x=4.95 sat on the last
+    # right-hand box.
+    ax.text(2.6, 3.4, f"{len(you)} things on your side.\n{len(weabsorb)} on ours.",
+            ha="center", va="center", fontsize=10.5, color=theme.MUTED,
+            fontfamily=theme.SERIF_STACK, linespacing=1.6)
+
+    theme.finalize(
+        fig, kicker="what you do, what we do",
+        headline="You hold one position; the operational chain sits on our side",
+        subtitle="The same plumbing as the research map, from the client's chair. Everything in "
+                 "the right column is a prerequisite to holding the trade at all.",
+        source="Mechanics from SEC 424B4, Deposit Agreement F-6 Ex. 99(a), and Korean "
+               "registration requirements. Repo-computed figures elsewhere in this pack.",
+        footnote="Booking-entity and standby terms are desk matters and are not quoted here.",
+        stats=[(f"{pkg['calm_saving']:.0%}", "capital saved vs two tickets\n(calm conditions)"),
+               (f"{pkg['peak']['peak_total_pair_pct']:.0%}", "peak margin call on the\nrealised excursion"),
+               (f"{pkg['crit_bp']/12:.0f}bp", "carry ceiling per month\nfor the base rate to pay")],
+    )
+    return fig, ax
+
+
+def g19_monitoring(ledger_text: str, triggers: list[str], call: dict):
+    """G19 — the monitoring pack as a preview of the actual client report.
+
+    P6 exists so the client sees what arrives monthly before they sign anything. It is a
+    deliberately plain figure: a state strip, the trigger list, and the registered call with its
+    resolution date. Nothing here forecasts; every line is a state reading.
+    """
+    fig, (a, b) = theme.figure(nrows=2, height=5.6)
+
+    # Top: the barrier-state strip. One bar per programme, so "sealed" is visible not asserted.
+    from pipeline.measurement.premium import build_all_variants
+    pi = build_all_variants("skhy")[0].series
+    a.plot(pi.index, pi.values, color=theme.INK, linewidth=1.8)
+    a.fill_between(pi.index, pi.values, color=theme.INK, alpha=0.08)
+    theme.pct_axis(a); theme.thin_date_ticks(a, 4)
+    a.set_ylabel("premium", fontsize=8, color=theme.MUTED)
+    a.set_title("What you receive: the premium, the barrier state, and the trigger list",
+                loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=6)
+
+    b.axis("off")
+    b.text(0.0, 0.95, "TRIGGERS — mechanism-observables, not forecasts", fontsize=9,
+           color=theme.SEMANTIC["barrier"], va="top", fontfamily=theme.SERIF_STACK)
+    for i, t in enumerate(triggers):
+        b.text(0.02, 0.76 - i * 0.17, f"·  {t}", fontsize=8.2, va="top", color=theme.TEXT,
+               fontfamily=theme.SERIF_STACK, wrap=True)
+    b.text(0.0, 0.16, f"REGISTERED CALL  H5, Class C, frozen {call['frozen']}, "
+                      f"resolves {call['resolution']} — four branches incl. INDETERMINATE. "
+                      "Not resolved in this pack.",
+           fontsize=8, va="top", color=theme.MUTED, fontfamily=theme.SERIF_STACK)
+    b.text(0.0, 0.02, ledger_text, fontsize=7.6, va="top", color=theme.MUTED,
+           fontfamily=theme.SERIF_STACK)
+
+    theme.finalize(
+        fig, kicker="monitoring",
+        headline="The service is a state report, because the timing test came back a draw",
+        subtitle="Directional model timing was tested head-to-head (notebook 06) and the shallow "
+                 "model's edge is gross, pre-cost and panel-only. Triggers are therefore "
+                 "observables whose reading does not depend on that.",
+        source="D5 KSD/SEIBro headroom; KOFIA 000660 lending; DART disclosures; event register.",
+        footnote="Nothing on this panel is a forecast. A state change is visible only once it "
+                 "has happened, which is the honest limit of a trigger.",
+    )
+    return fig, (a, b)

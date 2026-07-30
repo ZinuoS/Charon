@@ -102,3 +102,52 @@ class TestPackageSheets:
         src = inspect.getsource(sheets.package_convergence_access)
         assert "_pkg_numbers()" in src
         assert "954" not in src and "43.6" not in src, "a literal figure crept into the sheet"
+
+
+class TestClientPack:
+    def test_all_six_panels_build(self):
+        """Seven files for six panels: P4 is a pair (payoff + margin path)."""
+        import matplotlib
+        matplotlib.use("Agg")
+        from scripts.export_client_pack import panels
+        names = [n for n, _ in panels()]
+        assert len(names) == 7
+        assert {n[:2] for n in names} == {"P1", "P2", "P3", "P4", "P5", "P6"}
+
+    def test_importing_panels_does_not_hijack_the_backend(self):
+        """`matplotlib.use("Agg")` at module scope silenced every figure in the notebook that
+        imported this — a pack with no figures and no error explaining why. The switch belongs
+        inside main()."""
+        import inspect
+        from scripts import export_client_pack as E
+        src = inspect.getsource(E)
+        head = src[:src.index("def panels")]
+        assert 'matplotlib.use' not in head, "backend set at import time"
+        assert 'matplotlib.use("Agg")' in inspect.getsource(E.main)
+
+    def test_the_pack_has_no_body_paragraphs(self):
+        """The composition rule, enforced. A PM scans callouts and labels; anything over ~40
+        words is a paragraph that belongs in notebook 00."""
+        import json
+        import pathlib
+        import re
+        nb = json.loads((pathlib.Path(__file__).resolve().parents[1]
+                         / "notebooks" / "01_client_note.ipynb").read_text())
+        for c in nb["cells"]:
+            if c["cell_type"] != "markdown":
+                continue
+            text = "".join(c["source"])
+            if "Informational only" in text:      # the footer band is allowed to be long
+                continue
+            assert len(re.findall(r"\w+", text)) <= 45, f"body paragraph: {text[:70]!r}"
+
+    def test_every_panel_carries_stat_callouts_or_is_a_schematic(self):
+        """Numbers are the point. A panel with neither callouts nor a diagram is a slide with
+        nothing on it."""
+        import matplotlib
+        matplotlib.use("Agg")
+        from scripts.export_client_pack import panels
+        for name, build in panels():
+            fig, _ = build()
+            texts = " ".join(t.get_text() for t in fig.texts)
+            assert texts.strip(), f"{name} has no chrome text at all"

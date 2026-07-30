@@ -18,7 +18,7 @@ material to do it.
 
 | | Notebook | What it is | Status |
 |---|---|---|---|
-| **00** | [`00_executive_pitch.ipynb`](00_executive_pitch.ipynb) | The full argument: background, trading insights, execution. Organised around the prospectus finding that the barrier is a *corporate decision*, not an exhausted quota. | ✅ live, 6 figures |
+| **00** | [`00_executive_pitch.ipynb`](00_executive_pitch.ipynb) | The full argument in prose: background, mechanism, trading insights, execution. The verbal research lives here. Organised around the prospectus finding that the barrier is a *corporate decision*, not an exhausted quota. | ✅ live, 6 figures |
 | 01 | `01_client_note.ipynb` | A desk-voice version of the same material for a prime-finance reader | not written |
 | **02** | [`02_premium_anatomy.ipynb`](02_premium_anatomy.ipynb) | How π is constructed and how much of it is measurement rather than economics | ✅ live, 8 figures |
 | 03 | `03_comparator_panel.ipynb` | The training universe: three regimes, corporate-action QA, calendar policy | not written — needs the taxonomy ratified |
