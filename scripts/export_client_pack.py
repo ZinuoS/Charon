@@ -33,10 +33,12 @@ ORDER = [
     ("P0b_the_currents", "Three outside forces: the index, the won, and the funding differential."),
     ("P1_situation", "The gap is 22.6% and the trade that normally closes it runs one way."),
     ("P2_structure", "You hold one position; the Korean plumbing sits on our side."),
-    ("P3_economics", "It pays if your carry stays under about 79 basis points a month."),
+    ("P3_economics", "It pays if your carry stays under about 80 basis points a month."),
     ("P7_the_chain", "Walk the six steps — the last one is why the first five matter."),
     ("P8_scenario_pnl", "Best case pays a fraction of your margin; the realised case cost all of it."),
     ("P8b_hedge_menu", "Three bolt-ons: the currency hedge is standard, the other two are honest gaps."),
+    ("P8c_lab_outcomes", "21 years of the nearest pair: at mid-bracket carry this lost more often than it won."),
+    ("P8d_lab_stops", "It goes against you 11 points first — and Hynix week one was worse than 21 years."),
     ("P4a_payoff", "Gain is capped by the floor. Loss is not capped by anything on file."),
     ("P4b_margin_path", "A move that already happened called for 44 cents per dollar."),
     ("P9_exit_discipline", "We agree the exit rules up front: five things to watch, three ways out."),
@@ -72,7 +74,7 @@ def panels():
             footnote="Non-contemporaneous closes: KRX 15:30 KST against Nasdaq 16:00 ET.",
             stats=[(f"{sk.iloc[-1]:.1%}", "premium today"),
                    ("0.07%", "structural floor\n(cancellation round trip)"),
-                   (f"{tsm.mean():.1%}", "base-rate anchor\n(comparator, 2,328 days)")])
+                   (f"{tsm.mean():.1%}", f"base-rate anchor\n(comparator, {len(tsm):,} days)")])
         return fig, ax
 
     def p3():
@@ -136,13 +138,19 @@ def panels():
 
     def p8b():
         from pipeline.hedging.ratios import HedgeLegs, beta_hedge, fx_hedge, fx_sensitivity
-        from pipeline.measurement.premium import _load_close
         from pipeline.package.breakeven import CARRY_BRACKET_BP
-        legs = HedgeLegs(float(_load_close("d1_prices", "skhy_adr_daily").iloc[-1]),
-                         float(_load_close("d1_prices", "skhynix_local_daily").iloc[-1]),
-                         float(_load_close("d1_prices", "usdkrw_spot_daily").iloc[-1]))
+        legs = HedgeLegs.live("skhy")
         return figures.g23_hedge_menu(fx_hedge(legs), fx_sensitivity(legs.premium),
                                       beta_hedge(), CARRY_BRACKET_BP)
+
+    def p8c():
+        from pipeline.lab import tsmc as LAB
+        return figures.g26_entry_outcomes(LAB.entry_outcomes(LAB.premium()))
+
+    def p8d():
+        from pipeline.lab import tsmc as LAB
+        return figures.g26b_stop_survival(LAB.excursions(LAB.premium()),
+                                          LAB.skhy_week_one_excursion())
 
     def p9():
         days = CAP.days_to_unwind()
@@ -168,6 +176,8 @@ def panels():
         ("P7_the_chain", figures.g21_chain),
         ("P8_scenario_pnl", p8),
         ("P8b_hedge_menu", p8b),
+        ("P8c_lab_outcomes", p8c),
+        ("P8d_lab_stops", p8d),
         ("P9_exit_discipline", p9),
     ]
 

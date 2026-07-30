@@ -262,7 +262,7 @@ side**, which makes it negatively skewed *by construction* rather than by bad lu
 code(r'''
 fig, axes = figures.g4_asymmetry(tsm.series, sk.series)
 theme.source_note(fig, "Nasdaq; TWSE; EODHD; FRED H.10; frankfurter/ECB. Repo-computed.",
-                  "Left: conditional mean next-day change by starting-level quintile, TSM, 2,328 days. "
+                  f"Left: conditional mean next-day change by starting-level quintile, TSM, {len(tsm.series):,} days. "
                   "Right: payoff schematic; the excursion is realized, not hypothetical.", y=-0.06)
 fig;
 ''')

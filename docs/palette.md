@@ -111,3 +111,36 @@ PRESENTATION_PALETTE="#RRGGBB,#RRGGBB,#RRGGBB" uv run python -m scripts.render_a
 `tests/test_chrome_lint.py` asserts no presentation hex appears in any committed file, so this
 separation is enforced rather than remembered. Hand me the hexes directly if you want the deck
 built under them; they will not be written to disk inside the repo.
+
+---
+
+## Type and geometry — amended 2026-07-30 (S25)
+
+**Type.** The stack is `Arial → Helvetica → Liberation Sans → DejaVu Sans`, recorded in
+`theme.PORTABLE_FONT_STACK`. The live `theme.FONT_STACK` is that list filtered to faces
+matplotlib can actually resolve on the authoring machine, because an unresolvable name in a
+per-call `fontfamily=` list emits one `findfont` warning *per text object* — 1,628 lines for
+four figures, which buries real output in a notebook. Sizes were retuned once for the new face
+with a maximal-readability bias: title 15.0, subtitle 11.0, label 10.5, tick 10.0, note 8.5,
+kicker 9.0.
+
+Worth recording as a defect rather than a change: `theme.apply()` had never set
+`font.family` at all. Chrome text passed the stack per call, while axis ticks and labels
+rendered in matplotlib's default face — two faces in every figure, unnoticed because both were
+quiet. Setting the family globally is what actually makes the type identity real.
+
+**Geometry.** The canonical-width constraint is retired. It existed because the deck was the
+delivery medium and slides are uniform; the repository is now the delivery medium, and a
+reader scrolling a notebook is not bound by slide geometry. `theme.SHAPES` names the shapes
+content actually needs — `wide` for long timelines, `tall` for distributions, `large` for
+schematics — and `FIGSIZE` is what a figure falls back to when it expresses no preference.
+What is still fixed, because it protects legibility rather than uniformity: the DPI floor, the
+tight bounding box, and `finalize()` owning all chrome.
+
+**Palette.** Anchors unchanged pending the author's supplied hex values. The CVD simulation
+was re-run under the new type and geometry and passes at every severity; the worst pair is
+`warning|inert_fill` at ΔE 24.1 (deuteranope) and 24.9 (protanope), against a floor of 20.0.
+When the new anchors land, the ramps re-derive programmatically and this report is re-run —
+advisory, not a veto: if a supplied pair fails deuteranopia, the failing pair is *named* along
+with wherever linestyle or direct labelling already disambiguates it, and the author's choice
+stands.

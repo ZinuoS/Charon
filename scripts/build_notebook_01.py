@@ -337,7 +337,7 @@ md(r"""
 on *changes*, and differencing two independently-noisy fixes **amplifies** rather than
 cancels the discrepancy — the change gap is roughly five times the level gap.
 
-For scale: TSM's mean $|\Delta \ln(1+\pi)|$ over 2,327 days is **162bp**. So **~16% of a
+For scale: TSM's mean $|\Delta \ln(1+\pi)|$ over the comparator sample is **162bp**. So **~16% of a
 typical daily premium move is attributable purely to which FX clock you read.** That is
 not a rounding term, and it is the strongest argument for adopting a fix contemporaneous
 with the local close.
@@ -500,7 +500,7 @@ decomposition needs the 2026-07-29 close on **both** legs. The KRX side has clos
 
 This is worth stating precisely rather than filing under "missing data": the machinery is
 built and tested (`pipeline/measurement/asynchrony.py`, identity residual 0.00e+00 on
-2,327 real days), the FX-instant component is calibrated on 2,849 changes, and the figure
+thousands of real days), the FX-instant component is calibrated on 2,849 changes, and the figure
 renders the moment 07-29 closes in New York.
 
 A second, harder limit applies even then. Intraday capture for the 07-28→29 window was

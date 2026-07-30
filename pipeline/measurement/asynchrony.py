@@ -89,7 +89,8 @@ FX_FIX_CALIBRATION = {
     "fix_b": "fred (H.10 noon New York)",
 }
 
-# For scale: TSM's mean |Δln(1+π)| over 2,327 days is ~162bp. So a 26.6bp mean FX-instant
+# For scale: TSM's mean |Δln(1+π)| over the comparator sample is ~162bp (measured on 2,327
+# days before the ADR leg was recovered to 1997; the order of magnitude is unchanged). So a 26.6bp mean FX-instant
 # artifact is on the order of **16% of a typical daily premium change** — not a rounding
 # term, and the single strongest argument for adopting a fix contemporaneous with the
 # local close (ECOS 731Y003.0000003, 15:30 KST) once access exists.

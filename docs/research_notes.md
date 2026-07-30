@@ -199,7 +199,7 @@ Jul 2026**. Both can be true — the trailing window rolled through a 26% episod
 is a rolling-window artifact, not an equilibrium anchor.**
 
 **This repo has an independent, reproducible alternative:** its own TSM series, computed
-from primary-exchange data with a published formula — mean **+8.88%** over 2,328 days
+from primary-exchange data with a published formula — mean **+6.24%** over 5,064 days (2005-01-03 onward; was +8.88% over 2,328 days when the ADR leg's provider chain truncated it at 2016 — see docs/gate_reports/S25.md)
 (2016–2026). Cite that, not the press figure.
 
 ## TSMC's facility is **revolving**, not closed — [P]

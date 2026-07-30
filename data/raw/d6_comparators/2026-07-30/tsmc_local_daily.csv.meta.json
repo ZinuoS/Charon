@@ -1,0 +1,36 @@
+{
+  "asset_class": "local_equity",
+  "availability_confirmed": false,
+  "availability_lag": "close 13:30:00 Asia/Taipei + 15min",
+  "availability_note": "TWSE regular-session close 13:30 TPE; daily bar assumed knowable 13:45 TPE.",
+  "close_local": "13:30:00",
+  "currency": "TWD",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-30T05:45:00+00:00",
+    "obs_date": "2026-07-30",
+    "observation_ts_utc": "2026-07-30T05:30:00+00:00"
+  },
+  "first_obs_date": "2010-01-04",
+  "last_obs_date": "2026-07-30",
+  "market": "TWSE",
+  "native_timezone": "Asia/Taipei",
+  "notes": "",
+  "provider": "twse",
+  "provider_chain": [
+    "twse",
+    "yahoo_finance"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-07-30T12:23:39+00:00",
+  "request_params": {
+    "months": "iterated",
+    "stockNo": "2330"
+  },
+  "rows": 4061,
+  "series_id": "tsmc_local_daily",
+  "sha256": "98cf1ba6fde9ed297bc7a4a80e97bcf09aa6c18d3d9112945d566c4d73bbb7db",
+  "source_url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY",
+  "symbol": "2330.TW",
+  "transport": "exchangeReport_STOCK_DAY",
+  "units": "TWD per common share"
+}

@@ -215,8 +215,9 @@ def g4_asymmetry(pi_tsm: pd.Series, pi_skhy: pd.Series):
         fig,
         kicker="risk",
         headline="This is relative value against a one-sided barrier - not arbitrage",
-        subtitle="Left: conditional next-day change by starting-level quintile, TSM, "
-                 "2,328 days. Right: what the convergence expression actually pays.",
+        subtitle=f"Left: conditional next-day change by starting-level quintile, TSM, "
+                 f"{len(pi_tsm):,} days. Right: what the convergence expression "
+                 f"actually pays.",
         source="Nasdaq; TWSE; EODHD; FRED H.10; frankfurter/ECB. Repo-computed.",
         footnote="The excursion marked on the right is realized, not hypothetical.",
     )
@@ -520,6 +521,37 @@ def g11_taxonomy_separation(per_pair: list[dict]):
 # ================================================================================
 
 LAYMAN: dict[str, list[str]] = {
+    "g25_episode_census": [
+        "Over 21 years, the Taiwan Semiconductor version of this same gap opened and closed "
+        "137 times — so this is a recurring event, not a one-off.",
+        "A typical episode was about 8 points wide and took 20 trading days to play out.",
+        "When the gap closed, it usually closed because the US share came down, not because "
+        "the local share went up. That tells you which leg to trade.",
+    ],
+    "g26_entry_outcomes": [
+        "We asked the obvious question of history: if you had sold this gap every time it "
+        "was unusually wide, would you have made money after paying the costs?",
+        "At the low cost estimate, just over half the time. At the middle estimate, only "
+        "42% of the time. At the high estimate, 16%.",
+        "So the trade is decided by what it costs to hold, not by how clever the timing is — "
+        "which is exactly why the financing conversation matters more than the forecast.",
+    ],
+    "g26b_stop_survival": [
+        "Before these trades worked out, they went against you first — typically by 11 "
+        "points, and in the worst case by 25.",
+        "Hynix's gap moved 36 points against an early seller in three days. That is worse "
+        "than the worst full year in two decades of the comparison pair.",
+        "A stop-loss cannot fix this: set it tight and it fires on trades that would have "
+        "won; set it loose and it does not protect you. Position size does the work instead.",
+    ],
+    "g27_fx_case": [
+        "The gap is partly a currency bet, because a US share priced in dollars against a "
+        "Korean share priced in won is a currency position whether you want one or not.",
+        "Over 21 years the effect is real but smaller than the arithmetic suggests, and it "
+        "changes from decade to decade — one five-year stretch shows almost no effect at all.",
+        "And hedging the Korean leg does not make you currency-neutral: about 18% of the US "
+        "leg stays exposed, which is near the widest this comparison pair has ever seen.",
+    ],
     "g1_barrier_anatomy": [
         "Hynix's US shares have been worth 16-52% more than the identical Korean shares "
         "since July. Normally that gap gets traded away in a day.",
@@ -777,8 +809,9 @@ def g12_variance_shares(rows):
                  "cancels it.",
         source="Repo-computed from D1/D6 closes. hypotheses/h4_vol_decomposition.",
         footnote="Non-contemporaneous closes inflate premium variance on every pair; the "
-                 "negative local-premium covariance is largely that artefact returning. SKHY "
-                 "n=11 — far too few to compare against 2,327 and 1,592.",
+                 "negative local-premium covariance is largely that artefact returning. The "
+                 "SKHY column's n is in single-digit weeks — far too few to compare against "
+                 "the comparators' thousands of sessions.",
     )
     return fig, ax
 
@@ -1390,7 +1423,7 @@ def g20_macro_map(pi, fx, events):
     return fig, (a, b)
 
 
-def g21_chain():
+def g21_chain(critical_carry_bp_mo: float | None = None):
     """G21 — the argument, drawn as six nodes.
 
     A salesperson walks a client left to right. Each node answers the objection the previous one
@@ -1402,7 +1435,8 @@ def g21_chain():
     nodes = [
         ("THE PROBLEM", "you want the premium,\nbut cannot reach the\nlocal market", theme.SEMANTIC["context"]),
         ("THE STRUCTURE", "one pair booked\nthrough the desk,\ncross-margined", theme.SEMANTIC["emphasis"]),
-        ("IS IT VIABLE?", "carry under ~79bp/mo\nand the base rate pays.\nAbove, it is your view", theme.SEMANTIC["emphasis"]),
+        ("IS IT VIABLE?", f"carry under ~{_crit_bp_mo(critical_carry_bp_mo):.0f}bp/mo\nand "
+         "the base rate pays.\nAbove, it is your view", theme.SEMANTIC["emphasis"]),
         ("CAN IT SURVIVE?", "64% capital saved,\nexits in ~1 session,\nbarrier monitored daily", theme.SEMANTIC["emphasis"]),
         ("WHAT HURTS", "44% peak margin call,\nloss unbounded above,\nborrow tightens into it", theme.SEMANTIC["warning"]),
         ("WHY TRUST IT", "we tested timing and\nit came back a draw.\nTriggers are observables", theme.SEMANTIC["barrier"]),
@@ -1430,6 +1464,19 @@ def g21_chain():
                  "the client's.",
     )
     return fig, ax
+
+
+def _crit_bp_mo(given: float | None = None) -> float:
+    """The viability threshold, computed rather than restated.
+
+    It was a literal ~79 in the chain node, which went stale the moment the comparator's
+    usable history doubled and the pooled half-life was re-fitted. A figure that hardcodes a
+    number another module computes will always drift; this one asks.
+    """
+    if given is not None:
+        return given
+    from pipeline.package.breakeven import critical_carry_bp
+    return critical_carry_bp() / 12.0
 
 
 def g24_exit_tree(days_to_exit: float, stop_points: float = 8.0,
@@ -1642,3 +1689,296 @@ def g23_hedge_menu(fxh, fxs, beta, carry_bracket_bp):
                ("1 of 3", "hedges quotable today")],
     )
     return fig, (a, b)
+
+
+# ================================================================================
+# The TSMC lab — G25 to G27 (notebooks/09_tsmc_lab.ipynb)
+#
+# Every one of these figures carries an inherited caveat, not a decorative one. The lab's
+# pair has a REVOLVING conversion facility and SKHY's does not, so each caption says which
+# way that cuts for the number on the panel. See pipeline.lab.tsmc.ASYMMETRY.
+# ================================================================================
+
+
+def g25_episode_census(cen, ep, ch, sample: dict):
+    """G25 — how often this happens, how big, how long, and which leg closes it.
+
+    Left: the census grid, every rule cell reported, so the reader can see the count is a
+    function of the rule and judge the rule. Right: the resolution-channel split, which is
+    the direct evidence for choosing between the two expressions on the sheet.
+    """
+    fig, (a, b) = theme.figure(1, 2, shape_name="wide", gridspec_kw={"width_ratios": [1.35, 1]})
+    EM, CON, FUN, CX, WA = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["constrained"],
+                            theme.SEMANTIC["fungible"], theme.SEMANTIC["context"],
+                            theme.SEMANTIC["warning"])
+
+    # --- left: episode count vs the rule that defines an episode
+    for i, md in enumerate(sorted(cen.min_days.unique())):
+        d = cen[cen.min_days == md].sort_values("min_move_pp")
+        col = [EM, CON, CX][i % 3]
+        a.plot(d.min_move_pp, d.n_episodes, marker="o", ms=4.5, color=col, lw=1.7)
+        theme.label_line_end(a, d.min_move_pp.iloc[-1], d.n_episodes.iloc[-1],
+                             f"min {md}d", col)
+    a.set_yscale("log")
+    a.set_xlabel("minimum peak-to-trough move (premium points)")
+    a.set_ylabel("episodes in 21.6 years")
+    base = cen[(cen.min_move_pp == 5.0) & (cen.min_days == 10)].iloc[0]
+    a.annotate(f"base rule: {int(base.n_episodes)} episodes\nmedian {base.median_move_pp}pp "
+               f"over {int(base.median_days)}d",
+               xy=(5.0, base.n_episodes), xytext=(-14, -42), textcoords="offset points",
+               ha="right",
+               fontsize=theme.NOTE_SIZE, color=EM, fontfamily=theme.SERIF_STACK,
+               arrowprops=dict(arrowstyle="-", color=EM, lw=0.8))
+
+    # --- right: who closes the gap
+    comp = ch[ch.direction == "compression"]
+    wide = ch[ch.direction == "widening"]
+    labels = ["ADR leg\nfalls", "local leg\nrises", "FX"]
+    keys = ["adr_leg", "local_leg", "fx_leg"]
+    y = np.arange(len(keys))
+    cs = [float((comp.channel == k).mean()) * 100 for k in keys]
+    ws = [float((wide.channel == k).mean()) * 100 for k in keys]
+    b.barh(y + 0.19, cs, height=0.36, color=FUN, label="compression")
+    b.barh(y - 0.19, ws, height=0.36, color=WA, label="widening")
+    for yy, v in zip(y + 0.19, cs):
+        b.text(v + 1.5, yy, f"{v:.0f}%", va="center", fontsize=theme.NOTE_SIZE,
+               color=FUN, fontfamily=theme.SERIF_STACK)
+    for yy, v in zip(y - 0.19, ws):
+        b.text(v + 1.5, yy, f"{v:.0f}%", va="center", fontsize=theme.NOTE_SIZE,
+               color=WA, fontfamily=theme.SERIF_STACK)
+    b.set_yticks(y); b.set_yticklabels(labels)
+    b.set_xlim(0, 100); b.set_xlabel("share of episodes closed by this leg")
+    b.legend(loc="upper right", bbox_to_anchor=(1.0, 0.62))
+    b.invert_yaxis()
+
+    theme.finalize(
+        fig,
+        headline="The gap moves in episodes, and the US leg does most of the moving",
+        subtitle=f"TSMC pair, {sample['first']} to {sample['last']} — {sample['n_obs']:,} "
+                 f"sessions. Peak-to-trough swings by a forward-only reversal walk.",
+        stats=[(f"{int(base.n_episodes)}", "episodes at the\nbase rule"),
+               (f"{base.median_move_pp:.1f}pp", "median size"),
+               (f"{int(base.median_days)}d", "median duration"),
+               (f"{cs[0]:.0f}%", "compressions closed\nby the ADR leg")],
+        source="Repo-computed. pipeline.lab.tsmc.census / resolution_channel.",
+        footnote="The decomposition is an identity, not a regression: log(1+pi) = log ADR + "
+                 "log FX - log local, so the three contributions sum to the move exactly. "
+                 "INHERITED CAVEAT: TSMC's facility revolves, so both legs can be arbitraged; "
+                 "SKHY's issuance needs Company consent, so the ADR leg is the one that can "
+                 "run away. Read the ADR-leg share as a lower bound.")
+    return fig, {"compression_channel_pct": dict(zip(keys, cs)),
+                 "widening_channel_pct": dict(zip(keys, ws))}
+
+
+def g26_entry_outcomes(eo, breakeven_pp: float | None = None):
+    """G26 — the lab's headline. Did entering an elevated premium beat the carry, historically?
+
+    Left: the full outcome distribution per entry percentile at the sheet's one-year horizon
+    — median, interquartile box, 5th-95th whisker, against zero net. Right: the single number
+    the financing decision turns on, as a function of the cost bracket. Every grid cell in
+    ``eo`` is reported; nothing is selected.
+    """
+    fig, (a, b) = theme.figure(1, 2, shape_name="wide", gridspec_kw={"width_ratios": [1.3, 1]})
+    EM, CON, FUN, WA, CX, BA = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["constrained"],
+                                theme.SEMANTIC["fungible"], theme.SEMANTIC["warning"],
+                                theme.SEMANTIC["context"], theme.SEMANTIC["barrier"])
+    H = 252
+    cols = {"low": FUN, "mid": EM, "high": WA}
+
+    d = eo[eo.horizon_d == H]
+    pcts = sorted(d.entry_pctile.unique())
+    x = np.arange(len(pcts))
+    for k, (bk, col) in enumerate(cols.items()):
+        s = d[d.bracket == bk].set_index("entry_pctile").loc[pcts]
+        off = (k - 1) * 0.26
+        a.vlines(x + off, s.p05_net_pp, s.p95_net_pp, color=col, lw=1.0, alpha=0.55)
+        a.vlines(x + off, s.q25_net_pp, s.q75_net_pp, color=col, lw=6.5, alpha=0.85)
+        a.plot(x + off, s.median_net_pp, marker="D", ms=5.0, ls="none",
+               color=theme.PAPER, mec=col, mew=1.6, zorder=5)
+        a.plot([], [], color=col, lw=6.5, label=f"{bk} carry")
+    a.axhline(0, color=BA, lw=1.2)
+    a.annotate("break even", xy=(x[-1] + 0.35, 0), fontsize=theme.NOTE_SIZE, color=BA,
+               va="bottom", ha="right", fontfamily=theme.SERIF_STACK)
+    a.set_xticks(x)
+    a.set_xticklabels([f"{p:.0%}" for p in pcts])
+    a.set_xlabel("entry trigger — premium's percentile within its own past")
+    a.set_ylabel("net P&L after carry, premium points")
+    a.legend(loc="upper left", ncol=3)
+
+    # --- right: fraction beating carry, by bracket, over horizons
+    for bk, col in cols.items():
+        for ls, p in zip(("-", "--"), (0.90, 0.99)):
+            s = eo[(eo.bracket == bk) & (eo.entry_pctile == p)].sort_values("horizon_d")
+            b.plot(s.horizon_d, s.frac_beats_carry * 100, color=col, lw=1.8, ls=ls,
+                   marker="o", ms=3.5)
+    b.axhline(50, color=CX, lw=0.9, ls=":")
+    b.annotate("coin flip", xy=(63, 50), xytext=(2, 5), textcoords="offset points",
+               fontsize=theme.NOTE_SIZE, color=CX, ha="left", fontfamily=theme.SERIF_STACK)
+    b.set_xlabel("holding horizon (sessions)")
+    b.set_ylabel("% of entries that beat the carry")
+    b.set_ylim(0, 100)
+    b.plot([], [], color=CX, lw=1.8, ls="-", label="90th pctile entry")
+    b.plot([], [], color=CX, lw=1.8, ls="--", label="99th pctile entry")
+    b.legend(loc="upper right")
+
+    head = d[d.entry_pctile == 0.90].set_index("bracket")
+    theme.finalize(
+        fig,
+        headline="At the middle cost bracket, entering an elevated premium lost more often "
+                 "than it won",
+        subtitle="TSMC pair, 21.6 years. Short-premium entries triggered on an EXPANDING "
+                 "percentile — the rule never sees its own future — held for one year.",
+        stats=[(f"{head.loc['low','frac_beats_carry']:.0%}", "beat LOW carry\n(250bp/yr)"),
+               (f"{head.loc['mid','frac_beats_carry']:.0%}", "beat MID carry\n(600bp/yr)"),
+               (f"{head.loc['high','frac_beats_carry']:.0%}", "beat HIGH carry\n(1200bp/yr)"),
+               (f"{int(head.loc['mid','n_entries'])}", "historical entries\nat the 90th pctile")],
+        source="Repo-computed. pipeline.lab.tsmc.entry_outcomes; carry brackets from "
+               "pipeline.package.breakeven.",
+        footnote="REGIME-FAMILY CHARACTERISATION, NOT AN SKHY FORECAST. The cost bracket, not "
+                 "the signal, decides this trade: the same entry rule wins or loses depending "
+                 "on which carry it pays, and four of five carry components are bracketed "
+                 "assumptions. INHERITED CAVEAT: TSMC's premium mean-reverts because its "
+                 "facility revolves. SKHY's is reflected with an open upper tail, so these "
+                 "rates describe the FAVOURABLE variant of the family.")
+    return fig, {"beats_carry_90_252": {k: float(head.loc[k, "frac_beats_carry"])
+                                        for k in cols}}
+
+
+def g26b_stop_survival(ex, skhy: dict, pctile: float = 0.90, horizon: int = 252):
+    """G26b — how wide the risk budget has to be, and why a stop is not the answer here.
+
+    Left: the distribution of maximum adverse excursion before resolution. Right: what each
+    candidate stop distance would have done — how often it fires, and how often it fires on a
+    trade that would have won anyway. SKHY's realised first-week excursion is marked on both.
+    """
+    fig, (a, b) = theme.figure(1, 2, shape_name="wide")
+    EM, WA, BA, CX, FUN = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["warning"],
+                           theme.SEMANTIC["barrier"], theme.SEMANTIC["context"],
+                           theme.SEMANTIC["fungible"])
+    mae = ex.attrs["mae_pp"]
+
+    a.hist(mae, bins=32, color=theme.SEMANTIC["inert_fill"], edgecolor=EM, linewidth=0.9)
+    for v, lab, col in ((float(np.median(mae)), "median", EM),
+                        (ex.attrs["p95_mae_pp"], "95th pctile", CX)):
+        a.axvline(v, color=col, lw=1.3, ls="--")
+        a.annotate(f"{lab} {v:.1f}pp", xy=(v, a.get_ylim()[1] * 0.92), xytext=(4, 0),
+                   textcoords="offset points", fontsize=theme.NOTE_SIZE, color=col,
+                   fontfamily=theme.SERIF_STACK)
+    a.axvline(skhy["excursion_pp"], color=WA, lw=2.0)
+    a.annotate(f"SKHY's first {skhy['sessions']} sessions\n{skhy['excursion_pp']:.1f}pp",
+               xy=(skhy["excursion_pp"], a.get_ylim()[1] * 0.55), xytext=(-6, 0),
+               textcoords="offset points", fontsize=theme.NOTE_SIZE, color=WA, ha="right",
+               fontfamily=theme.SERIF_STACK, linespacing=1.4)
+    a.set_xlabel("maximum adverse excursion before resolution (premium points)")
+    a.set_ylabel(f"historical entries (n={len(mae)})")
+
+    b.plot(ex.stop_pp, ex.frac_stopped * 100, marker="o", ms=4.5, color=EM, lw=1.8)
+    b.plot(ex.stop_pp, ex.frac_stopped_but_would_have_won * 100, marker="o", ms=4.5,
+           color=WA, lw=1.8, ls="--")
+    b.annotate("stop is hit", xy=(ex.stop_pp.iloc[0], ex.frac_stopped.iloc[0] * 100),
+               xytext=(8, 4), textcoords="offset points", fontsize=theme.NOTE_SIZE,
+               color=EM, fontfamily=theme.SERIF_STACK)
+    b.annotate("hit, but the trade\nwould have won anyway",
+               xy=(ex.stop_pp.iloc[0], ex.frac_stopped_but_would_have_won.iloc[0] * 100),
+               xytext=(10, -30), textcoords="offset points", fontsize=theme.NOTE_SIZE,
+               color=WA, fontfamily=theme.SERIF_STACK, linespacing=1.4)
+    b.axvline(skhy["excursion_pp"], color=WA, lw=2.0, alpha=0.5)
+    b.annotate(f"SKHY week one: {skhy['excursion_pp']:.1f}pp —\nwider than every stop tested",
+               xy=(skhy["excursion_pp"], 78), xytext=(-8, 0), textcoords="offset points",
+               fontsize=theme.NOTE_SIZE, color=WA, ha="right",
+               fontfamily=theme.SERIF_STACK, linespacing=1.4)
+    b.set_xlabel("candidate stop distance (premium points)")
+    b.set_ylabel("% of historical entries")
+    b.set_ylim(0, 100)
+
+    theme.finalize(
+        fig,
+        headline="No plausible stop survives this family — and SKHY's first week was worse "
+                 "than the worst of 21 years",
+        subtitle=f"Maximum adverse excursion for {pctile:.0%}-percentile entries held "
+                 f"{horizon} sessions. Adverse for a short-premium position is the gap WIDENING.",
+        stats=[(f"{ex.attrs['median_mae_pp']:.1f}pp", "median excursion\nagainst the entry"),
+               (f"{ex.attrs['max_mae_pp']:.1f}pp", "worst in 21.6\nyears"),
+               (f"{skhy['excursion_pp']:.1f}pp", f"SKHY, realised,\nin {skhy['sessions']} sessions"),
+               (f"{ex.iloc[4].frac_stopped:.0%}", "of entries hit a\n10pp stop")],
+        source="Repo-computed. pipeline.lab.tsmc.excursions; SKHY excursion from D1 closes.",
+        footnote="This is the empirical case for sizing rather than stopping. A stop tight "
+                 "enough to bound loss fires on most winners; one loose enough to leave "
+                 "winners alone does not bound loss. SKHY's realised first-week excursion "
+                 "exceeds the worst 252-day excursion in the whole comparator history, and "
+                 "that pair's facility revolves while SKHY's does not.")
+    return fig, {"median_mae_pp": ex.attrs["median_mae_pp"],
+                 "max_mae_pp": ex.attrs["max_mae_pp"],
+                 "skhy_exceeds_history": bool(skhy["excursion_pp"] > ex.attrs["max_mae_pp"])}
+
+
+def g27_fx_case(fx, resid: dict, skhy_residual_share: float, skhy_coef: float = 0.805):
+    """G27 — the FX channel over 21.6 years, per era, and what it means for the hedge.
+
+    Left: the empirical coefficient with its interval, era by era, against the analytic
+    (1+pi). Right: the residual FX exposure a local-leg hedge leaves, as a distribution over
+    the deep history, with SKHY's current level marked.
+    """
+    fig, (a, b) = theme.figure(1, 2, shape_name="wide", gridspec_kw={"width_ratios": [1.25, 1]})
+    EM, WA, BA, CX, FUN = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["warning"],
+                           theme.SEMANTIC["barrier"], theme.SEMANTIC["context"],
+                           theme.SEMANTIC["fungible"])
+
+    y = np.arange(len(fx))[::-1]
+    for yy, r in zip(y, fx.itertuples()):
+        col = EM if r.era == "full sample" else CX
+        lw = 2.2 if r.era == "full sample" else 1.4
+        a.plot([r.ci95_lo, r.ci95_hi], [yy, yy], color=col, lw=lw, solid_capstyle="butt")
+        a.plot(r.empirical_coef, yy, marker="D", ms=6.0, color=theme.PAPER, mec=col, mew=1.7,
+               zorder=5)
+        a.plot(r.analytic_coef, yy, marker="|", ms=11, color=BA, mew=1.6, zorder=4)
+        a.annotate(f"{r.empirical_coef:.2f}", xy=(r.ci95_hi, yy), xytext=(6, 0),
+                   textcoords="offset points", fontsize=theme.NOTE_SIZE, color=col,
+                   va="center", fontfamily=theme.SERIF_STACK)
+    a.axvline(0, color=WA, lw=1.0, ls=":")
+    a.set_yticks(y); a.set_yticklabels([f"{r.era}\n(n={r.n:,})" for r in fx.itertuples()])
+    a.set_xlabel("premium points per 1% currency move — coefficient, 95% interval")
+    a.plot([], [], marker="|", ls="none", ms=11, color=BA, mew=1.6,
+           label="analytic (1+pi)")
+    a.plot([], [], marker="D", ls="none", ms=6, color=theme.PAPER, mec=EM, mew=1.7,
+           label="empirical")
+    a.legend(loc="lower left")
+
+    shares = np.array([resid["median_residual_share"], resid["p95_residual_share"],
+                       resid["max_residual_share"]]) * 100
+    labels = ["TSMC\nmedian", "TSMC\n95th pctile", "TSMC\nworst day"]
+    b.bar(np.arange(3), shares, width=0.58, color=theme.SEMANTIC["inert_fill"],
+          edgecolor=CX, linewidth=1.0)
+    b.bar([3], [skhy_residual_share * 100], width=0.58, color=WA)
+    for i, v in enumerate(list(shares) + [skhy_residual_share * 100]):
+        b.text(i, v + 0.6, f"{v:.1f}%", ha="center", fontsize=theme.NOTE_SIZE,
+               color=WA if i == 3 else CX, fontfamily=theme.SERIF_STACK)
+    b.set_xticks(np.arange(4))
+    b.set_xticklabels(labels + ["SKHY\ntoday"])
+    b.set_ylabel("% of the ADR leg left FX-exposed\nafter hedging the local leg")
+    b.set_ylim(0, max(shares.max(), skhy_residual_share * 100) * 1.28)
+
+    full = fx.iloc[0]
+    theme.finalize(
+        fig,
+        headline="The currency link is real, weaker than theory, and NOT stable across eras",
+        subtitle="Daily premium change regressed on the proportional currency move. The "
+                 "analytic coefficient is (1+pi); the empirical one absorbs both equity legs' "
+                 "own FX betas.",
+        stats=[(f"{full.empirical_coef:.2f}", "coefficient,\n21.6 years"),
+               (f"{full.ci95_lo:.2f}-{full.ci95_hi:.2f}", "95% interval"),
+               (f"{full.r2:.1%}", "of daily premium\nvariance is FX"),
+               (f"{skhy_residual_share:.0%}", "of SKHY's ADR leg\nstays FX-exposed")],
+        source="Repo-computed. pipeline.lab.tsmc.fx_sensitivity_deep / "
+               "premium_notional_structure.",
+        footnote=f"Two findings the shallow sample could not show. First, the coefficient "
+                 f"is era-dependent: {fx.iloc[3].era} gives {fx.iloc[3].empirical_coef:.2f} "
+                 f"with an interval containing zero, while {fx.iloc[4].era} gives "
+                 f"{fx.iloc[4].empirical_coef:.2f} — so no single hedge ratio is stable. "
+                 f"Second, the residual is arithmetic (pi/(1+pi)) and therefore identical in "
+                 f"structure, but SKHY's level puts it near this pair's 21-year extreme. "
+                 f"CIRCULARITY DISCLOSED: the SKHY hedge panel's {skhy_coef} coefficient was "
+                 f"estimated on THIS pair, so it is a Taiwanese estimate applied to a Korean "
+                 f"pair, and the managed TWD makes it a lower bound on the won's.")
+    return fig, {"full_coef": float(full.empirical_coef),
+                 "era_unstable": bool(fx.ci95_lo.min() < 0)}

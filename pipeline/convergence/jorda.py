@@ -134,7 +134,7 @@ RIDGE_LAMBDA = 1e-4     # ridge penalty; near-OLS, stabilises small-sample folds
 # half-life honest rather than what makes it precise — see `_half_life_interval`.
 #
 # The binding constraint on H is NOT the row count. Local projections at horizon h use
-# overlapping windows, so 2,328 daily observations at h=300 are 2,028 rows carrying roughly
+# overlapping windows, so 5,064 daily observations at h=300 are 4,764 rows carrying roughly
 # 2028/300 ≈ 7 independent spans. That ratio, not n, is what the standard error should be
 # read against, so it is computed and reported as `n_eff` on every fit.
 #

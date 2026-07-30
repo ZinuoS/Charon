@@ -11,7 +11,8 @@ Three paths, all sourced rather than invented:
   cost bracket, since four of five components are undocumented.
 * **widening** — the realised 15.98 -> 51.60 run, replayed, then held.
 
-The breakeven carry (~954bp/yr) is the line the whole trade argues with, so it is drawn.
+The breakeven carry (~963bp/yr on the re-fitted panel) is the line the whole trade argues
+with, so it is drawn -- and it is COMPUTED by breakeven.critical_carry_bp(), never restated.
 """
 
 from __future__ import annotations

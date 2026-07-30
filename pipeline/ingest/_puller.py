@@ -169,3 +169,60 @@ def print_report(source: str, ok: list[dict], failed: list[tuple[str, str]]) -> 
             f"\n  {len(failed)} series unavailable. Per Task 3 these are reported, not "
             "substituted. Resolve the source before the S1 gate is signed."
         )
+
+# --------------------------------------------------------------------------------
+# Shared CLI plumbing
+# --------------------------------------------------------------------------------
+#
+# These three flags were implemented on d1_prices alone, which meant the cache-bypass
+# doctrine -- the one that exists because a stale cached response is served silently and
+# indefinitely after a tier upgrade -- was unavailable on the other six pullers. It cost
+# the comparator panel most of its available history: TSM's ADR leg sat at a 2016 start on
+# disk while the key served 1997. Six pullers could not express the fix, so the fix lives
+# here and every puller inherits it.
+
+
+def add_common_flags(parser) -> None:
+    """Attach --pull-date / --new-partition / --no-cache / --only to any puller's parser."""
+    parser.add_argument("--pull-date", default=None,
+                        help="Override the YYYY-MM-DD raw partition.")
+    parser.add_argument(
+        "--new-partition", action="store_true",
+        help="Pull into a fresh same-day partition (YYYY-MM-DD.N). Use when a re-pull is "
+             "a DIFFERENT request than the earlier one -- widened window, changed provider, "
+             "upgraded tier -- so both results survive on disk.")
+    parser.add_argument(
+        "--no-cache", action="store_true",
+        help="Bypass the local response cache. REQUIRED after a provider capability "
+             "change (tier upgrade, new entitlement): the cache is keyed on URL+params, "
+             "which do not change when your plan does, so a cached pre-upgrade response "
+             "will be served indefinitely and silently.")
+    parser.add_argument("--only", default=None,
+                        help="Comma-separated series_ids to pull (default: all in the tier).")
+
+
+def bypass_cache() -> None:
+    """Rebind every adapter's HTTP client to a cache-free one, for this process only."""
+    from . import _adapters, _http, _yahoo
+    client = _http.FragileHttpClient(use_cache=False)
+    _http.DEFAULT_CLIENT = _adapters.DEFAULT_CLIENT = _yahoo.DEFAULT_CLIENT = client
+    print("cache bypassed for this pull")
+
+
+def select_specs(specs: tuple, only: str | None) -> tuple:
+    """Filter specs by comma-separated series_ids; raises if the filter matches nothing."""
+    if not only:
+        return specs
+    wanted = {s.strip() for s in only.split(",")}
+    out = tuple(s for s in specs if s.series_id in wanted)
+    if not out:
+        raise SystemExit(f"no series matched {sorted(wanted)}")
+    return out
+
+
+def resolve_pull_date(source: str, pull_date: str | None, new_partition: bool) -> str | None:
+    """Apply --new-partition: a widened window is a different request, so it gets its own."""
+    if new_partition and not pull_date:
+        from ._common import next_partition_name
+        return next_partition_name(source)
+    return pull_date

@@ -66,7 +66,7 @@ Recorded here so later analysis is checked against what was knowable at freeze t
 - **The barrier — corrected 2026-07-29 from the primary documents.** The widely-quoted "2.5% conversion quota" is **not** a conversion cap. The 424B4 states the board resolved a maximum *primary issuance* of 17,790,000 shares (2.50%), sized so that SK square remains above the **20% floor required by the Monopoly Regulation and Fair Trade Act** (post-issuance: 20.0008%). Separately, **no numeric deposit cap appears in any SEC filing**: the deposit agreement refuses deposits that would exceed "a level from time to time determined by the Company," subject to the Company's prior consent. The 1.78bn-ADS Form F-6 registration is ~90% unused and is not the binding constraint. **So the upper barrier is a corporate decision entangled with a controlling shareholder's regulatory position — harder to lift than a quota, since expanding by primary issuance dilutes SK square below a statutory floor. ADR→local cancellation is uncapped and is a holder right (17 CFR §239.36(a)).** See `docs/research_notes.md`.
 - **Two-way conversion opens 2026-07-29** — the same day as Q2 earnings (confounded event; treated as such, §5 H-notes). Depositary: Citibank; issuance/cancellation overseen by the Korea Securities Depository (KSD).
 - **Premium path to date:** peak ~51–52% post-offering → ~19% on 07-16 (front-running of conversion expectations) → ~33% around 07-23 → **~22% on 07-28** (ADR −8.76% to $130.49 amid broad Korea weakness).
-- **Structural comparator:** TSMC ADR/2330.TW operates an asymmetric regime, but a *revolving* one — its 20-F states issuance is "permitted to the extent that previously issued depositary receipts have been cancelled." The widely-quoted **12.6% five-year average is untraceable at origin** and is contradicted by ~10% from the same provider in Feb 2025; it is a rolling-window artifact, not an equilibrium anchor, and is **not used**. This repo measures its own: **mean +8.88% over 2,328 days**. That TSMC's ceiling is *exhausted* is unsourced. Note the analogy cuts both ways: a working refill valve makes TSMC a weaker analogue for a discretionary barrier, yet its premium persists anyway — which strengthens the persistence prior.
+- **Structural comparator:** TSMC ADR/2330.TW operates an asymmetric regime, but a *revolving* one — its 20-F states issuance is "permitted to the extent that previously issued depositary receipts have been cancelled." The widely-quoted **12.6% five-year average is untraceable at origin** and is contradicted by ~10% from the same provider in Feb 2025; it is a rolling-window artifact, not an equilibrium anchor, and is **not used**. This repo measures its own: **mean +6.24% over 5,064 days** (2005-2026). That TSMC's ceiling is *exhausted* is unsourced. Note the analogy cuts both ways: a working refill valve makes TSMC a weaker analogue for a discretionary barrier, yet its premium persists anyway — which strengthens the persistence prior.
 
 ---
 
@@ -251,3 +251,34 @@ hid the gaps would misrepresent coverage.
 Every working session opens by (1) reading this README, (2) checking `preregistration/calls.yaml` for anything now resolvable, and (3) stating which stage gate is active. Curation and threshold decisions are the author's alone; analysis sessions may propose, never ratify.
 
 *S0 closed 2026-07-29 05:20 UTC. The pre-release freeze class (P) is **empty**: no call was committed before the 2026-07-10 listing, and Amendment 001 records that rather than backdating one. What is registered is H5 alone; H1–H4 are exploratory and are never presented as pre-registered forward tests. The honest history is the deliverable — see `preregistration/amendments/2026-07-29-partitioned-freeze.md`.*
+
+---
+
+## Research status — the comparator lab (staged for the author's commit, S25)
+
+**The TSMC lab** (`notebooks/09_tsmc_lab.ipynb`) closes the last analysis gap. SK Hynix's ADR
+programme is fourteen sessions old, and every question the trade has to answer is a question
+about a distribution, so the deepest pair in the same regime family is measured over its full
+history and reported as family characterisation. The sample is **5,064 sessions, 2005-01-03 to
+2026-07-24** — recovered this session from 2,328 after the ADR leg's provider chain was found
+to be resolving to a venue that serves only a rolling ten-year window, and admitted only
+because the deeper source agrees with the listing venue bit-for-bit across the whole 2,513-day
+overlap. The pre-2005 era is excluded for a documented corporate-action reason, and the
+headline number is reported under both the conservative and the cause-based cut: the wider
+sample is *less* favourable, so the exclusion is not flattering the result.
+
+What it finds. The gap moved in **137 episodes**, median 7.97 points over 20 sessions, and
+**56% of compressions closed through the ADR leg** rather than the local one. Entering at the
+90th percentile of the premium's own past and holding a year beat the carry **55.5% / 41.8% /
+16.4%** of the time across the low, mid and high cost brackets — so the bracket, not the
+signal, decides the trade. The path is the harder finding: the median entry went **11.2 points
+against you** first and the worst in 21.6 years went 25.3, while SK Hynix moved **35.6 points
+in three sessions**, and no stop distance bounds that loss without also cutting the winners.
+
+What bounds it. TSMC's ADR facility *revolves* — cancelled shares return to a re-issuable pool
+— so its premium is arbitraged from both sides and mean-reverts. SK Hynix's issuance requires
+Company consent, so its premium is reflected with an open upper tail. Almost every row of the
+structural audit leans the same way: this history should understate how persistent the traded
+premium can be, and overstate how comparable the two trades are on execution. Every figure in
+the notebook carries that caveat in its own caption. **The lab bounds the argument; it does not
+make it.**

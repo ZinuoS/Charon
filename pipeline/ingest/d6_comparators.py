@@ -25,7 +25,8 @@ from __future__ import annotations
 
 import argparse
 
-from ._puller import print_report, run_specs
+from ._puller import (add_common_flags, bypass_cache, print_report,
+                      resolve_pull_date, run_specs, select_specs)
 from .registry import (D6_BRAZIL_SERIES, D6_EXTRA_SERIES, D6_TAIWAN_SERIES,
                        D6_TSMC_SERIES)
 
@@ -43,10 +44,15 @@ TIERS = {
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--tier", choices=sorted(TIERS), default="tsmc")
-    parser.add_argument("--pull-date", default=None, help="Override the YYYY-MM-DD raw partition.")
+    add_common_flags(parser)
     args = parser.parse_args(argv)
 
-    ok, failed = run_specs(SOURCE, TIERS[args.tier], pull_date=args.pull_date)
+    if args.no_cache:
+        bypass_cache()
+    specs = select_specs(TIERS[args.tier], args.only)
+    pull_date = resolve_pull_date(SOURCE, args.pull_date, args.new_partition)
+
+    ok, failed = run_specs(SOURCE, specs, pull_date=pull_date)
     print_report(SOURCE, ok, failed)
     return 1 if failed else 0
 

@@ -151,20 +151,67 @@ def regime_color(regime: str) -> str:
     return REGIME_COLORS.get(regime, SEMANTIC["context"])
 
 
-#: RATIFIED 2026-07-29 — standard geometry. One size for single charts keeps the notebook
-#: visually consistent; small-multiples override height only. 9.5x5.2 at 150 DPI renders
-#: legibly at GitHub's content width without horizontal scroll, which is the medium the
-#: repo actually publishes through.
+#: DEFAULT geometry, not a constraint. Superseded 2026-07-30: figures were previously held
+#: to one canonical width because the deck was the delivery medium and slides are uniform.
+#: The repo is now the delivery medium, and a reader scrolling a notebook is not bound by
+#: slide geometry -- so a timeline may be wide, a distribution tall, and a schematic large.
+#: FIGSIZE is what `panel()` falls back to when a figure expresses no preference. What is
+#: still fixed, because it protects legibility rather than uniformity: the DPI floor, the
+#: tight bounding box, and `finalize()` owning all chrome.
 FIGSIZE = (9.5, 5.2)
 DPI = 150
 
-SERIF_STACK = ["Charter", "Palatino", "Georgia", "DejaVu Serif"]
+#: Per-figure sizes, by what the content needs. Named so a figure asks for a SHAPE rather
+#: than remembering two numbers, and so a later retune moves every figure of that shape.
+SHAPES = {
+    "wide":     (13.0, 5.4),    # long timelines: 21 years of daily data needs the width
+    "standard": (9.5, 5.2),     # the old canonical size, still right for most charts
+    "tall":     (9.0, 7.6),     # distributions and grids read down, not across
+    "square":   (7.6, 7.0),     # scatter and two-axis comparisons
+    "large":    (12.0, 8.2),    # schematics and decision trees, which need room to breathe
+}
 
-TITLE_SIZE = 13.5
-SUBTITLE_SIZE = 10
-LABEL_SIZE = 9
-TICK_SIZE = 8.5
-NOTE_SIZE = 7.5
+
+def shape(name: str) -> tuple[float, float]:
+    """Figure size by content shape. Unknown names fall back to the default, not an error."""
+    return SHAPES.get(name, FIGSIZE)
+
+
+#: RATIFIED 2026-07-30 — Arial first. Arial and Helvetica both resolve on the authoring
+#: machine; Liberation Sans is the metric-compatible Linux substitute and DejaVu Sans is
+#: matplotlib's own guaranteed fallback, so the stack degrades without reflowing chrome.
+#: The name SERIF_STACK is kept because it is the chrome API every figure already calls;
+#: renaming it would touch fifty call sites to say the same thing.
+#: The full intended stack, recorded for portability. Liberation Sans is the metric-compatible
+#: Linux substitute for Arial and is the right second-to-last resort on a Linux CI box.
+PORTABLE_FONT_STACK = ["Arial", "Helvetica", "Liberation Sans", "DejaVu Sans"]
+
+
+def _resolvable(names: list[str]) -> list[str]:
+    """Keep only faces matplotlib can actually find, plus DejaVu Sans as the guaranteed tail.
+
+    An unresolvable name in a per-call ``fontfamily=`` list makes matplotlib emit one
+    findfont warning PER TEXT OBJECT -- 1,628 lines for four figures, which buries real
+    output in a notebook. The unresolvable names stay recorded in PORTABLE_FONT_STACK so the
+    intent survives the machine it was authored on.
+    """
+    from matplotlib import font_manager
+    have = {f.name for f in font_manager.fontManager.ttflist}
+    out = [n for n in names if n in have]
+    return out or ["DejaVu Sans"]
+
+
+FONT_STACK = _resolvable(PORTABLE_FONT_STACK)
+SERIF_STACK = FONT_STACK          # alias: same object, one owner
+
+#: Retuned once for the new face. Arial's x-height is larger than Charter's at equal point
+#: size, but its counters are tighter, so ticks and labels are pushed UP rather than left
+#: alone -- the bias is maximal readability in a scrolled notebook, not deck density.
+TITLE_SIZE = 15.0
+SUBTITLE_SIZE = 11.0
+LABEL_SIZE = 10.5
+TICK_SIZE = 10.0
+NOTE_SIZE = 8.5
 
 
 
@@ -243,6 +290,12 @@ def palette_report(meanings: Iterable[str] | None = None) -> dict:
 def apply() -> None:
     """Install the theme globally. Idempotent; call once per notebook."""
     mpl.rcParams.update({
+        # The font family was previously set ONLY per-call, in chrome text. Axis ticks and
+        # labels therefore rendered in matplotlib's default face while headlines rendered in
+        # the theme's -- two faces in one figure, unnoticed because both were quiet. Setting
+        # it globally is what actually makes the type change visible.
+        "font.family": "sans-serif",
+        "font.sans-serif": FONT_STACK,
         "figure.figsize": FIGSIZE,
         "figure.dpi": DPI,
         "figure.facecolor": PAPER,
@@ -281,9 +334,21 @@ def apply() -> None:
     })
 
 
-def figure(nrows: int = 1, ncols: int = 1, height: float | None = None, **kw) -> tuple:
-    """A themed figure with horizontal-only gridlines and no vertical clutter."""
-    figsize = kw.pop("figsize", (FIGSIZE[0], height or FIGSIZE[1]))
+def figure(nrows: int = 1, ncols: int = 1, height: float | None = None,
+           shape_name: str | None = None, **kw) -> tuple:
+    """A themed figure with horizontal-only gridlines and no vertical clutter.
+
+    Size resolution, in priority order: explicit ``figsize``, then ``shape_name`` from
+    :data:`SHAPES`, then the default width with an optional ``height`` override. A figure
+    may state the shape its content needs; it is not held to one width.
+    """
+    if "figsize" in kw:
+        figsize = kw.pop("figsize")
+    elif shape_name:
+        w, h = shape(shape_name)
+        figsize = (w, height or h)
+    else:
+        figsize = (FIGSIZE[0], height or FIGSIZE[1])
     fig, axes = plt.subplots(nrows, ncols, figsize=figsize, **kw)
     for ax in (axes.flat if hasattr(axes, "flat") else [axes]):
         ax.grid(axis="y", visible=True)
@@ -471,7 +536,7 @@ def thin_date_ticks(ax, max_ticks: int = 5) -> None:
 # it goes and reserving the space it uses. Figure modules draw data; they do not place
 # text. `tests/test_chrome_lint.py` enforces that division.
 
-KICKER_SIZE = 8.0
+KICKER_SIZE = 9.0
 _CHROME_LINE_H = 0.030          # figure-fraction per chrome line at default geometry
 _CHROME_GAP = 0.014
 

@@ -26,7 +26,7 @@ itself*, which is the excess of ADR notional over local notional.
 ...but the mechanical coefficient is NOT the hedge ratio
 --------------------------------------------------------
 The derivative above holds **ceteris paribus** — equity prices fixed. Reality does not hold
-them fixed. Tested on 2,327 days of the TSM pair (the deep comparator):
+them fixed. Tested on 5,063 days of the TSM pair (the deep comparator, 2005-2026):
 
 ======================================  ==========================
 quantity                                value
@@ -40,8 +40,11 @@ beta(local return, dFX)                 −1.69
 
 Three honest readings, in order of importance:
 
-1. **Theory is not rejected** — 1.000 sits inside the confidence interval — but it is not
-   precisely pinned either. The interval is wide.
+1. **Theory is now marginally rejected on the deep sample.** On 2,327 days the interval
+   (0.507–1.103) contained 1.000 comfortably. On 5,063 days it is 0.653–1.058, and the
+   pair's own analytic coefficient (1 + mean pi = 1.062) sits just outside it. The
+   mechanical link is therefore real but partially offset, and calling it "1.0, unrejected"
+   was a statement about a short sample.
 2. **Both equity legs reprice strongly against FX** (betas ≈ −1.9 and −1.7), and those
    co-movements partially offset the mechanical term. That is *why* the empirical
    coefficient sits below 1.
@@ -73,6 +76,13 @@ class HedgeLegs:
     local_price_krw: float
     fx_krw_per_usd: float
     n_adr: float = 1.0
+
+    @classmethod
+    def live(cls, pair_id: str = "skhy", n_adr: float = 1.0) -> "HedgeLegs":
+        """Build from the legs' LAST SHARED date, never from each leg's own last close."""
+        from pipeline.measurement.premium import latest_common_legs
+        s = latest_common_legs(pair_id)
+        return cls(s["adr"], s["local"], s["fx"], n_adr)
 
     @property
     def local_shares(self) -> float:
@@ -132,10 +142,21 @@ def fx_hedge(legs: HedgeLegs) -> dict:
     }
 
 
-# Measured on 2,327 days of the TSM pair; see the module docstring.
-FX_COEF_EMPIRICAL = 0.805
-FX_COEF_CI95 = (0.507, 1.103)
-FX_R2_ALONE = 0.012
+# Measured on the TSM pair. RE-ESTIMATED 2026-07-30 on 5,063 days (2005-2026) after the
+# comparator's ADR leg was recovered back to 1997 -- the previous values came from 2,327 days
+# because the leg's provider chain served a rolling ten-year window. Pinned by
+# tests/test_lab_tsmc.py against pipeline.lab.tsmc.fx_sensitivity_deep(), so a constant that
+# drifts from its own estimator fails the suite rather than shipping.
+#
+# TWO CAVEATS THAT TRAVEL WITH THIS NUMBER, and are drawn on G27 rather than buried:
+#   * It is a TAIWANESE estimate applied to a KOREAN pair. The TWD is a managed float, so
+#     this is a lower bound on the won's sensitivity, not a like-for-like.
+#   * It is NOT stable across eras: 2016-2020 gives 0.31 with an interval containing zero;
+#     2021-2026 gives 1.26. No single hedge ratio is right for all regimes.
+FX_COEF_EMPIRICAL = 0.856
+FX_COEF_CI95 = (0.653, 1.058)
+FX_R2_ALONE = 0.0134
+FX_COEF_SAMPLE = "TSM pair, 2005-01-03 to 2026-07-24, 5,063 daily changes"
 
 
 def fx_sensitivity(premium: float, fx_move_pct: float = 0.01) -> dict:

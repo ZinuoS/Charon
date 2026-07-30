@@ -1,0 +1,38 @@
+{
+  "asset_class": "adr",
+  "availability_confirmed": false,
+  "availability_lag": "close 16:00:00 America/New_York + 15min",
+  "availability_note": "NYSE regular-session close 16:00 ET; daily bar assumed knowable 16:15 ET.",
+  "close_local": "16:00:00",
+  "currency": "USD",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-29T20:15:00+00:00",
+    "obs_date": "2026-07-29",
+    "observation_ts_utc": "2026-07-29T20:00:00+00:00"
+  },
+  "first_obs_date": "2016-07-29",
+  "last_obs_date": "2026-07-29",
+  "market": "NYSE",
+  "native_timezone": "America/New_York",
+  "notes": "Structural comparator: same asymmetric conversion regime as SKHY (README \u00a72).",
+  "provider": "nasdaq",
+  "provider_chain": [
+    "nasdaq",
+    "yahoo_finance"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-07-30T12:23:37+00:00",
+  "request_params": {
+    "assetclass": "stocks",
+    "fromdate": "1990-01-01",
+    "limit": "99999",
+    "todate": "2026-07-30"
+  },
+  "rows": 2513,
+  "series_id": "tsm_adr_daily",
+  "sha256": "fafb7b87de5738d88db41c354e8b5f6c866c58802a97789710ae7d15cd694fb5",
+  "source_url": "https://api.nasdaq.com/api/quote/TSM/historical",
+  "symbol": "TSM",
+  "transport": "api_quote_historical",
+  "units": "USD per ADR"
+}

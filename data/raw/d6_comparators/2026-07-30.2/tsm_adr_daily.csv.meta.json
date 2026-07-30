@@ -1,0 +1,39 @@
+{
+  "asset_class": "adr",
+  "availability_confirmed": false,
+  "availability_lag": "close 16:00:00 America/New_York + 15min",
+  "availability_note": "NYSE regular-session close 16:00 ET; daily bar assumed knowable 16:15 ET.",
+  "close_local": "16:00:00",
+  "currency": "USD",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-29T20:15:00+00:00",
+    "obs_date": "2026-07-29",
+    "observation_ts_utc": "2026-07-29T20:00:00+00:00"
+  },
+  "first_obs_date": "1997-10-08",
+  "last_obs_date": "2026-07-29",
+  "market": "NYSE",
+  "native_timezone": "America/New_York",
+  "notes": "Structural comparator: same asymmetric conversion regime as SKHY (README \u00a72). PROVIDER ORDER IS DELIBERATE AND IS A DEPTH DECISION. Nasdaq is the listing venue and outranks an aggregator on provenance, but its API serves a rolling 10-year window, which truncated this leg at 2016 and cost the panel its only deep history. EODHD serves from 1997-10-08. It is preferred here ONLY because it is corroborated against Nasdaq over the whole 2016-2026 overlap by tests/test_tsmc_deep_history.py; if that agreement test fails, this ordering must be reverted, not loosened.",
+  "provider": "eodhd",
+  "provider_chain": [
+    "eodhd",
+    "nasdaq",
+    "yahoo_finance"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-07-30T12:32:56+00:00",
+  "request_params": {
+    "fmt": "json",
+    "from": "1990-01-01",
+    "period": "d",
+    "to": "2026-07-30"
+  },
+  "rows": 7245,
+  "series_id": "tsm_adr_daily",
+  "sha256": "7cccc8cc50a8c64ffa5e75e046e36851485b4a8811b6fcc8e7e991f90d36c9ec",
+  "source_url": "https://eodhd.com/api/eod/TSM.US",
+  "symbol": "TSM",
+  "transport": "eod_api_v1",
+  "units": "USD per ADR"
+}

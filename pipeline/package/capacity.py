@@ -75,8 +75,9 @@ def borrow_ceiling() -> dict:
         from pipeline.measurement.utilization import current
         from pipeline.measurement.premium import _load_close
         u = current()
-        px = float(_load_close("d1_prices", "skhynix_local_daily").iloc[-1])
-        fx = float(_load_close("d1_prices", "usdkrw_spot_daily").iloc[-1])
+        from pipeline.measurement.premium import latest_common_legs
+        snap = latest_common_legs("skhy")
+        px, fx = snap["local"], snap["fx"]
         return {"as_of": u["as_of"], "on_loan_shares": u["balance_shares"],
                 "on_loan_usd": u["balance_shares"] * px / fx,
                 "percentile": u["balance_pctile"], "state": u["state"],

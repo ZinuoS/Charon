@@ -227,9 +227,18 @@ D6_TSMC_SERIES: tuple[SeriesSpec, ...] = (
         units="USD per ADR",
         start=None,
         confirmed=False,
-        notes="Structural comparator: same asymmetric conversion regime as SKHY (README §2).",
-        providers=("nasdaq", "yahoo_finance"),
-        provider_symbols={"nasdaq": "TSM"},
+        notes=(
+            "Structural comparator: same asymmetric conversion regime as SKHY (README §2). "
+            "PROVIDER ORDER IS DELIBERATE AND IS A DEPTH DECISION. Nasdaq is the listing "
+            "venue and outranks an aggregator on provenance, but its API serves a rolling "
+            "10-year window, which truncated this leg at 2016 and cost the panel its only "
+            "deep history. EODHD serves from 1997-10-08. It is preferred here ONLY because "
+            "it is corroborated against Nasdaq over the whole 2016-2026 overlap by "
+            "tests/test_tsmc_deep_history.py; if that agreement test fails, this ordering "
+            "must be reverted, not loosened."
+        ),
+        providers=("eodhd", "nasdaq", "yahoo_finance"),
+        provider_symbols={"nasdaq": "TSM", "eodhd": "TSM.US"},
     ),
     SeriesSpec(
         series_id="tsmc_local_daily",
@@ -244,8 +253,13 @@ D6_TSMC_SERIES: tuple[SeriesSpec, ...] = (
         units="TWD per common share",
         start=None,
         confirmed=False,
-        providers=("twse", "yahoo_finance"),
-        provider_symbols={"twse": "2330"},
+        notes=(
+            "Same depth decision as the ADR leg: the TWSE route starts 2010, EODHD serves "
+            "from 1994-09-05, and the ordering is justified by the overlap agreement test, "
+            "not by convenience."
+        ),
+        providers=("eodhd", "twse", "yahoo_finance"),
+        provider_symbols={"twse": "2330", "eodhd": "2330.TW"},
     ),
     SeriesSpec(
         series_id="usdtwd_spot_daily",
@@ -619,6 +633,22 @@ PAIRS: tuple[PairSpec, ...] = (
         local_shares_per_adr=5.0,
         ratio_source="TSMC depositary terms: 1 ADR = 5 common shares.",
         confirmed=False,
+        sample_start="2005-01-03",
+        sample_reason=(
+            "TSMC's stock-dividend era. Both legs are raw closes and the ratio is a constant "
+            "5.0, so an annual stock dividend that the two providers adjust inconsistently "
+            "accumulates into the level: the constructed premium averages -55% in 1997 and "
+            "walks monotonically to roughly zero by 2005, which is a compounded share-count "
+            "artefact, not a discount any arbitrageur left on the table. Eleven one-leg-only "
+            "price jumps >5sd are detected, ALL of them between 1997-10-09 and 2002-07-25 "
+            "and clustered in the June-August ex-dividend season; none occur afterwards in "
+            "24 years. Using adjusted closes on both legs is WORSE (annual mean +10% by 2004 "
+            "against +2% raw) because the two legs' cash-dividend adjustments differ. "
+            "The cause-based cut is 2002-07-26, the day after the last detected event; this "
+            "start is the conservative one, which additionally requires the level to sit in "
+            "an economically possible band. Both are reported: notebooks/09_tsmc_lab.ipynb "
+            "runs its headline number under both starts as a curation sensitivity."
+        ),
         notes=(
             "Cross-checked against the live sanity anchor: with this ratio the 2026-07-28 "
             "close-to-close premium lands in low double digits, consistent with the ~12.6% "

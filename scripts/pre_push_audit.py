@@ -62,8 +62,13 @@ def main() -> int:
 
     blocking = [f for f in findings if not f[0].startswith("desk-vocabulary")]
     print(f"\n  blocking: {len(blocking)}   review-only: {len(findings) - len(blocking)}")
-    print("\n  REMINDER: README §0 requires this repo stay PRIVATE until the internship")
-    print("  concludes or compliance clears. Confirm the GitHub setting before pushing.")
+    # README §0 was AMENDED 2026-07-28: the repository is public by the author's decision,
+    # and the firm name was removed at the same time under §0's own rule. The old reminder
+    # told the operator to confirm a setting the constitution no longer asks for, which is a
+    # worse failure than no reminder -- a checklist that is wrong trains you to skip it.
+    print("\n  README §0 (amended 2026-07-28): repository is PUBLIC by author decision.")
+    print("  What still matters on every push: no key material, no internal names, no")
+    print("  withheld-source data. All three are checked above, not remembered.")
     return 1 if blocking else 0
 
 

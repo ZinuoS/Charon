@@ -196,6 +196,35 @@ def _load_close(source: str, series_id: str) -> pd.Series:
     return frame.set_index("date")["close"].rename(series_id)
 
 
+def latest_common_legs(pair_id: str = "skhy") -> dict:
+    """The three legs on their LAST SHARED observation date.
+
+    Callers that need a live snapshot of the pair -- hedge sizing, capacity, notionals --
+    must not take each leg's own last close independently. The legs publish on different
+    calendars and with different lags, so the newest value of each is not a single moment:
+    on 2026-07-29 the ADR and local legs had settled and the FX fix had not, and mixing
+    them put the hedge panel's premium at 32.1% against 22.6% on the last shared date. A
+    premium is a price ratio, so all three prices must be from the same instant or it is
+    not one.
+    """
+    from pipeline.ingest.registry import PAIRS
+    pair = next(p for p in PAIRS if p.pair_id == pair_id)
+    source = PAIR_SOURCE.get(pair_id, DEFAULT_SOURCE)
+    fx_source = "d1_prices" if pair_id == "skhy" else source
+    legs = {"adr": _load_close(source, pair.adr),
+            "local": _load_close(source, pair.local),
+            "fx": _load_close(fx_source, pair.fx)}
+    frame = pd.DataFrame(legs).dropna()
+    if not len(frame):
+        raise ValueError(f"{pair_id}: legs share no observation date")
+    row = frame.iloc[-1]
+    return {"date": frame.index[-1], "adr": float(row.adr), "local": float(row.local),
+            "fx": float(row.fx), "ratio": pair.local_shares_per_adr,
+            "premium": float(row.adr * row.fx / (pair.local_shares_per_adr * row.local) - 1.0),
+            "stale_legs": {k: str(v.index[-1].date()) for k, v in legs.items()
+                           if v.index[-1] != frame.index[-1]}}
+
+
 def build_variant(
     pair: PairSpec,
     fx_leg: str,

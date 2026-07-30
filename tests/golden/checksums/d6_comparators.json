@@ -27,9 +27,14 @@
     "data/raw/d6_comparators/2026-07-29/usdinr_spot_daily.csv": "b985ddfbc1a01726429e1a4279241cb7986cf86ea523e8de51576eb229020558",
     "data/raw/d6_comparators/2026-07-29/usdtwd_spot_daily.csv": "cd3a7aec6a4b3cd8a7a5b415d5ad350d0a0ac04b41e88a49e39c989cd0502978",
     "data/raw/d6_comparators/2026-07-29/vale_adr_daily.csv": "0b5e0032f861643f7f4d719036ff35c1afce4817d2f589c89be56dbf3b2eca1f",
-    "data/raw/d6_comparators/2026-07-29/vale_local_daily.csv": "8c7c0ebb3073163a273d720803a5eeae899db980ef350d0a12a1a2f16171e018"
+    "data/raw/d6_comparators/2026-07-29/vale_local_daily.csv": "8c7c0ebb3073163a273d720803a5eeae899db980ef350d0a12a1a2f16171e018",
+    "data/raw/d6_comparators/2026-07-30.2/tsm_adr_daily.csv": "7cccc8cc50a8c64ffa5e75e046e36851485b4a8811b6fcc8e7e991f90d36c9ec",
+    "data/raw/d6_comparators/2026-07-30.2/tsmc_local_daily.csv": "f481640a383393b15ae10de4301d37531aca873b005ab21124481a4f4cde33a3",
+    "data/raw/d6_comparators/2026-07-30/tsm_adr_daily.csv": "fafb7b87de5738d88db41c354e8b5f6c866c58802a97789710ae7d15cd694fb5",
+    "data/raw/d6_comparators/2026-07-30/tsmc_local_daily.csv": "98cf1ba6fde9ed297bc7a4a80e97bcf09aa6c18d3d9112945d566c4d73bbb7db",
+    "data/raw/d6_comparators/2026-07-30/usdtwd_spot_daily.csv": "cd3a7aec6a4b3cd8a7a5b415d5ad350d0a0ac04b41e88a49e39c989cd0502978"
   },
   "history": {},
   "source": "d6_comparators",
-  "updated_at_utc": "2026-07-29T10:40:20+00:00"
+  "updated_at_utc": "2026-07-30T12:33:00+00:00"
 }
