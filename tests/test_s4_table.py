@@ -82,3 +82,31 @@ def test_permutation_placebo_collapses():
     p = s4_metrics_table(horizons=(20,), target="change", shuffle_seed=11)
     assert p.r2.max() < 0.02, f"placebo R² {p.r2.max():.4f} — harness is leaking"
     assert (p.hit_rate - 0.5).abs().max() < 0.05
+
+
+def test_track_b_shares_track_a_folds_by_construction():
+    """Not by two implementations agreeing — both consume jorda.fold_iter, so a divergence is
+    impossible rather than merely tested for. This asserts the shared consumption."""
+    import inspect
+    from pipeline.convergence import voc
+    assert "fold_iter" in inspect.getsource(voc.run)
+    from pipeline.convergence.jorda import _oof_predictions
+    assert "fold_iter" in inspect.getsource(_oof_predictions)
+
+
+def test_track_b_placebo_collapses():
+    """Full stop if this fails: a 60% hit rate on shuffled labels would mean the harness leaks."""
+    from pipeline.convergence import voc
+    p = voc.run("one_way_constrained", h=20, complexity=(2.0,), shrinkage=(1.0,), shuffle_seed=11)
+    assert (p.hit_rate - 0.5).abs().max() < 0.03, f"placebo hit rate {p.hit_rate.max():.3f}"
+
+
+def test_track_b_edge_does_not_survive_the_vol_managed_benchmark():
+    """The session's verdict, pinned. Track B beats Track A but loses to mechanically shorting
+    at 1/sigma, and neither beats not trading. If this ever flips, the deviation is worth
+    re-opening — and it should fail loudly rather than be rediscovered."""
+    from pipeline.convergence.voc import strategy_diagnostics
+    d = strategy_diagnostics("one_way_constrained", h=20)
+    assert d["sharpe_track_b"] > d["sharpe_track_a"], "complexity should beat parsimony on Sharpe"
+    assert d["sharpe_track_b"] < 0, "Track B Sharpe turned positive — re-open DEV-004"
+    assert d["track_b_alpha_vs_volmanaged"] < 0, "Track B alpha turned positive — re-open DEV-004"

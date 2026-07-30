@@ -25,7 +25,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOKS = ("00_executive_pitch", "01_client_note", "02_premium_anatomy",
-             "04_regimes_convergence", "05_hypothesis_engines")
+             "04_regimes_convergence", "05_hypothesis_engines", "06_complexity_ledger")
 
 # Order matters: borrow state feeds the sheets, the table feeds notebook 04, the builders
 # write the notebooks that then get executed. Anything out of order silently ships stale text.
@@ -37,6 +37,7 @@ STEPS = [
     ("build 02 anatomy", [sys.executable, "-m", "scripts.build_notebook_01"]),
     ("build 04 regimes", [sys.executable, "-m", "scripts.build_notebook_04"]),
     ("build 05 engines", [sys.executable, "-m", "scripts.build_notebook_05"]),
+    ("build 06 complexity ledger", [sys.executable, "-m", "scripts.build_notebook_06"]),
 ]
 
 

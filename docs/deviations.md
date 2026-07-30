@@ -156,9 +156,9 @@ remain the one item still awaiting the author's wording confirmation.
 
 ---
 
-## DEV-004 (DRAFTED, UNSIGNED) — capacity-rule exception for a Virtue-of-Complexity track
+## DEV-004 (SIGNED 2026-07-29) — capacity-rule exception for a Virtue-of-Complexity track
 
-**Status: AWAITING AUTHOR SIGNATURE. Track B has NOT run.**
+**Status: SIGNED. Track B ran under this exception.**
 
 ### What is requested
 
@@ -194,7 +194,20 @@ diagnostics, making the exception standing is a separate ratification.
 
 ### Signature
 
-`signed_by:` _(author — unsigned as of 2026-07-29)_
-`signed_at:` _(pending)_
+`signed_by:` author (verbatim: "i sign dev-004, run track b")
+`signed_at:` 2026-07-29
 
-**Until both fields are filled, Track B does not run.** That is a stop, not a workaround.
+**Signed. Track B ran.** The exception remains scoped to this experiment and expires with it;
+making it standing is a separate ratification.
+
+### One design decision the author should see
+
+A complexity grid c = P/N is only meaningful relative to a training window. KMZ's regime is
+**small N** — they work in the hundreds of observations, where P ≫ N is both feasible and the
+whole point. This panel's expanding folds reach N ≈ 18,000, where c = 20 would demand 360,000
+features: not a faithful reproduction, just an infeasible one.
+
+So **both tracks run at the same capped N_train (200)** with **identical test folds**. That
+makes it a true head-to-head at the sample size the capacity rule was written for, and it means
+the comparison isolates model class rather than sample size. Test-fold indices are asserted
+equal between tracks by test, not by assumption.

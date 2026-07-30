@@ -55,3 +55,4 @@ described as a pre-registered forward test unless the ledger says so on the reco
 **"Arbitrage" appears only for the conversion channel that does not work.** Everything live
 is relative value against a one-sided barrier, and the figures say so — see G4, which puts
 the unbounded-loss side on the same page as the convergence expression.
+| **06** | [`06_complexity_ledger.ipynb`](06_complexity_ledger.ipynb) | Parsimony vs. complexity head-to-head under one harness. EXPERIMENT, deviation-gated (DEV-004). Verdict: complexity's edge dies in the vol-timing decomposition. | ✅ live, 1 figure |

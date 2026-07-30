@@ -495,27 +495,23 @@ def metrics_table(results: dict[str, ConvergenceResult], horizons=(1, 5, 20)) ->
 TABLE_HORIZONS = (1, 5, 20, 60)   # named constant; short end is where coefficients are identified
 
 
-def _oof_predictions(pi_series: list[pd.Series], h: int, n_splits: int = 5,
-                     extra: list[pd.Series] | None = None, use_extra: bool = True,
-                     target: str = "level", shuffle_seed: int | None = None
-                     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Out-of-fold (actual, predicted), pooled across a regime's pairs.
+def fold_iter(pi_series: list[pd.Series], h: int, n_splits: int = 5,
+              extra: list[pd.Series] | None = None, use_extra: bool = True,
+              target: str = "level", shuffle_seed: int | None = None,
+              max_train: int | None = None):
+    """Yield ``(X_train, y_train, X_test, y_test, level_test, pair_idx, fold)`` per pair-fold.
 
-    ``target="level"``  -> pi_{t+h} ~ pi_t. High R2, and it is mostly persistence.
-    ``target="change"`` -> ln(1+pi_{t+h}) - ln(1+pi_t). **This is the tradeable target.** A
-    convergence RV expression is paid by the CHANGE, not by the level, so the level's R2 of
-    0.92 is not an edge -- it is the statement that a slow series stays where it is.
+    **One source of fold truth.** Track A and the Virtue-of-Complexity track both consume this,
+    so their folds are identical BY CONSTRUCTION rather than by two implementations agreeing.
+    Two parallel fold builders that a test compares is a test waiting to pass while the
+    implementations drift on something the test does not look at.
 
-    ``shuffle_seed`` permutes the labels WITHIN each pair, for the permutation placebo. Real
-    performance must collapse toward zero under it; if it does not, the harness leaks and
-    nothing downstream is trustworthy.
-
-    Embargo = h. Training labels overlap the test block by h periods, so without it the
-    fit sees its own test window through the label and the metrics come out flattering.
+    ``max_train`` truncates each training block to its LAST n rows, keeping test indices
+    untouched. That is what makes a P >> N complexity grid feasible at the sample size KMZ
+    actually works in, without moving the evaluation set.
     """
     from pipeline.validation.splitters import expanding_walk_forward
 
-    acts, preds, levels = [], [], []
     for idx, pi in enumerate(pi_series):
         y_raw = (np.log1p(pi.shift(-h)) - np.log1p(pi)) if target == "change" else pi.shift(-h)
         cols = {"x": pi, "y": y_raw}
@@ -533,23 +529,33 @@ def _oof_predictions(pi_series: list[pd.Series], h: int, n_splits: int = 5,
         X = df[feats].to_numpy(float)
         y = df["y"].to_numpy(float)
         if shuffle_seed is not None:
-            # Within-pair permutation. Shuffling ACROSS pairs would also destroy the pair
-            # structure, so a collapse would not isolate label information.
             y = np.random.default_rng(shuffle_seed + idx).permutation(y)
+
         for split in expanding_walk_forward(len(df), n_splits=n_splits, embargo=h):
             tr, te = split.train, split.test
             if len(tr) < 30 or len(te) == 0:
                 continue
-            # Train-only centring: fitting the mean on the full sample is the exact leak
-            # pipeline.validation.splitters.assert_scaler_fitted_on_train_only exists to catch.
-            mu_x, mu_y = X[tr].mean(axis=0), y[tr].mean()
-            A = X[tr] - mu_x
-            beta = np.linalg.solve(A.T @ A + RIDGE_LAMBDA * np.eye(A.shape[1]), A.T @ (y[tr] - mu_y))
-            preds.append((X[te] - mu_x) @ beta + mu_y)
-            acts.append(y[te])
-            # For the change target the label already IS the change, so the sign baseline is
-            # zero; for the level target it is pi_t.
-            levels.append(np.zeros(len(te)) if target == "change" else X[te, 0])
+            if max_train is not None:
+                tr = tr[-max_train:]
+            lvl = np.zeros(len(te)) if target == "change" else X[te, 0]
+            yield X[tr], y[tr], X[te], y[te], lvl, idx, split
+
+
+def _oof_predictions(pi_series: list[pd.Series], h: int, n_splits: int = 5,
+                     extra: list[pd.Series] | None = None, use_extra: bool = True,
+                     target: str = "level", shuffle_seed: int | None = None,
+                     max_train: int | None = None
+                     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Track A: ridge on the raw features, out of fold. Thin consumer of `fold_iter`."""
+    acts, preds, levels = [], [], []
+    for Xtr, ytr, Xte, yte, lvl, _, _ in fold_iter(
+            pi_series, h, n_splits, extra, use_extra, target, shuffle_seed, max_train):
+        mu_x, mu_y = Xtr.mean(axis=0), ytr.mean()
+        A = Xtr - mu_x
+        beta = np.linalg.solve(A.T @ A + RIDGE_LAMBDA * np.eye(A.shape[1]), A.T @ (ytr - mu_y))
+        preds.append((Xte - mu_x) @ beta + mu_y)
+        acts.append(yte)
+        levels.append(lvl)
     if not acts:
         return np.array([]), np.array([]), np.array([])
     return np.concatenate(acts), np.concatenate(preds), np.concatenate(levels)

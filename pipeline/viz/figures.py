@@ -563,6 +563,14 @@ LAYMAN: dict[str, list[str]] = {
         "problems rather than research problems.",
         "Nothing here says which trade is better — only which can be built honestly now.",
     ],
+    "g13_complexity": [
+        "We tried the fashionable answer: throw thousands of made-up features at the problem "
+        "and let the maths sort it out.",
+        "It made no difference. Going from 20 features to 10,000 moved the result almost not "
+        "at all — what mattered was how hard we reined the model in.",
+        "So the boring model was the right model here, and now we can say that because we "
+        "tested it, not because we preferred it.",
+    ],
     "g12_variance_shares": [
         "Break the US share's daily moves into three parts: the Korean share, the currency, "
         "and the gap between them.",
@@ -673,3 +681,68 @@ def g12_variance_shares(rows):
                  "n=11 — far too few to compare against 2,327 and 1,592.",
     )
     return fig, ax
+
+
+def g13_complexity(grid, regime="one_way_constrained", horizon=20):
+    """G13 — the double-descent curve, drawn on our problem, where it does not appear.
+
+    The paper's signature is OOS performance improving as complexity passes the interpolation
+    threshold c = P/N = 1. On this panel there is no such curve: R² is flat in c and ordered
+    almost entirely by SHRINKAGE. Drawn as flat, because a negative result massaged into a
+    shape is the one thing this figure must not do.
+
+    Left panel is log-scaled because near-ridgeless R² reaches −1,300 — on a linear axis every
+    other line collapses onto zero and the shrinkage ordering, which is the actual finding,
+    becomes invisible.
+    """
+    g = grid[(grid.regime == regime) & (grid.horizon == horizon)]
+    fig, (a, b) = theme.figure(ncols=2, height=4.8)
+    lams = sorted(g.shrinkage.unique())
+    ramp = [theme._ramp(theme.SEMANTIC["emphasis"], 0.62 - 0.72 * i / max(1, len(lams) - 1))
+            for i in range(len(lams))]
+
+    for lam, col in zip(lams, ramp):
+        s = g[g.shrinkage == lam].sort_values("c")
+        a.plot(s.c, -s.r2, color=col, linewidth=1.7, marker="o", markersize=3)
+        theme.label_line_end(a, s.c.iloc[-1], -s.r2.iloc[-1], f"λ={lam:g}", col)
+        b.plot(s.c, s.hit_rate, color=col, linewidth=1.7, marker="o", markersize=3)
+
+    for ax in (a, b):
+        ax.axvline(1.0, color=theme.BARRIER, linewidth=1.2, linestyle=(0, (6, 4)))
+        ax.set_xscale("log")
+        ax.set_xlabel("complexity  c = P / N", fontsize=8, color=theme.MUTED)
+    a.set_yscale("log")
+    a.set_ylabel("out-of-sample loss  (−R², log)", fontsize=8, color=theme.MUTED)
+    b.set_ylabel("sign hit rate", fontsize=8, color=theme.MUTED)
+    b.axhline(0.5, color=theme.RULE, linewidth=1.0)
+
+    a.annotate("interpolation\nthreshold", xy=(1.0, a.get_ylim()[1] * 0.45),
+               xytext=(6, 0), textcoords="offset points", fontsize=theme.NOTE_SIZE,
+               color=theme.BARRIER, fontfamily=theme.SERIF_STACK, linespacing=1.4)
+    a.set_title("Loss is ordered by shrinkage, not by complexity",
+                loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+    b.set_title("Hit rate is flat in complexity —\neven 20 features get it",
+                loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+
+    # The one takeaway annotation: flatness is the finding.
+    s10 = g[g.shrinkage == max(lams)].sort_values("c")
+    b.annotate(f"flat across a 500× range in P\n({s10.hit_rate.min():.1%}–{s10.hit_rate.max():.1%})",
+               xy=(s10.c.iloc[len(s10) // 2], s10.hit_rate.iloc[len(s10) // 2]),
+               # Into the empty lower half of the panel; at -34pt it landed on the lines.
+               xytext=(0.5, 0.16), textcoords="axes fraction", ha="center", va="bottom",
+               fontsize=theme.NOTE_SIZE, color=theme.MUTED, fontfamily=theme.SERIF_STACK,
+               linespacing=1.4, arrowprops=dict(arrowstyle="-|>", color=theme.RULE, linewidth=0.9,
+                                                connectionstyle="arc3,rad=0.12"))
+
+    theme.finalize(
+        fig, kicker="experiment — deviation-gated",
+        headline="The virtue here is shrinkage, not complexity",
+        subtitle=f"Random-Fourier ridge on Δln(1+π), {regime.replace('_', ' ')}, h={horizon}. "
+                 "Complexity spans a 500× range in feature count; the curve barely moves. "
+                 "Regularisation moves it by three orders of magnitude.",
+        source="Repo-computed. Method: Kelly, Malamud & Zhou (J. Finance 2024). Identical folds "
+               "to Track A by construction.",
+        footnote="EXPERIMENT under docs/deviations.md DEV-004, signed 2026-07-29. Exceeds the "
+                 "README §8 capacity rule by design; quarantined to data/derived/voc_experiment/.",
+    )
+    return fig, (a, b)
