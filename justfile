@@ -90,3 +90,7 @@ snapshot:
 # is more moving parts than the thing it automates.
 pitch-refresh:
     uv run python -m scripts.pitch_refresh
+
+# D2 — macro context (KOSPI, US/KR short rates).
+ingest-d2:
+    uv run python -m pipeline.ingest.d2_macro

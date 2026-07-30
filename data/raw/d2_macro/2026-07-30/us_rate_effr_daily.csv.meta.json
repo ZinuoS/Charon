@@ -1,0 +1,37 @@
+{
+  "asset_class": "rate",
+  "availability_confirmed": false,
+  "availability_lag": "close 09:00:00 America/New_York + 1440min",
+  "availability_note": "Effective federal funds rate, published T+1.",
+  "close_local": "09:00:00",
+  "currency": "USD",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-29T13:00:00+00:00",
+    "obs_date": "2026-07-28",
+    "observation_ts_utc": "2026-07-28T13:00:00+00:00"
+  },
+  "first_obs_date": "2000-07-03",
+  "last_obs_date": "2026-07-28",
+  "market": "FRED (NY Fed)",
+  "native_timezone": "America/New_York",
+  "notes": "",
+  "provider": "fred",
+  "provider_chain": [
+    "fred"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-07-30T04:28:03+00:00",
+  "request_params": {
+    "file_type": "json",
+    "observation_end": "2026-07-30",
+    "observation_start": "1990-01-01",
+    "series_id": "EFFR"
+  },
+  "rows": 6545,
+  "series_id": "us_rate_effr_daily",
+  "sha256": "669a71d984055ccece477bec0f20874e39e4bbdcde4ae24a0dbd003072c583e0",
+  "source_url": "https://api.stlouisfed.org/fred/series/observations",
+  "symbol": "EFFR",
+  "transport": "fred_observations_v1",
+  "units": "percent per annum"
+}

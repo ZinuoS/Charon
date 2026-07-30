@@ -1,0 +1,37 @@
+{
+  "asset_class": "rate",
+  "availability_confirmed": false,
+  "availability_lag": "close 12:00:00 America/New_York + 43200min",
+  "availability_note": "MONTHLY, OECD-sourced, published with a material lag -- latest observation is several weeks behind the equity legs. Context only; never a same-day input.",
+  "close_local": "12:00:00",
+  "currency": "KRW",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-01T16:00:00+00:00",
+    "obs_date": "2026-06-01",
+    "observation_ts_utc": "2026-06-01T16:00:00+00:00"
+  },
+  "first_obs_date": "1991-01-01",
+  "last_obs_date": "2026-06-01",
+  "market": "FRED (OECD)",
+  "native_timezone": "America/New_York",
+  "notes": "",
+  "provider": "fred",
+  "provider_chain": [
+    "fred"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-07-30T04:28:03+00:00",
+  "request_params": {
+    "file_type": "json",
+    "observation_end": "2026-07-30",
+    "observation_start": "1990-01-01",
+    "series_id": "IR3TIB01KRM156N"
+  },
+  "rows": 426,
+  "series_id": "kr_rate_3m_monthly",
+  "sha256": "7a1f995b76f42f0aab9fe730242c7163d58b1ebffef92c4b5fe0c0303678556c",
+  "source_url": "https://api.stlouisfed.org/fred/series/observations",
+  "symbol": "IR3TIB01KRM156N",
+  "transport": "fred_observations_v1",
+  "units": "percent per annum, 3-month interbank"
+}

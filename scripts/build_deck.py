@@ -22,6 +22,7 @@ OUT = ROOT / "data" / "derived" / "deck"
 #: (panel stem, one-line speaker note in the approved layman register)
 ORDER = [
     ("P0a_the_stage", "Set the stage: Korean rules and the won move this gap on their own."),
+    ("P0b_the_currents", "Three outside forces: the index, the won, and the funding differential."),
     ("P1_situation", "The gap is 22.6% and the trade that normally closes it runs one way."),
     ("P2_structure", "You hold one position; the Korean plumbing sits on our side."),
     ("P3_economics", "It pays if your carry stays under about 79 basis points a month."),
@@ -29,6 +30,7 @@ ORDER = [
     ("P8_scenario_pnl", "Best case pays a fraction of your margin; the realised case cost all of it."),
     ("P4a_payoff", "Gain is capped by the floor. Loss is not capped by anything on file."),
     ("P4b_margin_path", "A move that already happened called for 44 cents per dollar."),
+    ("P9_exit_discipline", "We agree the exit rules up front: five things to watch, three ways out."),
     ("P5_size_and_exit", "Getting out is easy. Borrowing the shares to sell is the limit."),
     ("P6_what_you_receive", "Monthly: the gap, the valve, and three things that either happened or did not."),
 ]

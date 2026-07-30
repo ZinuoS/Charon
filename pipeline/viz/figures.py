@@ -584,6 +584,22 @@ LAYMAN: dict[str, list[str]] = {
         "We are not sending you a forecast, because we tested forecasting and it did not beat "
         "simply watching.",
     ],
+    "g23_currents": [
+        "Three outside forces move this gap: the Korean market overall, the won, and the gap "
+        "between US and Korean interest rates.",
+        "None of them are about SK hynix. The rate one matters most to you, because it is what "
+        "funding the position costs.",
+        "One thing we still cannot show you is what foreign investors are doing month to month — "
+        "there is no clean public feed for it, so we say so rather than guess.",
+    ],
+    "g24_exit_tree": [
+        "We are not telling you when to get out, so we agree the rules up front: five things to "
+        "watch, three ways out.",
+        "If the borrow gets pulled, the cleanest exit is handing the US shares back for Korean "
+        "ones — that kills the borrowing problem outright.",
+        "And be honest about stops: this gap jumped 36 points in a week. A stop tells the desk "
+        "what you want, it does not promise you get it.",
+    ],
     "g20_macro_map": [
         "This gap does not float in space. Korean rules on short selling, a leveraged-ETF curb "
         "landing this month, and the won all move it.",
@@ -1406,3 +1422,137 @@ def g21_chain():
                  "the client's.",
     )
     return fig, ax
+
+
+def g24_exit_tree(days_to_exit: float, stop_points: float = 8.0,
+                  excursion_points: float = 35.6, call: dict | None = None):
+    """G24 — the exit decision tree. Unifies the rules scattered across P4, P5 and P6.
+
+    Since no timing signal is sold, exits are RULES, and rules are a tree. Each monitor node
+    carries the observable that fires it and points at the route that answers it — recall points
+    to cancellation because the borrow problem lives on the leg cancellation extinguishes.
+
+    The honesty note is drawn, not footnoted: a stop on a gapping spread limits INTENT, not
+    loss. The realised excursion is marked against the stop to show by how much.
+    """
+    call = call or {"resolution": "2026-10-31"}
+    fig, ax = theme.figure(height=6.0)
+    ax.set_xlim(0, 25); ax.set_ylim(0, 15); ax.axis("off")
+    ax.set_aspect("equal")
+
+    def box(x, y, w, h, title, body, col, lw=1.3):
+        ax.add_patch(mpatches.FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.10",
+                     facecolor=theme.PAPER, edgecolor=col, linewidth=lw))
+        ax.text(x + w / 2, y + h - 0.55, title, ha="center", fontsize=7.4, color=col,
+                fontfamily=theme.SERIF_STACK)
+        ax.text(x + w / 2, y + h / 2 - 0.35, body, ha="center", va="center", fontsize=6.6,
+                color=theme.TEXT, fontfamily=theme.SERIF_STACK, linespacing=1.5)
+
+    EM, WA, BA, CX = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["warning"],
+                      theme.SEMANTIC["barrier"], theme.SEMANTIC["context"])
+
+    box(9.0, 12.6, 7.0, 2.0, "POSITION ON", "the pair, cross-margined", EM, lw=1.8)
+
+    # Monitor layer — five nodes, each with its observable and the route it points at.
+    mons = [
+        (0.2, "DRAWDOWN", f"stop at {stop_points:.0f} premium pts\n(realised move was "
+                          f"{excursion_points:.0f})", WA, 2),
+        (5.2, "BORROW", "recall, or a cost step\non the short leg", WA, 1),
+        (10.2, "ISSUANCE", "DART disclosure —\nthe upper-barrier class", BA, 0),
+        (15.2, "HEADROOM", f"D5 print on the capped\nprogramme · H5 {call['resolution']}", BA, 0),
+        (20.2, "CARRY SPENT", "the bleed fan crosses\nyour tolerance", CX, 2),
+    ]
+    for x, title, body, col, route in mons:
+        box(x, 7.8, 4.2, 3.0, title, body, col)
+        ax.annotate("", xy=(x + 2.1, 10.95), xytext=(12.5, 12.55),
+                    arrowprops=dict(arrowstyle="-", color=theme.RULE, linewidth=0.8,
+                                    connectionstyle="arc3,rad=0.06"))
+
+    # Exit-route layer — three terminals, each with cost and timeline.
+    routes = [
+        (0.2, "MARKET UNWIND", f"sell both legs\n~{days_to_exit:.1f} sessions at 10% ADV\n"
+                               "cost: spread + fees", EM),
+        (9.0, "CANCEL THROUGH\nTHE OPEN BARRIER", "surrender ADRs, take local\n0.07% round trip, "
+                                                  "KSD settle\nextinguishes the borrow", BA),
+        (17.8, "DE-RISK / REVERT\nTO STANDBY", "cut size, or never having\ninitiated: zero cost\n"
+                                               "(event-conditional variant)", CX),
+    ]
+    for x, title, body, col in routes:
+        box(x, 2.2, 7.0, 3.0, title, body, col, lw=1.5)
+
+    # Edges: monitor -> route. Arrowheads land ON the top edge (5.2), below which the two-line
+    # route titles sit -- at 5.9 they crossed the titles they were pointing at.
+    targets = {0: 3.7, 1: 12.5, 2: 21.3}
+    for x, _, _, _, route in mons:
+        ax.annotate("", xy=(targets[route], 5.25), xytext=(x + 2.1, 7.7),
+                    arrowprops=dict(arrowstyle="-|>", color=theme.RULE, linewidth=1.0,
+                                    connectionstyle="arc3,rad=0.10"))
+
+    ax.text(12.5, 1.05, "recall points at cancellation because the borrow problem lives on the "
+                        "very leg cancellation extinguishes.\nA stop on a gapping spread limits "
+                        "INTENT, not loss — the realised move gapped through any level set here.",
+            ha="center", va="center", fontsize=7.0, color=theme.MUTED,
+            fontfamily=theme.SERIF_STACK, linespacing=1.6)
+
+    theme.finalize(
+        fig, kicker="exit discipline",
+        headline="No timing is sold, so exits are rules — and rules are a tree",
+        subtitle="Five observables, three routes. Each monitor points at the route that actually "
+                 "answers it.",
+        source="Cancellation mechanics and fee from SEC 424B4 and F-6 Ex. 99(a); unwind sessions "
+               "from the capacity panel; H5 from the frozen ledger.",
+        footnote="A stop is an instruction, not a guarantee: this spread has gapped 36 points in "
+                 "five sessions. Sizing, not stops, is what bounds loss here.",
+    )
+    return fig, ax
+
+
+def g23_currents(kospi, fx, kr_rate, us_rate):
+    """P0b — the currents: the three macro series that were gaps until they landed.
+
+    Three panels because three different frequencies. The rate differential is drawn at the
+    Korea leg's NATIVE MONTHLY frequency: interpolating a monthly OECD series to daily for a
+    context panel would manufacture twenty observations a month that nobody published.
+
+    Foreign-investor flows remain a gap and are named as one. No route exists without a
+    registration this repo does not hold, and an unsourced flow direction on a client panel is
+    exactly the claim this project has spent every session refusing.
+    """
+    fig, (a, b, c) = theme.figure(ncols=3, height=4.4)
+
+    k = kospi.tail(750)
+    a.plot(k.index, k.values, color=theme.INK, linewidth=1.8)
+    a.set_title("KOSPI", loc="left", fontsize=9, color=theme.TEXT,
+                fontfamily=theme.SERIF_STACK, pad=6)
+    theme.thin_date_ticks(a, 3)
+
+    f = fx.tail(750)
+    b.plot(f.index, f.values, color=theme.SEMANTIC["barrier"], linewidth=1.8)
+    b.set_title("USD/KRW", loc="left", fontsize=9, color=theme.TEXT,
+                fontfamily=theme.SERIF_STACK, pad=6)
+    theme.thin_date_ticks(b, 3)
+
+    diff = (us_rate.resample("MS").mean() - kr_rate).dropna().tail(60)
+    c.fill_between(diff.index, diff.values, color=theme.SEMANTIC["emphasis"], alpha=0.18,
+                   linewidth=0)
+    c.plot(diff.index, diff.values, color=theme.SEMANTIC["emphasis"], linewidth=1.8)
+    c.axhline(0, color=theme.RULE, linewidth=1.0)
+    c.set_title("US − KR short rate (monthly)", loc="left", fontsize=9, color=theme.TEXT,
+                fontfamily=theme.SERIF_STACK, pad=6)
+    theme.thin_date_ticks(c, 3)
+
+    theme.finalize(
+        fig, kicker="the currents",
+        headline="Three things move this gap that have nothing to do with the company",
+        subtitle="Index level, the won, and the funding differential. The rate panel is monthly "
+                 "because its Korea leg is — not interpolated to look daily.",
+        source="KOSPI via EODHD (KS11.INDX); USD/KRW frankfurter/ECB; both rate legs FRED "
+               "(EFFR; OECD-sourced Korea 3-month interbank), public domain.",
+        footnote="FOREIGN-INVESTOR FLOWS REMAIN A GAP: no sanctioned route without a "
+                 "registration this repository does not hold. Named rather than estimated.",
+        stats=[(f"{float(kospi.iloc[-1]):,.0f}", "KOSPI today"),
+               (f"{float(fx.iloc[-1]):.0f}", "USD/KRW"),
+               (f"{float(diff.iloc[-1]):+.2f}pp", "US minus KR short rate\n(funding-leg relevant)"),
+               ("gap", "foreign flows\n— no sanctioned route")],
+    )
+    return fig, (a, b, c)

@@ -107,6 +107,19 @@ def panels():
         fx = _load_close("d1_prices", "usdkrw_spot_daily")
         return figures.g20_macro_map(sk, fx, theme.events_for(markets=["US", "KR", "GLOBAL"]))
 
+    def p0b():
+        from pipeline.measurement.premium import _load_close
+        return figures.g23_currents(
+            _load_close("d2_macro", "kospi_index_daily"),
+            _load_close("d1_prices", "usdkrw_spot_daily"),
+            _load_close("d2_macro", "kr_rate_3m_monthly"),
+            _load_close("d2_macro", "us_rate_effr_daily"))
+
+    def p9():
+        days = CAP.days_to_unwind()
+        one = float(days[(days.participation == 0.10) & (days.size_usd == 1e9)].days_binding.iloc[0])
+        return figures.g24_exit_tree(one)
+
     def p8():
         from pipeline.package import scenarios as SC
         su = SC.summary()
@@ -114,6 +127,7 @@ def panels():
 
     return [
         ("P0a_the_stage", p0a),
+        ("P0b_the_currents", p0b),
         ("P1_situation", p1),
         ("P2_structure", lambda: figures.g2c_ops_asymmetry(pkg)),
         ("P3_economics", p3),
@@ -124,6 +138,7 @@ def panels():
          lambda: figures.g19_monitoring(status_report()[:400], TRIGGERS, CALL)),
         ("P7_the_chain", figures.g21_chain),
         ("P8_scenario_pnl", p8),
+        ("P9_exit_discipline", p9),
     ]
 
 

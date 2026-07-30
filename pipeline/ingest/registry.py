@@ -449,6 +449,49 @@ _CONTROL_RATIO_REGIME = (
 )
 
 
+
+# ------------------------------------------------------------------------------------
+# D2 macro context (S24). The three named gaps on G20, closed where a sanctioned route
+# existed. All three had a route through access already held -- no new registration.
+#
+# KOSPI: EODHD index symbology is `KS11.INDX`. `^KS11`, `KOSPI.INDX` and `KS11.KO` all 404,
+# so the symbology matters more than the ticker one knows.
+#
+# RATE DIFFERENTIAL: both legs from FRED, which is public domain -- the cleanest provenance in
+# the repo. The Korea leg is OECD-sourced and MONTHLY; it is landed and presented at its native
+# frequency. Interpolating a monthly policy-adjacent series to daily for a CONTEXT panel would
+# manufacture 20 observations a month that no one published.
+# ------------------------------------------------------------------------------------
+D2_MACRO_SERIES: tuple[SeriesSpec, ...] = (
+    SeriesSpec(
+        series_id="kospi_index_daily", symbol="KS11.INDX", asset_class="index", currency="KRW",
+        market="KRX (index)", timezone="Asia/Seoul", close_local=time(15, 30),
+        availability_lag=_STD_LAG,
+        availability_note="KRX close 15:30 KST; index level disseminated with the close.",
+        units="index points", start=None, confirmed=False,
+        providers=("eodhd",), provider_symbols={"eodhd": "KS11.INDX"},
+    ),
+    SeriesSpec(
+        series_id="kr_rate_3m_monthly", symbol="IR3TIB01KRM156N", asset_class="rate",
+        currency="KRW", market="FRED (OECD)", timezone="America/New_York", close_local=time(12, 0),
+        availability_lag=timedelta(days=30),
+        availability_note=(
+            "MONTHLY, OECD-sourced, published with a material lag -- latest observation is "
+            "several weeks behind the equity legs. Context only; never a same-day input."
+        ),
+        units="percent per annum, 3-month interbank", start=None, confirmed=False,
+        providers=("fred",), provider_symbols={"fred": "IR3TIB01KRM156N"},
+    ),
+    SeriesSpec(
+        series_id="us_rate_effr_daily", symbol="EFFR", asset_class="rate", currency="USD",
+        market="FRED (NY Fed)", timezone="America/New_York", close_local=time(9, 0),
+        availability_lag=timedelta(days=1),
+        availability_note="Effective federal funds rate, published T+1.",
+        units="percent per annum", start=None, confirmed=False,
+        providers=("fred",), provider_symbols={"fred": "EFFR"},
+    ),
+)
+
 PAIRS: tuple[PairSpec, ...] = (
     # --- Brazil control cohort (S19). Every ratio verified against the implied ratio and
     # every one lands within 1.1% of an exact integer -- which is itself evidence of
@@ -621,7 +664,7 @@ PAIRS: tuple[PairSpec, ...] = (
 
 def all_series() -> tuple[SeriesSpec, ...]:
     return (D1_SERIES + D6_TSMC_SERIES + D6_EXTRA_SERIES + D6_TAIWAN_SERIES
-            + D6_BRAZIL_SERIES)
+            + D6_BRAZIL_SERIES + D2_MACRO_SERIES)
 
 
 def series_by_id(series_id: str) -> SeriesSpec:

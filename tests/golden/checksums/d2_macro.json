@@ -1,0 +1,10 @@
+{
+  "files": {
+    "data/raw/d2_macro/2026-07-30/kospi_index_daily.csv": "944566445491f23b94cd9df95802d5e93825e569224d57387ebcab73900a9d0a",
+    "data/raw/d2_macro/2026-07-30/kr_rate_3m_monthly.csv": "7a1f995b76f42f0aab9fe730242c7163d58b1ebffef92c4b5fe0c0303678556c",
+    "data/raw/d2_macro/2026-07-30/us_rate_effr_daily.csv": "669a71d984055ccece477bec0f20874e39e4bbdcde4ae24a0dbd003072c583e0"
+  },
+  "history": {},
+  "source": "d2_macro",
+  "updated_at_utc": "2026-07-30T04:28:06+00:00"
+}
