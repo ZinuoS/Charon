@@ -563,6 +563,14 @@ LAYMAN: dict[str, list[str]] = {
         "problems rather than research problems.",
         "Nothing here says which trade is better — only which can be built honestly now.",
     ],
+    "g15_breakeven": [
+        "The gap is 22.6% today. If it closes, you make money; while you wait, you pay to hold "
+        "the position.",
+        "The arithmetic says: at today's level, the cost of carrying has to stay under about "
+        "80 basis points a month, or waiting costs more than closing pays.",
+        "We do not know your borrow and funding rates — that is the one number this turns on, "
+        "and it is the first thing to ask the desk.",
+    ],
     "g14_magnitude_paradox": [
         "Both models call the direction right about six times in ten. That sounds like the "
         "same model twice.",
@@ -811,5 +819,80 @@ def g14_magnitude_paradox(dec):
         source="Repo-computed. Track B method: Kelly, Malamud & Zhou (J. Finance 2024).",
         footnote="EXPERIMENT under DEV-004. GROSS of transaction costs, on the comparator "
                  "panel only — SKHY is never fitted. Not a claim about the live trade.",
+    )
+    return fig, (a, b)
+
+
+def g15_breakeven(surf, verdict, critical_bp, critical_bp_floor):
+    """G15 — how fast convergence must arrive to beat the carry.
+
+    The pitch's central number, drawn as a BRACKET because four of five cost components are
+    undocumented. Point estimates would be the dishonest version: the whole finding is that
+    the bracket straddles the answer, so whether this trade works is determined by numbers the
+    desk holds and this repository does not.
+    """
+    fig, (a, b) = theme.figure(ncols=2, height=5.0)
+    ramp = {"low": theme._ramp(theme.SEMANTIC["emphasis"], 0.45),
+            "mid": theme.SEMANTIC["emphasis"],
+            "high": theme.SEMANTIC["warning"]}
+
+    # LEFT: breakeven half-life vs entry premium, one line per cost bracket, at 252d.
+    s252 = surf[surf.horizon_days == 252]
+    for br, col in ramp.items():
+        d = s252[s252.bracket == br].sort_values("entry_premium")
+        a.plot(d.entry_premium, d.breakeven_half_life_days, color=col, linewidth=1.9,
+               marker="o", markersize=4)
+        theme.label_line_end(a, d.entry_premium.iloc[-1], d.breakeven_half_life_days.iloc[-1],
+                             f"{br} carry", col)
+
+    est, flo = verdict["estimated_half_life_days"], verdict["estimated_floor_days"]
+    a.axhspan(flo, est, color=theme.SEMANTIC["context"], alpha=0.16, zorder=0)
+    a.axhline(est, color=theme.BARRIER, linewidth=1.6)
+    a.annotate(f"estimated base rate {est:.0f}d\n(95% floor {flo:.0f}d, no ceiling)",
+               xy=(0.02, est), xycoords=("axes fraction", "data"), xytext=(0, 7),
+               textcoords="offset points", fontsize=theme.NOTE_SIZE, color=theme.BARRIER,
+               fontfamily=theme.SERIF_STACK, linespacing=1.4)
+    a.axvline(verdict["entry_premium"], color=theme.RULE, linewidth=1.1, linestyle=(0, (4, 3)))
+    a.annotate("SKHY today", xy=(verdict["entry_premium"], a.get_ylim()[1]),
+               xytext=(4, -12), textcoords="offset points", fontsize=theme.NOTE_SIZE,
+               color=theme.MUTED, fontfamily=theme.SERIF_STACK)
+    theme.pct_axis(a)
+    a.set_yscale("log")
+    a.set_xlabel("entry premium", fontsize=8, color=theme.MUTED)
+    a.set_ylabel("breakeven half-life (days, log)", fontsize=8, color=theme.MUTED)
+    a.set_title("Above the black line the base rate pays;\nbelow it, it does not",
+                loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+
+    # RIGHT: the single number the desk conversation must fill.
+    brs = list(ramp)
+    vals = [verdict[f"carry_bp_{k}"] for k in brs]
+    b.barh(range(len(brs)), vals, color=[ramp[k] for k in brs], height=0.55)
+    b.set_yticks(range(len(brs))); b.set_yticklabels([f"{k} bracket" for k in brs], fontsize=8)
+    b.invert_yaxis()
+    b.axvline(critical_bp, color=theme.BARRIER, linewidth=2.0)
+    # Anchored in axes fraction: at (critical_bp, len(brs)-0.55) it fell below the inverted
+    # y-range and rendered off-panel entirely -- the takeaway was invisible.
+    b.annotate(f"CRITICAL CARRY {critical_bp:.0f}bp/yr\n({critical_bp/12:.0f}bp/month)\n"
+               "above this, the linear trade is\nnegative-carry to the base rate",
+               xy=(critical_bp, 1.0), xytext=(0.03, 0.06), textcoords="axes fraction",
+               ha="left", va="bottom", fontsize=theme.NOTE_SIZE, color=theme.BARRIER,
+               fontfamily=theme.SERIF_STACK, linespacing=1.45,
+               arrowprops=dict(arrowstyle="-|>", color=theme.BARRIER, linewidth=1.0,
+                               connectionstyle="arc3,rad=-0.15"))
+    b.axvline(critical_bp_floor, color=theme.BARRIER, linewidth=1.1, linestyle=(0, (5, 4)))
+    b.set_xlabel("all-in carry (bp per year)", fontsize=8, color=theme.MUTED)
+    b.set_title("The brackets straddle it — which is the finding",
+                loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+
+    theme.finalize(
+        fig, kicker="economics",
+        headline=f"At today's premium the carry has to stay under ~{critical_bp/12:.0f}bp a month",
+        subtitle=f"Breakeven half-life against entry level, one line per cost bracket, 252-day "
+                 f"horizon. Estimated base rate {est:.0f}d. Dashed line on the right is the "
+                 f"critical carry at the 95% FLOOR half-life ({critical_bp_floor:.0f}bp/yr).",
+        source="Conversion fee 0.07% documented [424B4]. FOUR of five components are BRACKETED "
+               "assumptions, not quotes: local borrow, ADR borrow, FX forward points, funding.",
+        footnote="Brackets exist to be replaced by the desk, not quoted. Whether this trade "
+                 "pays is determined by numbers this repository does not hold.",
     )
     return fig, (a, b)
