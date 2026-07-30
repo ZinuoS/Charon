@@ -105,14 +105,22 @@ class TestPackageSheets:
 
 
 class TestClientPack:
-    def test_all_six_panels_build(self):
-        """Seven files for six panels: P4 is a pair (payoff + margin path)."""
+    def test_every_deck_slide_has_a_panel_that_builds(self):
+        """Asserted as a PROPERTY, not a count. `len(names) == 7` broke the moment a panel was
+        added, which is a test measuring its own staleness rather than the pack."""
         import matplotlib
         matplotlib.use("Agg")
+        from scripts.build_deck import ORDER
         from scripts.export_client_pack import panels
-        names = [n for n, _ in panels()]
-        assert len(names) == 7
-        assert {n[:2] for n in names} == {"P1", "P2", "P3", "P4", "P5", "P6"}
+        built = {n for n, _ in panels()}
+        missing = [stem for stem, _ in ORDER if stem not in built]
+        assert not missing, f"deck orders slides with no panel builder: {missing}"
+
+    def test_every_panel_has_a_speaker_note(self):
+        """A slide a presenter cannot narrate is a slide that gets skipped."""
+        from scripts.build_deck import ORDER
+        assert all(note.strip() for _, note in ORDER)
+        assert len({s for s, _ in ORDER}) == len(ORDER), "duplicate slide in the deck order"
 
     def test_importing_panels_does_not_hijack_the_backend(self):
         """`matplotlib.use("Agg")` at module scope silenced every figure in the notebook that

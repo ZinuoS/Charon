@@ -102,7 +102,18 @@ def panels():
                    ("desk", "quotes real borrow depth")])
         return fig, ax
 
+    def p0a():
+        from pipeline.measurement.premium import _load_close
+        fx = _load_close("d1_prices", "usdkrw_spot_daily")
+        return figures.g20_macro_map(sk, fx, theme.events_for(markets=["US", "KR", "GLOBAL"]))
+
+    def p8():
+        from pipeline.package import scenarios as SC
+        su = SC.summary()
+        return figures.g22_scenario_pnl(SC.paths(), SC.pnl(), su, cc)
+
     return [
+        ("P0a_the_stage", p0a),
         ("P1_situation", p1),
         ("P2_structure", lambda: figures.g2c_ops_asymmetry(pkg)),
         ("P3_economics", p3),
@@ -111,6 +122,8 @@ def panels():
         ("P5_size_and_exit", p5),
         ("P6_what_you_receive",
          lambda: figures.g19_monitoring(status_report()[:400], TRIGGERS, CALL)),
+        ("P7_the_chain", figures.g21_chain),
+        ("P8_scenario_pnl", p8),
     ]
 
 
@@ -128,7 +141,8 @@ def main() -> int:
         for ext in ("png", "pdf"):
             fig.savefig(OUT / f"{name}.{ext}", dpi=200, bbox_inches="tight")
         print(f"  {name}  ({used} palette)")
-    print(f"\n7 panel files -> {OUT}   (P4 is two panels: payoff + margin path)")
+    n = len(panels())
+    print(f"\n{n} panels -> {OUT}  ({n * 2} files, PNG + PDF). P4 is a pair: payoff + margin path.")
     return 0
 
 

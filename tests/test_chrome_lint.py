@@ -194,8 +194,16 @@ def test_no_builder_hand_rolls_notebook_json():
     a file that looked fine on disk and failed later inside nbconvert.
     """
     from pathlib import Path
-    builders = sorted((Path(__file__).resolve().parents[1] / "scripts").glob("build_*.py"))
-    assert builders, "no builders found — the glob is wrong, not the repo"
+    # Identified by what they DO -- write a notebook -- not by filename prefix. The
+    # `build_*.py` glob also caught build_deck.py, which assembles PNG/PDF slides and has no
+    # business importing a notebook helper.
+    scripts = (Path(__file__).resolve().parents[1] / "scripts")
+    # A notebook builder is a script that CALLS the helper's writer. Keyed on that rather
+    # than on a filename prefix (which caught build_deck.py, a slide assembler) or on the
+    # string ".ipynb" (which caught _nb.py, the helper itself).
+    builders = sorted(f for f in scripts.glob("*.py")
+                      if f.name != "_nb.py" and "write(OUT)" in f.read_text())
+    assert builders, "no notebook builders found — the predicate is wrong, not the repo"
     for b in builders:
         src = b.read_text()
         assert 'json.dumps({"cells"' not in src, f"{b.name} hand-rolls notebook JSON"

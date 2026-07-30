@@ -570,6 +570,44 @@ LAYMAN: dict[str, list[str]] = {
         "shrinks to roughly a third of what it was.",
         "So the capital relief is real and it is smallest exactly when you need it most.",
     ],
+    "g2c_ops_asymmetry": [
+        "You get one position, one margin call and one report a month.",
+        "Everything else — registering in Korea, borrowing the US shares, rolling the currency "
+        "hedge, booking the local leg — sits on our side of the line.",
+        "That is what you are paying for. Not a view on the gap.",
+    ],
+    "g19_monitoring": [
+        "Every month you get the gap, the state of the one-way valve, and whether any of three "
+        "specific things has happened.",
+        "The three things are all visible facts: a company filing, a change in the conversion "
+        "headroom, or a shift in the borrow rules.",
+        "We are not sending you a forecast, because we tested forecasting and it did not beat "
+        "simply watching.",
+    ],
+    "g20_macro_map": [
+        "This gap does not float in space. Korean rules on short selling, a leveraged-ETF curb "
+        "landing this month, and the won all move it.",
+        "None of those are about whether SK hynix is a good company. They can push the gap "
+        "around on their own.",
+        "Two dates to know cold: short selling came back in March 2025, and the ETF curb bites "
+        "end of July.",
+    ],
+    "g21_chain": [
+        "Walk it in order: you want the gap, you cannot reach the Korean side, so we hold both "
+        "legs and you hold one position.",
+        "Whether it pays comes down to your funding cost. Whether it survives comes down to "
+        "margin and borrow.",
+        "And we are not selling you timing — we tested that and it did not hold up, which is why "
+        "the triggers are things you can see rather than things we predict.",
+    ],
+    "g22_scenario_pnl": [
+        "Three ways this can go: the gap closes at its normal speed, it sits still while you pay "
+        "to hold it, or it widens the way it actually did in July.",
+        "Best case here makes you about a fifth to two-fifths of the money you had to post. Worst "
+        "case loses more than all of it.",
+        "The shaded band is not uncertainty about the market — it is uncertainty about your own "
+        "costs, and the desk can remove it.",
+    ],
     "g18_margin_path": [
         "In the first week of this thing existing, the gap went from 16% to 52%. That is not a "
         "scenario, it happened.",
@@ -1211,3 +1249,160 @@ def g19_monitoring(ledger_text: str, triggers: list[str], call: dict):
                  "has happened, which is the honest limit of a trigger.",
     )
     return fig, (a, b)
+
+
+def g22_scenario_pnl(lv, pl, summ, crit_bp):
+    """G22 — three paths, net of bracketed carry, in multiples of initial margin.
+
+    Return-on-margin is the axis, because that is the number a book is run on. The static path
+    is drawn as a FAN across the cost bracket rather than a line: four of five carry components
+    are undocumented, and a single line would imply a precision that does not exist.
+
+    The honest shape of this figure is that the best path pays a fraction of margin and the
+    realised-widening path costs more than all of it.
+    """
+    fig, (a, b) = theme.figure(ncols=2, height=5.0)
+    im = float(summ.initial_margin_pct.iloc[0])
+    style = {"compression": (theme.SEMANTIC["emphasis"], "-"),
+             "static": (theme.SEMANTIC["context"], (0, (5, 3))),
+             "widening": (theme.SEMANTIC["warning"], "-")}
+
+    for path, (col, ls) in style.items():
+        a.plot(lv.index, lv[path] * 100, color=col, linewidth=1.9, linestyle=ls)
+        theme.label_line_end(a, lv.index[-1], lv[path].iloc[-1] * 100, path, col)
+    a.axhline(0.07, color=theme.BARRIER, linewidth=1.5)
+    a.annotate("cost floor 0.07%", xy=(0.02, 0.07), xycoords=("axes fraction", "data"),
+               xytext=(0, 6), textcoords="offset points", fontsize=theme.NOTE_SIZE,
+               color=theme.BARRIER, fontfamily=theme.SERIF_STACK)
+    a.set_xlabel("sessions held", fontsize=8, color=theme.MUTED)
+    a.set_ylabel("premium (%)", fontsize=8, color=theme.MUTED)
+    a.set_title("Three paths, one of them realised", loc="left", fontsize=9.2,
+                color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+
+    for path, (col, ls) in style.items():
+        lo = pl[f"{path}__low"] / im
+        hi = pl[f"{path}__high"] / im
+        b.fill_between(pl.index, lo, hi, color=col, alpha=0.16, linewidth=0)
+        b.plot(pl.index, pl[f"{path}__mid"] / im, color=col, linewidth=1.9, linestyle=ls)
+        theme.label_line_end(b, pl.index[-1], pl[f"{path}__mid"].iloc[-1] / im, path, col)
+    b.axhline(0, color=theme.BARRIER, linewidth=1.5)
+    b.axhline(-1.0, color=theme.SEMANTIC["warning"], linewidth=1.2, linestyle=(0, (4, 3)))
+    b.annotate("−1× : the whole initial margin", xy=(0.35, -1.0),
+               xycoords=("axes fraction", "data"), xytext=(0, 5),
+               textcoords="offset points", fontsize=theme.NOTE_SIZE,
+               color=theme.SEMANTIC["warning"], fontfamily=theme.SERIF_STACK)
+    b.set_xlabel("sessions held", fontsize=8, color=theme.MUTED)
+    # labelpad: the left panel's end-labels overhang into this axis's default label position.
+    b.set_ylabel("P&L ÷ initial margin", fontsize=8, color=theme.MUTED, labelpad=10)
+    b.set_title("Shaded band = the cost bracket, not a confidence interval",
+                loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+
+    best = summ[(summ.path == "compression") & (summ.bracket == "low")].iloc[0]
+    worst = summ[(summ.path == "widening") & (summ.bracket == "high")].iloc[0]
+    theme.finalize(
+        fig, kicker="scenario P&L",
+        headline="The best path pays a fraction of the margin; the realised one cost more than all of it",
+        subtitle=f"Short-premium pair over 252 sessions, net of carry. Compression decays to the "
+                 f"cost floor at the estimated base-rate half-life; widening applies the "
+                 f"realised move ADDITIVELY from today's level. Breakeven carry {crit_bp:.0f}bp/yr.",
+        source="Premium path and realised excursion from landed closes; half-life from the S4 "
+               "metrics table. Initial margin is an ILLUSTRATIVE sketch.",
+        footnote="Carry is BRACKETED, not quoted — the band is the bracket. Four of five cost "
+                 "components are undocumented, so no path here has a single number.",
+        stats=[(f"{best.pnl_x_initial_margin:+.2f}×", "compression, low carry\n(best drawn path)"),
+               (f"{summ[(summ.path=='static')&(summ.bracket=='mid')].pnl_x_initial_margin.iloc[0]:+.2f}×",
+                "static, mid carry\n(the bleed)"),
+               (f"{worst.pnl_x_initial_margin:+.2f}×", "realised widening, high carry\n(worse than total margin)"),
+               (f"{im:.0%}", "initial margin\n(illustrative)")],
+    )
+    return fig, (a, b)
+
+
+def g20_macro_map(pi, fx, events):
+    """G20 — the premium inside its policy-and-flow environment.
+
+    WHAT THIS PANEL CANNOT SHOW, stated because the absence is the honest part: KOSPI level,
+    the US-Korea rate differential, and foreign-investor flows are NOT landed in this
+    repository. A macro strip built from unsourced levels would be the one kind of slide this
+    project has spent every session refusing. What is landed is the won and the event register,
+    so that is what is drawn.
+    """
+    fig, (a, b) = theme.figure(nrows=2, height=5.6)
+
+    a.plot(pi.index, pi.values, color=theme.INK, linewidth=2.0, marker="o", markersize=3)
+    theme.pct_axis(a); a.set_ylabel("premium", fontsize=8, color=theme.MUTED)
+    a.set_title("Regulatory and market-structure events sit above the price",
+                loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+    if events:
+        theme.annotate_events(a, events, labels={
+            "skhy_adr_listing": "ADR listing", "skhy_conversion_open": "books reopen",
+            "skhy_q2_earnings": "Q2 earnings"}, y_frac=0.55)
+    theme.thin_date_ticks(a, 5)
+
+    win = fx.loc[pi.index[0]:] if len(fx.loc[pi.index[0]:]) > 2 else fx.tail(30)
+    b.plot(win.index, win.values, color=theme.SEMANTIC["barrier"], linewidth=1.8)
+    b.set_ylabel("USD/KRW", fontsize=8, color=theme.MUTED)
+    b.set_title("The won — a full leg of the premium and of the hedge cost",
+                loc="left", fontsize=9.2, color=theme.TEXT, fontfamily=theme.SERIF_STACK, pad=8)
+    b.annotate("KOSPI level, US–KR rate differential and foreign-flow series are NOT landed;\n"
+               "they are named as gaps rather than drawn from unsourced numbers.",
+               xy=(0.01, 0.06), xycoords="axes fraction", fontsize=theme.NOTE_SIZE,
+               color=theme.MUTED, fontfamily=theme.SERIF_STACK, linespacing=1.4)
+    theme.thin_date_ticks(b, 5)
+
+    theme.finalize(
+        fig, kicker="the environment",
+        headline="The premium lives inside a policy environment that can move it for non-fundamental reasons",
+        subtitle="Event register above, the won below. This panel describes the stage; it does "
+                 "not call it.",
+        source="Event register (repo, hand-maintained, checksummed); USD/KRW from frankfurter/ECB.",
+        footnote="Short selling resumed 2025-03-31. Single-stock 2x ETF listings suspended "
+                 "2026-07-16 with the deposit requirement raised, accelerated to 2026-07-31. "
+                 "Eurex–KRX link terminated 2025-06-06; KRX night session from 2025-06-09.",
+        stats=[("2025-03-31", "short selling resumed\n— the short leg is possible"),
+               ("2026-07-31", "2x ETF curb effective\n— concentrated in this name"),
+               (f"{float(fx.iloc[-1]):.0f}", "USD/KRW today\n— a full leg of π")],
+    )
+    return fig, (a, b)
+
+
+def g21_chain():
+    """G21 — the argument, drawn as six nodes.
+
+    A salesperson walks a client left to right. Each node answers the objection the previous one
+    raises, which is why it is a chain and not a list.
+    """
+    fig, ax = theme.figure(height=5.0)
+    ax.set_xlim(0, 12); ax.set_ylim(0, 6); ax.axis("off")
+
+    nodes = [
+        ("THE PROBLEM", "you want the premium,\nbut cannot reach the\nlocal market", theme.SEMANTIC["context"]),
+        ("THE STRUCTURE", "one pair booked\nthrough the desk,\ncross-margined", theme.SEMANTIC["emphasis"]),
+        ("IS IT VIABLE?", "carry under ~79bp/mo\nand the base rate pays.\nAbove, it is your view", theme.SEMANTIC["emphasis"]),
+        ("CAN IT SURVIVE?", "64% capital saved,\nexits in ~1 session,\nbarrier monitored daily", theme.SEMANTIC["emphasis"]),
+        ("WHAT HURTS", "44% peak margin call,\nloss unbounded above,\nborrow tightens into it", theme.SEMANTIC["warning"]),
+        ("WHY TRUST IT", "we tested timing and\nit came back a draw.\nTriggers are observables", theme.SEMANTIC["barrier"]),
+    ]
+    w, gap = 1.72, 0.28
+    for i, (title, body, col) in enumerate(nodes):
+        x = 0.25 + i * (w + gap)
+        ax.add_patch(mpatches.FancyBboxPatch((x, 2.1), w, 2.5, boxstyle="round,pad=0.08",
+                     facecolor=theme.PAPER, edgecolor=col, linewidth=1.4))
+        ax.text(x + w / 2, 4.28, title, ha="center", fontsize=7.6, color=col,
+                fontfamily=theme.SERIF_STACK)
+        ax.text(x + w / 2, 3.25, body, ha="center", va="center", fontsize=7.4,
+                color=theme.TEXT, fontfamily=theme.SERIF_STACK, linespacing=1.55)
+        if i < len(nodes) - 1:
+            ax.annotate("", xy=(x + w + gap - 0.03, 3.35), xytext=(x + w + 0.03, 3.35),
+                        arrowprops=dict(arrowstyle="-|>", color=theme.RULE, linewidth=1.4))
+
+    theme.finalize(
+        fig, kicker="the argument",
+        headline="Six steps, and the last one is why the other five are worth hearing",
+        subtitle="Each node answers the objection the previous one raises. Every number on this "
+                 "panel is derived elsewhere in the pack.",
+        source="Repo-computed throughout; carry is bracketed and the desk fills it.",
+        footnote="No forecast is sold at any node. The viability step names the client's view as "
+                 "the client's.",
+    )
+    return fig, ax
