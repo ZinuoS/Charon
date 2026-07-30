@@ -23,6 +23,13 @@ from scripts.export_client_pack import ORDER   # single source of pack order + n
 
 
 def main() -> int:
+    # The output is a NUMBERED SEQUENCE, so it must be rebuilt, not merged into. Re-ordering
+    # the deck used to leave the old prefixes behind -- 34 files for a 15-slide deck -- and
+    # anyone copying the directory in filename order got duplicates in the wrong places.
+    if OUT.exists():
+        for stale in OUT.iterdir():
+            if stale.is_file():
+                stale.unlink()
     OUT.mkdir(parents=True, exist_ok=True)
     notes, missing = [], []
     for i, (stem, note) in enumerate(ORDER, 1):

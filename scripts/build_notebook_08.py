@@ -40,8 +40,9 @@ ROOT = pathlib.Path.cwd().parent if pathlib.Path.cwd().name == "notebooks" else 
 if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
 from pipeline.viz import theme
 from scripts.export_client_pack import panels
+from scripts.build_deck_v2 import extra_panels
 theme.apply()
-PANELS = dict(panels())
+PANELS = dict(panels()) | dict(extra_panels())
 ''')
 
 md("## 1. The chain\n\nSix steps. Each answers the objection the previous one raises.")
@@ -84,6 +85,53 @@ sessions. Sizing bounds loss here; stops express preference.
 """)
 code('fig, _ = PANELS["P9_exit_discipline"]()\nfig;')
 md(figures.layman_block("g24_exit_tree"))
+
+
+md(r"""
+## 5. The P&L identity — the premium-decay question, settled
+
+A practitioner reading this deck will ask the right question early: *where does the return
+come from?* The answer is an identity, and it has exactly two terms.
+
+$$\mathbb{E}[\text{P\&L}] \;=\; \underbrace{-\,\text{financing differential}}_{\text{deterministic}} \;+\; \underbrace{\mathbb{E}[\Delta\pi]}_{\text{zero drift under the structural null}}$$
+
+**Financing is the only deterministic component.** It accrues every day, it is what the desk
+prices and earns on, and it is the one number known in advance — subject to four of its five
+components still being bracketed assumptions.
+
+**Δπ has no assumed drift, and this repository is the argument for why.** There is no
+mechanical convergence force. A premium held open by a consent gate has nothing pulling it
+down: cancellation removes ADRs and pushes the premium *up*, and issuance — the only force
+that would push it down — requires the Company's consent. That is the barrier framework, and
+it cuts against the trade as often as for it. So Δπ is high-variance, catalyst-driven, and
+argued for by the **entry level** and the **identifiable channels**, never by decay.
+
+This agrees with the desk's formulation, and it locates the pitch precisely: **financing is
+the leg the desk prices; Δπ is the opportunity leg.** Two people who thought they disagreed
+were describing the two terms of the same identity.
+""")
+code('fig, _ = PANELS["S04a_identity"]()\nfig;')
+md(figures.layman_block("g28_pnl_identity"))
+
+md(r"""
+## 6. Two registers, one analysis
+
+This repository presents the **research register**: full distributions, the risk analysis,
+the nulls, and the results that went against the thesis. The pitch deck derived from it
+presents the **opportunity register** appropriate to an internal sales document — which panel
+leads, which of three honest paths is featured, and where the qualifier sits.
+
+**Both draw on identical numbers.** Every deck figure is rendered by a builder in this
+repository; there is no second set of numbers, and no figure exists in one and not the other
+except by ordering. Advocacy is allowed to select and to emphasise. It is not allowed to
+invent a number, to quote a cost without its range, or to claim a convergence force the
+research disproved — and in `scripts/build_deck_v2.py` those three are assertions that fail
+the build, not conventions someone has to remember.
+
+The separation is the point. A sales document that reads like a research paper convinces
+nobody, and a research paper that reads like a sales document is worth nothing. The reason
+both can exist here is that only the emphasis differs.
+""")
 
 md(r"""
 ---

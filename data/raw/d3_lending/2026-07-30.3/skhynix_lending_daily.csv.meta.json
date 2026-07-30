@@ -1,0 +1,16 @@
+{
+  "availability_lag": "KOFIA publishes T+1 for the previous session. TODO(ash): confirm the exact publication hour before this enters any same-day decision.",
+  "first_obs_date": "2010-01-04",
+  "last_obs_date": "2026-07-30",
+  "native_timezone": "Asia/Seoul",
+  "provider": "https://freesis.kofia.or.kr/meta/getMetaDataList.do",
+  "pulled_at_utc": "2026-07-30T17:22:26+00:00",
+  "rationale": "D3 lending leg. Endpoint and payload recovered by running the eXBuilder6 SPA in a browser and reading its own XHR; docs/data_sources.md D3-b previously recorded the payload format as un-reverse-engineerable.",
+  "rows": 4096,
+  "series_id": "skhynix_lending_daily",
+  "sha256": "a6ada0e0d59e1b3419ba8cb84cd9f23e4fde26a988eda124c9c24008918ea642",
+  "source_id": "kofia_freesis_lending",
+  "source_url": "https://freesis.kofia.or.kr/meta/getMetaDataList.do",
+  "transport": "http_post_json",
+  "units": "shares for new_lending/repaid/balance. balance_value_unverified_unit is landed UNPARSED: tmpV40=1000000 implies \ubc31\ub9cc\uc6d0 but the implied per-share value is ~3.5x the traded price, so the unit is not established."
+}

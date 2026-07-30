@@ -282,3 +282,17 @@ structural audit leans the same way: this history should understate how persiste
 premium can be, and overstate how comparable the two trades are on execution. Every figure in
 the notebook carries that caveat in its own caption. **The lab bounds the argument; it does not
 make it.**
+
+---
+
+## Staged for S26 — the two registers (author to place in the research-status section)
+
+> **Two registers, one analysis.** This repository is the research register: full
+> distributions, the risk analysis, the nulls, and the findings that went against the thesis
+> — including a comparator study in which the same entry rule loses more often than it wins
+> at mid-bracket financing costs. A pitch deck derived from this work presents the
+> opportunity register appropriate to an internal sales document: which panel leads, which of
+> three honest paths is featured, and where the qualifier sits. Both draw on identical
+> numbers, because every deck figure is rendered by a builder in this repository. What differs
+> is emphasis and ordering, never substance — and the deck's build script asserts that it
+> quotes no unbracketed cost and claims no convergence force this research disproved.

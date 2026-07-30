@@ -521,6 +521,23 @@ def g11_taxonomy_separation(per_pair: list[dict]):
 # ================================================================================
 
 LAYMAN: dict[str, list[str]] = {
+    "g28_pnl_identity": [
+        "Two things move this position and only two: the cost of financing it, which is known "
+        "and ticks up every day, and the gap itself, which is not known.",
+        "We do NOT claim the gap has to close. Nothing pulls it down — that is the whole point "
+        "of the research. What we claim is that it starts unusually wide and that there are "
+        "specific, watchable events that could close it.",
+        "So the financing is the part the desk prices, and the gap is the part the entry level "
+        "and the catalysts have to argue for.",
+    ],
+    "g29_comparator_anchor": [
+        "Three companies with US-listed shares over local shares. One trades at zero, one at "
+        "about twelve percent, and Hynix at twenty-three.",
+        "The difference is not the business — it is whether new US shares can be created when "
+        "demand shows up. Alibaba's can, so the gap closes instantly. Hynix's cannot.",
+        "That is the case for looking at this at all: the same instrument, priced three ways "
+        "by one piece of plumbing.",
+    ],
     "g25_episode_census": [
         "Over 21 years, the Taiwan Semiconductor version of this same gap opened and closed "
         "137 times — so this is a recurring event, not a one-off.",
@@ -1250,12 +1267,17 @@ def g2c_ops_asymmetry(pkg):
 
     theme.finalize(
         fig, kicker="what you do, what we do",
-        headline="You hold one position; the operational chain sits on our side",
+        headline="The gate is why the opportunity exists — the desk is how you reach it anyway",
         subtitle="The same plumbing as the research map, from the client's chair. Everything in "
                  "the right column is a prerequisite to holding the trade at all.",
         source="Mechanics from SEC 424B4, Deposit Agreement F-6 Ex. 99(a), and Korean "
                "registration requirements. Repo-computed figures elsewhere in this pack.",
-        footnote="Booking-entity and standby terms are desk matters and are not quoted here.",
+        footnote="The premium persists because the market CANNOT arbitrage it — new US shares "
+                 "need the Company's consent, so supply does not answer demand. That sealed "
+                 "supply is the thesis, not an obstacle to it. The desk's product is "
+                 "manufacturing the exposure synthetically through the booking chain above; "
+                 "cancellation appears only as an unwind mechanic in the exit terms. "
+                 "Booking-entity and standby terms are desk matters and are not quoted here.",
         stats=[(f"{pkg['calm_saving']:.0%}", "capital saved vs two tickets\n(calm conditions)"),
                (f"{pkg['peak']['peak_total_pair_pct']:.0%}", "peak margin call on the\nrealised excursion"),
                (f"{pkg['crit_bp']/12:.0f}bp", "carry ceiling per month\nfor the base rate to pay")],
@@ -1982,3 +2004,164 @@ def g27_fx_case(fx, resid: dict, skhy_residual_share: float, skhy_coef: float = 
                  f"pair, and the managed TWD makes it a lower bound on the won's.")
     return fig, {"full_coef": float(full.empirical_coef),
                  "era_unstable": bool(fx.ci95_lo.min() < 0)}
+
+
+# ================================================================================
+# G28 / G29 — the reconciliation, and the anchor
+# ================================================================================
+
+
+def g28_pnl_identity(pi_0: float, brackets: dict, sd_daily_pp: float,
+                     horizon_d: int = 252, catalysts: list[tuple[int, str]] | None = None,
+                     margin_frac: float = 0.20):
+    """G28 — the P&L identity, with both sides of the decay argument inside one frame.
+
+    The disagreement was never about arithmetic. Expected P&L on a swap-financed pair is
+
+        E[P&L]  =  -financing differential  +  E[d pi]
+
+    and the two terms have completely different characters. Financing is DETERMINISTIC: it
+    accrues every day, the desk prices it, and it is the only component known in advance.
+    d pi has ZERO DRIFT under the structural null -- this repository's own barrier framework
+    is the argument for that, because a premium held open by a consent gate has no arbitrage
+    force pulling it down -- but it is high-variance and moves on identifiable events.
+
+    So: the financing leg is what the desk prices, and the d pi leg is what the entry level
+    and the catalysts argue for. Drawn together, there is nothing left to disagree about.
+    """
+    fig, (a, b) = theme.figure(1, 2, shape_name="wide", gridspec_kw={"width_ratios": [1.4, 1]})
+    EM, WA, BA, CX, FUN = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["warning"],
+                           theme.SEMANTIC["barrier"], theme.SEMANTIC["context"],
+                           theme.SEMANTIC["fungible"])
+    t = np.arange(0, horizon_d + 1)
+    yrs = t / 252.0
+
+    # --- financing: the deterministic ramp, drawn as the bracket it actually is
+    lo = -brackets["low"] / 1e4 * yrs * 100
+    mid = -brackets["mid"] / 1e4 * yrs * 100
+    hi = -brackets["high"] / 1e4 * yrs * 100
+    a.fill_between(t, lo, hi, color=theme.SEMANTIC["inert_fill"], zorder=1)
+    a.plot(t, mid, color=WA, lw=2.0, zorder=3)
+    theme.label_line_end(a, t[-1], mid[-1], "financing", WA)
+
+    # --- d pi: zero drift, sqrt-time band around the financing line
+    band = sd_daily_pp * np.sqrt(t)
+    a.fill_between(t, mid - band, mid + band, color=EM, alpha=0.13, zorder=2)
+    a.fill_between(t, mid - 0.5 * band, mid + 0.5 * band, color=EM, alpha=0.16, zorder=2)
+    a.plot(t, mid, color=EM, lw=0.0)
+    a.annotate("Δπ — zero drift, high variance,\nmoves on events",
+               xy=(horizon_d * 0.62, (mid + band)[int(horizon_d * 0.62)]),
+               xytext=(0, 10), textcoords="offset points", fontsize=theme.NOTE_SIZE,
+               color=EM, ha="center", fontfamily=theme.SERIF_STACK, linespacing=1.4)
+    a.axhline(0, color=BA, lw=1.1)
+
+    for day, label in (catalysts or []):
+        if day > horizon_d:
+            continue
+        a.axvline(day, color=CX, lw=0.9, ls=":")
+        a.annotate(label, xy=(day, a.get_ylim()[0]), xytext=(3, 6),
+                   textcoords="offset points", fontsize=theme.NOTE_SIZE, color=CX,
+                   rotation=90, va="bottom", fontfamily=theme.SERIF_STACK)
+    a.set_xlabel("sessions held")
+    a.set_ylabel("P&L, premium points")
+    a.set_xlim(0, horizon_d * 1.16)
+
+    # --- right: the two components named, side by side, on their properties
+    rows = [("financing differential", "DETERMINISTIC", "accrues daily; the desk prices it;\n"
+             "the only component known in advance", WA),
+            ("Δπ", "ZERO DRIFT", "no arbitrage force pulls it down —\nthe consent gate is why;\n"
+             "high variance, catalyst-driven", EM)]
+    b.set_xlim(0, 10); b.set_ylim(0, 10); b.axis("off")
+    y = 8.6
+    for name, kind, body, col in rows:
+        b.add_patch(mpatches.FancyBboxPatch((0.3, y - 2.9), 9.4, 2.9,
+                    boxstyle="round,pad=0.12", facecolor=theme.PAPER, edgecolor=col, lw=1.4))
+        b.text(0.75, y - 0.55, name, fontsize=theme.LABEL_SIZE, color=col, weight="medium",
+               fontfamily=theme.SERIF_STACK)
+        b.text(9.25, y - 0.55, kind, fontsize=theme.NOTE_SIZE, color=col, ha="right",
+               fontfamily=theme.SERIF_STACK)
+        b.text(0.75, y - 1.75, body, fontsize=theme.NOTE_SIZE, color=theme.TEXT,
+               va="center", fontfamily=theme.SERIF_STACK, linespacing=1.5)
+        y -= 3.5
+    b.text(0.75, y + 0.35, "There is no third term. Nothing in this repository\n"
+                           "claims a mechanical convergence force, and the\n"
+                           "barrier framework is the reason why.",
+           fontsize=theme.NOTE_SIZE, color=BA, va="top", fontfamily=theme.SERIF_STACK,
+           linespacing=1.6)
+
+    theme.finalize(
+        fig,
+        headline="Expected P&L is financing plus Δπ — and only one of the two is knowable "
+                 "in advance",
+        subtitle="The identity for a swap-financed pair, drawn over one year at today's "
+                 f"entry of {pi_0:.1%}. Band is ±1 and ±0.5 standard deviations of the "
+                 "premium's own daily moves, centred on zero drift.",
+        stats=[(f"{brackets['low'] / 12:.0f}-{brackets['high'] / 12:.0f}bp",
+                "financing, per month\n(bracket, mid "
+                f"{brackets['mid'] / 12:.0f}bp)"),
+               (f"{sd_daily_pp * np.sqrt(252):.1f}pp", "1-year Δπ\nstandard deviation"),
+               (f"{pi_0:.1%}", "entry level — what\nthe Δπ leg argues from"),
+               ("0", "assumed drift in Δπ")],
+        source="Repo-computed. Carry brackets from pipeline.package.breakeven; Δπ volatility "
+               "from the pair's own daily premium changes.",
+        footnote="This agrees with the desk's formulation and it locates the pitch. Financing "
+                 "is the leg the desk prices and earns on. Δπ is the opportunity leg, and it "
+                 "is argued for by the entry level and the catalysts — NOT by a decay force, "
+                 "which this repository's own research says does not exist. Four of five "
+                 "financing components are bracketed assumptions pending the desk's levels.")
+    return fig, {"financing_mid_pp_1y": float(-mid[-1]),
+                 "dpi_sd_1y_pp": float(sd_daily_pp * np.sqrt(252))}
+
+
+def g29_comparator_anchor(levels: list[tuple[str, float, str, str]], tsmc_band=None):
+    """G29 — the relative-value case in one chart: three regimes, three levels.
+
+    The whole argument for looking at this at all, before any mechanism or any trade
+    structure: the same instrument type sits at three completely different levels depending
+    on one structural fact — whether the supply of ADRs can respond.
+    """
+    fig, ax = theme.figure(shape_name="standard")
+    EM, CON, FUN, CX, BA = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["constrained"],
+                            theme.SEMANTIC["fungible"], theme.SEMANTIC["context"],
+                            theme.SEMANTIC["barrier"])
+    cols = {"emphasis": EM, "constrained": CON, "fungible": FUN}
+    x = np.arange(len(levels))
+    for i, (name, val, note, key) in enumerate(levels):
+        col = cols[key]
+        ax.bar(i, val, width=0.5, color=col, zorder=3)
+        ax.text(i, val + 0.8, f"{val:.1f}%", ha="center", fontsize=theme.SUBTITLE_SIZE,
+                color=col, fontfamily=theme.SERIF_STACK)
+
+    if tsmc_band:
+        ax.plot([0.72, 1.28], [tsmc_band, tsmc_band], color=CX, lw=1.2, ls="--", zorder=4)
+        ax.annotate(f"{tsmc_band:.1f}% over 21 years", xy=(1.32, tsmc_band),
+                    fontsize=theme.NOTE_SIZE, color=CX, va="center",
+                    fontfamily=theme.SERIF_STACK)
+    ax.axhline(0, color=BA, lw=1.1)
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"{n}\n{note}" for n, _, note, _ in levels], linespacing=1.6)
+    ax.set_ylabel("premium of the US line over the local line")
+    ax.set_ylim(min(0.0, min(v for _, v, _, _ in levels)) - 1.0,
+                max(v for _, v, _, _ in levels) * 1.25)
+    ax.set_xlim(-0.6, len(levels) - 0.4)
+    gap = levels[0][1] - levels[1][1]
+    ax.annotate("", xy=(0.28, levels[0][1]), xytext=(0.28, levels[1][1]),
+                arrowprops=dict(arrowstyle="<->", color=EM, lw=1.3))
+    ax.text(0.34, (levels[0][1] + levels[1][1]) / 2, f"{gap:.1f} points\nabove the family norm",
+            fontsize=theme.NOTE_SIZE, color=EM, va="center", fontfamily=theme.SERIF_STACK,
+            linespacing=1.5)
+
+    theme.finalize(
+        fig, kicker="the anchor",
+        headline="The same instrument sits at three levels, and one structural fact explains it",
+        subtitle="Whether the supply of US shares can respond to demand. When it can, the gap "
+                 "is zero. When it cannot, it is whatever demand says it is.",
+        stats=[(f"{levels[0][1]:.1f}%", "Hynix today"),
+               (f"{levels[1][1]:.1f}%", "TSMC, 5-year mean\n— the family norm"),
+               (f"{levels[2][1]:.1f}%", "Alibaba — supply\nfully fungible"),
+               (f"{gap:.0f}pts", "the distance the\nopportunity is about")],
+        source="Repo-computed from D1/D6 closes. Same construction for all three pairs.",
+        footnote="The comparison is a LEVEL comparison, not a forecast. TSMC's facility "
+                 "revolves and Hynix's does not, which is exactly why Hynix sits higher — and "
+                 "it is also why nothing here promises the gap closes to the norm.")
+    return fig, {"gap_to_norm_pp": float(gap)}
