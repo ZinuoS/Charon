@@ -73,3 +73,8 @@ s4:
 # D3 — securities-lending balances for 000660 (KOFIA FreeSIS).
 ingest-d3:
     uv run python -m pipeline.ingest.d3_lending
+
+# Perishable daily captures (TWSE SBL lendable supply, SEIBro DR headroom).
+# No date inside these payloads: an uncaptured day is lost permanently.
+snapshot:
+    uv run python -m pipeline.ingest.snapshot_daily

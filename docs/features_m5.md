@@ -91,7 +91,30 @@ the desk quotes. And the current reading is worth reading carefully: a `low` per
 **not reassurance**. It says borrow is plentiful today, on a series that contains no forward
 commitment at all — the tenor question against a 220-day holding floor is untouched by it.
 
-**Route to a real ablation:** lending data for the panel pairs — TWSE SBL for the Taiwanese
-four, B3 BTB for the Brazilian five. Both need `approved:` marks, which are the author's. The
-`util` family is already wired into `_features_for`, so landing either makes the ablation a
-one-word change to `families` rather than a new code path.
+## Route to a real ablation — both sources approved, and approval was not the constraint
+
+**Both approved 2026-07-29** (`twse_sbl_available`, `b3_btb_lending`). The ablation still
+cannot run, and the reason is worth being exact about because it is not permission:
+
+**TWSE SBL gives the right thing in the wrong shape.**
+`https://openapi.twse.com.tw/v1/SBL/TWT96U` returns lendable supply for all four constrained
+pairs — 2330 12,248,328 · 2303 61,751,182 · 3711 7,949,964 · 2412 5,885,259 — which is the
+*denominator* Korea does not publish, so Taiwanese utilization could be a true ratio rather
+than a percentile. But `當日` means today: the payload has four fields and **no date**. It is a
+snapshot, so history begins the day capture begins. Capture began **2026-07-30**; one
+observation exists.
+
+**59 more sessions to the fold minimum → runnable ≈ 2026-10-26** (business days plus a 6%
+allowance for Taiwanese holidays; `lending_readiness()` computes the current count).
+
+**B3 BTB is left unresolved deliberately, and not for budget.** Brazilian utilization without
+Taiwanese history would give the feature to the *fungible class alone*, where it is
+**confounded with the class label** — an ablation of a variable present in one class and absent
+in the other measures the class, not the variable. It is worth landing only once the
+constrained side has history.
+
+**What has to happen, in order:** `just snapshot` daily (the capture is perishable — an
+uncaptured day is unrecoverable), then when `lending_readiness()["ready"]` includes the
+Taiwanese pairs, add them to `_LENDING_COVERAGE` and run `families=("util",)`. A test compares
+the hardcoded set against what is landed and fails on divergence, so this does not depend on
+anyone remembering.

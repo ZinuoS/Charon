@@ -90,6 +90,26 @@ ABSENT_UNRESOLVED = ("kodex_issuer_disclosure", "tiger_issuer_disclosure")
 
 SNAPSHOTS: tuple[SnapshotSpec, ...] = (
     SnapshotSpec(
+        source_id="twse_sbl_available",
+        series_id="twse_sbl_available",
+        url="https://openapi.twse.com.tw/v1/SBL/TWT96U",
+        method="GET",
+        native_timezone="Asia/Taipei",
+        availability_lag=(
+            "same-day figure, published intraday. TODO(ash): confirm the publication hour "
+            "before this enters a same-day decision."
+        ),
+        units="shares available to borrow (TWSEAvailableVolume), thousands separators in source",
+        encoding="UTF-8",
+        extension="json",
+        rationale=(
+            "D3-e. Lendable supply for all four constrained pairs -- the denominator that is "
+            "not public for Korea. PERISHABLE: the payload carries no date, so every "
+            "uncaptured day is permanently lost and the cross-pair utilization ablation "
+            "cannot be run until enough sessions accumulate."
+        ),
+    ),
+    SnapshotSpec(
         source_id="naver_etf_navlist",
         series_id="naver_etf_navlist",
         url="https://finance.naver.com/api/sise/etfItemList.nhn",

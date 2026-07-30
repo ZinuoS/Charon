@@ -210,6 +210,10 @@ class TestApprovalGate:
             "krx_night_session_futures", "kmb_fx_swap", "smbs_manual_snapshot",
             "bok_ecos", "fred_dexkous", "kofia_freesis_lending", "ksfc_lending",
             "opendart", "ksd_opendata_api", "sec_edgar_f6", "twelvedata_krx",
+            # 2026-07-29, verbatim: "approve both twse and b3 btb to run real cross pair
+            # ablation". Both are terms-clean -- TWSE is a documented public OpenAPI, B3 is
+            # an exchange open-data portal -- so neither touches the prohibited set below.
+            "twse_sbl_available", "b3_btb_lending",
         }
         unexpected = set(summary()["yes"]) - author_approved
         assert not unexpected, (

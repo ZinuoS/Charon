@@ -1,8 +1,9 @@
 {
   "files": {
-    "data/raw/snapshots/2026-07-29/seibro_dr_program_list.html": "ffb1c2b3dfc8ba62f47cbb594f8e10755cb77b66e2a465a474951b7d27603cc3"
+    "data/raw/snapshots/2026-07-29/seibro_dr_program_list.html": "ffb1c2b3dfc8ba62f47cbb594f8e10755cb77b66e2a465a474951b7d27603cc3",
+    "data/raw/snapshots/2026-07-30/twse_sbl_available.json": "a83882fe7420c9747f66c46c6ed881d9e74e75beebc4676b5ac3eee42cbcab84"
   },
   "history": {},
   "source": "snapshots",
-  "updated_at_utc": "2026-07-29T04:54:42+00:00"
+  "updated_at_utc": "2026-07-30T02:08:30+00:00"
 }

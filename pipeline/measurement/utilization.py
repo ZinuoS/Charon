@@ -80,26 +80,67 @@ def current(df: pd.DataFrame | None = None) -> dict:
     }
 
 
+#: Rows a pair needs before `_oof_predictions` can build folds for it (its own `len(df) < 60`
+#: guard, plus a walk-forward that needs a train block inside that).
+MIN_ROWS_FOR_FOLDS = 60
+
+
+def lending_readiness() -> dict:
+    """Per-pair lending coverage, COMPUTED from what is landed.
+
+    Exists because `_LENDING_COVERAGE` in jorda.py is a hardcoded set, and a hardcoded set is
+    how a coverage claim goes stale silently. This reads the disk; the test compares the two
+    and fails if they disagree.
+    """
+    from pipeline.ingest._common import latest_raw_file
+    rows: dict[str, int] = {}
+    try:
+        import pandas as pd
+        rows["skhy"] = len(pd.read_csv(latest_raw_file("d3_lending", "skhynix_lending_daily.csv")))
+    except Exception:
+        rows["skhy"] = 0
+    # TWSE SBL is a dated-partition SNAPSHOT with no date inside the payload, so its history
+    # is the number of captured partitions -- one per session from the day capture began.
+    try:
+        snaps = sorted((latest_raw_file("snapshots", "twse_sbl_available.json").parents[1]).glob(
+            "*/twse_sbl_available.json"))
+        for tw in ("tsmc", "umc", "ase", "cht"):
+            rows[tw] = len(snaps)
+    except Exception:
+        for tw in ("tsmc", "umc", "ase", "cht"):
+            rows[tw] = 0
+    return {
+        "rows_per_pair": rows,
+        "ready": sorted(p for p, n in rows.items() if n >= MIN_ROWS_FOR_FOLDS),
+        "min_rows_for_folds": MIN_ROWS_FOR_FOLDS,
+    }
+
+
 def ablation_status() -> dict:
     """Why this is not in the metrics table, computed rather than asserted."""
     from pipeline.convergence.jorda import FORWARD_TEST_PAIRS, REGIME_OF_PAIR
     fitted = sorted(set(REGIME_OF_PAIR) - FORWARD_TEST_PAIRS)
-    covered = ["skhy"]                    # D3 is 000660 only
+    ready = lending_readiness()
+    covered = ready["ready"]
     usable = sorted(set(fitted) & set(covered))
     return {
         "fitted_pairs": fitted,
         "pairs_with_lending_data": covered,
         "usable_in_panel_fit": usable,
         "ablatable": bool(usable),
+        "rows_per_pair": ready["rows_per_pair"],
         "reason": (
-            "D3 covers 000660 only, which is SKHY's local leg. SKHY is forward-test-only and "
-            "never enters a fit, so the feature reaches zero fitted pairs and there is no fold "
-            "structure to ablate it in."
+            "Two constraints, and approval was never one of them. D3 (KOFIA) covers 000660 "
+            "only, which is SKHY's local leg -- forward-test-only, never fitted. TWSE SBL "
+            "(approved 2026-07-29) covers all four constrained pairs but is a SNAPSHOT with no "
+            "date in the payload, so its history begins the day capture began. Neither pair "
+            "set clears the fold minimum yet."
         ),
         "route_to_a_real_ablation": (
-            "Lending data for the panel pairs — TWSE SBL for the Taiwanese four, B3 BTB for "
-            "the Brazilian five. Both need `approved:` marks in docs/data_sources.md, which "
-            "are the author's alone."
+            "Capture TWSE SBL daily and wait. Both sources are approved; the binding "
+            "constraint is history, not permission. B3 BTB stays unresolved deliberately -- "
+            "Brazilian utilization without Taiwanese history would give the feature to the "
+            "fungible class alone, where it is confounded with the class label."
         ),
     }
 

@@ -497,6 +497,43 @@ source: kofia_freesis_lending
 approved: yes
 ```
 
+### D3-e. TWSE SBL — lendable supply for the constrained panel. APPROVED 2026-07-29.
+
+- **[V] Endpoint, public and documented:** `https://openapi.twse.com.tw/v1/SBL/TWT96U`
+  (上市上櫃股票當日可借券賣出股數 — shares available to borrow for short sale). Found via
+  the TWSE OpenAPI catalogue at `/v1/swagger.json`, 143 documented endpoints, rather than by
+  guessing report codes.
+- **[V] All four constrained pairs present.** Today's reading:
+  2330 12,248,328 · 2303 61,751,182 · 3711 7,949,964 · 2412 5,885,259 (TWSEAvailableVolume).
+- **[V] This is LENDABLE SUPPLY** — the denominator that is *not* public for Korea. So a
+  Taiwanese utilization figure can be a true ratio where the 000660 one can only be a
+  percentile of its own history.
+- **[U] NO HISTORY. `當日` means today.** The payload carries four fields and **no date**:
+  `TWSECode`, `TWSEAvailableVolume`, `GRETAICode`, `GRETAIAvailableVolume`. It is a snapshot,
+  so a time series exists only from the day capture starts. **This, not approval, is what
+  blocks the cross-pair ablation.**
+
+```yaml
+source: twse_sbl_available
+approved: yes
+```
+
+### D3-f. B3 BTB — Brazilian lending. APPROVED 2026-07-29, route unresolved.
+
+- **[U] No data endpoint found.** `arquivos.b3.com.br/apinegocios/...` 404s; the lending and
+  open-data paths return HTML shells (1.9–8.5 KB). Same shape as KOFIA before its XHR was
+  read from a running browser, so the browser route is the obvious next attempt.
+- **Deliberately not pursued further this session**, and the reason is structural rather than
+  budgetary: Brazilian utilization without Taiwanese *history* would give the feature to the
+  fungible class only, where it would be **confounded with the class label** — an "ablation"
+  of a variable that is present in one class and absent in the other measures the class, not
+  the variable.
+
+```yaml
+source: b3_btb_lending
+approved: yes
+```
+
 ### D3-c. KSFC — unreachable
 
 **[U]** `ksfc.co.kr` was unreachable from the research environment (connection failure).

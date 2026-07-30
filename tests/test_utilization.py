@@ -51,6 +51,25 @@ def test_current_reading_declares_it_is_relative_not_a_ratio():
     assert c["state"] in U.TERCILES
 
 
+def test_hardcoded_coverage_set_matches_what_is_actually_landed():
+    """`_LENDING_COVERAGE` in jorda.py is a hardcoded set; `lending_readiness()` reads the
+    disk. A hardcoded coverage claim is how a stale one survives, so the two are compared
+    and this fails when they diverge — including the good divergence, when TWSE SBL
+    accumulates enough sessions to become usable."""
+    from pipeline.convergence.jorda import _LENDING_COVERAGE
+    ready = set(U.lending_readiness()["ready"])
+    assert ready == _LENDING_COVERAGE, (
+        f"landed coverage {sorted(ready)} != declared {sorted(_LENDING_COVERAGE)}. If TWSE SBL "
+        "has reached the fold minimum, add its pairs and run the real ablation."
+    )
+
+
+def test_twse_sbl_capture_has_started():
+    """The forward series only exists from the day capture began, so a gap is unrecoverable."""
+    r = U.lending_readiness()["rows_per_pair"]
+    assert r.get("tsmc", 0) >= 1, "no TWSE SBL snapshot landed — `just snapshot` is not running"
+
+
 def test_the_feature_reaches_zero_fitted_pairs_so_it_cannot_be_ablated():
     """THE POINT. D3 covers 000660 only; 000660 is SKHY's local leg; SKHY is forward-test-only.
     So there is no fold structure to ablate this in — not "we did not get to it".
