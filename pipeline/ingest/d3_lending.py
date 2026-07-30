@@ -88,10 +88,18 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--start", default="20100101")
     ap.add_argument("--pull-date", default=None)
+    # Same gap the other pullers had: a same-day re-pull that returns REVISED numbers hits the
+    # raw-immutability guard and stops the whole refresh. A revision is a different request,
+    # so it gets its own partition rather than being blocked or overwritten.
+    ap.add_argument("--new-partition", action="store_true",
+                    help="Pull into a fresh same-day partition (YYYY-MM-DD.N). Use when the "
+                         "provider has REVISED a same-day series, so both results survive.")
     args = ap.parse_args(argv)
     print("\n=== d3_lending ===")
     try:
-        r = pull(start=args.start, pull_date=args.pull_date)
+        from ._puller import resolve_pull_date
+        r = pull(start=args.start,
+                 pull_date=resolve_pull_date(SOURCE, args.pull_date, args.new_partition))
     except SourceNotApprovedError as exc:
         print(f"  BLOCKED  {exc}"); return 1
     except (RateLimited, ProviderError) as exc:
