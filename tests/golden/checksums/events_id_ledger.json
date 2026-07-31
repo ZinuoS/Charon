@@ -10,7 +10,28 @@
     "kr_2x_etf_curb_review",
     "fomc_20260916",
     "fomc_20261028",
-    "fomc_20261209"
+    "fomc_20261209",
+    "kr_single_stock_2x_etf_listing_known_from",
+    "kr_2x_etf_curb_review_known_from",
+    "eurex_krx_link_termination_known_from",
+    "krx_night_session_launch_known_from"
   ],
-  "updated_at_utc": "2026-07-31T02:46:29+00:00"
+  "updated_at_utc": "2026-07-31T03:31:19+00:00",
+  "entries": {
+    "skhy_adr_listing": "e6872b3a94d9e834e6045ef63ab05aa45974ef4e6950630d97e40f45b7ec774a",
+    "skhy_conversion_open": "a72a3b539963ae4f90580d05b45951921b08779720355718b24c0c38026cf7ce",
+    "skhy_q2_earnings": "237476af05ce46708f88b6a94e0da5f54455dc66bb6b3071fe6810b669cd1910",
+    "eurex_krx_link_termination": "6de804b43fb3f9bddceb9c740e99de1b3cea83b79b74c31043cbe47b5b76b12a",
+    "krx_night_session_launch": "0e864bd6060750d7b31eb07a0da022094e23e0111ade7fecdcafcb0339333b7b",
+    "krx_data_login_wall": "4e0253d1c5c9fd41ead1027e1b674833b7742d847469a07412391ed5731ca7e9",
+    "kr_single_stock_2x_etf_listing": "8477d3fb1defee33d7928287d64559fd0313c8de76dab38b5a79e0b939360476",
+    "kr_2x_etf_curb_review": "c9c706d672a0cd045db0b49171bf7edd42b1480f399ece3d6d5fc2b25466389a",
+    "fomc_20260916": "e196bb9a02a17db7e459d4c909c4bb92ae68f1bb97007701b2f23f70da98621b",
+    "fomc_20261028": "ddcf0fcc356648d7ab922fc4fa30f1b0fb2ff29743aca5fb4aaca479bd4b0a57",
+    "fomc_20261209": "1dc89c0e3f9363c60f779687bb4542224b40b8da6cde775916f2157a36aeef15",
+    "kr_single_stock_2x_etf_listing_known_from": "f34aeaf620bf844e5d2f26587c3c4cd1326630f747556c602c56e4ccd455633e",
+    "kr_2x_etf_curb_review_known_from": "d5ca68a639e2cce4a15cc8fc2507944c0208984e1f91265b20ae10a2616e5383",
+    "eurex_krx_link_termination_known_from": "f2d1192b948d5678de45cf73314b760677a7872f9a93a7b947a9a3fecc85a36f",
+    "krx_night_session_launch_known_from": "add984ce1d71f2290f713fe202e448aea5cce002f844ded05c1ddf8a7aefb0ab"
+  }
 }

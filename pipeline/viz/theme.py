@@ -421,9 +421,26 @@ def source_note(fig, source: str, construction: str | None = None, y: float = -0
 # --------------------------------------------------------------------------------
 
 
-def load_events(path: Path | None = None) -> list[dict]:
+def resolve_supersessions(events: list[dict]) -> list[dict]:
+    """The EFFECTIVE calendar: a superseded entry is replaced by the one that supersedes it.
+
+    events.yaml is append-only, so a correction is a NEW entry carrying `supersedes: <id>`
+    and the original stays on disk forever -- that immutability is the point, because the
+    record of what was believed when is itself data. But a CONSUMER wants the current
+    belief, not the audit trail. Without this, an annotation layer draws both the original
+    and its correction as two separate events on the same date.
+
+    Chains resolve: if B supersedes A and C supersedes B, only C survives.
+    """
+    superseded = {ev["supersedes"] for ev in events if ev.get("supersedes")}
+    return [ev for ev in events if ev["id"] not in superseded]
+
+
+def load_events(path: Path | None = None, effective: bool = True) -> list[dict]:
+    """The calendar. ``effective=False`` returns the raw append-only log, audit trail and all."""
     doc = yaml.safe_load((path or EVENTS_PATH).read_text())
-    return doc.get("events") or []
+    events = doc.get("events") or []
+    return resolve_supersessions(events) if effective else events
 
 
 def events_for(markets: Iterable[str] | None = None, categories: Iterable[str] | None = None,

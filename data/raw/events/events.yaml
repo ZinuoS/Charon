@@ -207,3 +207,80 @@ events:
       at the preceding meeting, per the Federal Reserve's own note.
     source: federalreserve.gov/monetarypolicy/fomccalendars.htm, fetched 2026-07-31
     confounded_with: []
+
+  # ------------------------------------------------------------------------------
+  # known_from resolutions, 2026-07-31. APPENDED, not edited: the originals stay in
+  # place because the record of what was believed when is itself data.
+  #
+  # THE SEMANTICS, stated once. `known_from` is the earliest date this repository can
+  # PROVE the event was public. It is deliberately conservative: a press report is an
+  # upper bound on public knowledge, never a lower one, so using the publication date
+  # errs LATE. A firewall that errs late blocks a study it could have allowed; one that
+  # errs early leaks the future into it. Only one of those is recoverable.
+  # ------------------------------------------------------------------------------
+
+  - id: kr_single_stock_2x_etf_listing_known_from
+    supersedes: kr_single_stock_2x_etf_listing
+    date: 2026-05-27
+    known_from: 2026-04-21
+    market: KR
+    category: product_launch
+    title: Korean 2x single-stock ETFs and ETNs list (18 products) — known_from resolved
+    detail: >-
+      Publicly reported 2026-04-21 under the headline "Korea to debut single-stock
+      leveraged ETFs with Samsung, SK hynix", which named a late-May launch "subject to
+      filings and exchange approval" and 22 May as the earliest possible debut. The
+      programme was therefore public five weeks before the 27 May listing, and an event
+      study may condition on it from 2026-04-21.
+    source: https://www.koreaherald.com/article/10722289 (published 2026-04-21)
+    confounded_with: []
+
+  - id: kr_2x_etf_curb_review_known_from
+    supersedes: kr_2x_etf_curb_review
+    date: 2026-07-08
+    known_from: 2026-07-08
+    market: KR
+    category: regulatory_risk
+    title: Ruling party reviewing curbs on 2x single-stock ETFs — known_from resolved
+    detail: >-
+      The report IS the event: publicly reported 2026-07-08 under "No more single-stock
+      leveraged ETFs? Korea weighs curbs". known_from equals the event date because the
+      review became public and became known in the same act, so there is no pre-event
+      window to condition on.
+    source: https://www.koreaherald.com/article/10802213 (published 2026-07-08)
+    confounded_with: []
+
+  - id: eurex_krx_link_termination_known_from
+    supersedes: eurex_krx_link_termination
+    date: 2025-06-06
+    known_from: 2025-02-05
+    market: GLOBAL
+    category: venue_structure
+    title: Eurex-KRX Link terminated — known_from resolved, and a DATE DISCREPANCY recorded
+    detail: >-
+      Eurex circular 008/25, dated 2025-02-05, announced the decommissioning four months
+      ahead, so the termination was public from that date.
+      DISCREPANCY, recorded rather than silently corrected: the circular states KOSPI
+      futures and options and USD/KRW futures were unavailable at Eurex "from 5 June
+      2025", with the last trading day 4 June 2025. The original entry records 2025-06-06.
+      The one-to-two-day gap is not resolved here — it may be last-trading-day versus
+      settlement versus full delisting — and no analysis in this repository turns on which
+      of those three the date means. Anything that later does must resolve it first.
+    source: https://www.eurex.com/ex-en/find/circulars/circular-4260544 (circular 008/25, 2025-02-05)
+    confounded_with: []
+
+  - id: krx_night_session_launch_known_from
+    supersedes: krx_night_session_launch
+    date: 2025-06-09
+    known_from: 2025-02-05
+    market: KR
+    category: venue_structure
+    title: KRX night session launch — known_from resolved
+    detail: >-
+      The same Eurex circular 008/25 of 2025-02-05 announced the transition of these
+      products to the Korea Exchange with extended trading hours, so the night session was
+      public from that date. Cited to the circular rather than to the KRX landing page
+      because the circular carries a date and the landing page does not.
+    source: https://www.eurex.com/ex-en/find/circulars/circular-4260544 (circular 008/25, 2025-02-05)
+    confounded_with: []
+

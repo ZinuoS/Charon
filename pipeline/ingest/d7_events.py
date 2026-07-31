@@ -79,14 +79,47 @@ def validate(doc: dict) -> list[str]:
 
 
 def unresolved_known_from(doc: dict) -> list[str]:
-    return [ev["id"] for ev in doc["events"] if str(ev.get("known_from", "")).startswith("TODO")]
+    # Report on the EFFECTIVE calendar. A superseding entry that resolves a known_from is
+    # the whole reason the supersedes mechanism exists; reading the raw log here meant a TODO
+    # could never be closed and the OPEN list only ever grew.
+    from pipeline.viz.theme import resolve_supersessions
+    effective = resolve_supersessions(doc["events"])
+    return [ev["id"] for ev in effective if str(ev.get("known_from", "")).startswith("TODO")]
 
 
-def check_append_only(ids: list[str]) -> str:
-    """Compare against the recorded id ledger. Returns a human-readable status."""
+def _entry_digest(ev: dict) -> str:
+    """Stable digest of one event's content, for detecting an EDIT rather than an append."""
+    return C.sha256_bytes(json.dumps(ev, sort_keys=True, default=str).encode())
+
+
+def check_append_only(ids: list[str], events: list[dict] | None = None) -> str:
+    """Compare against the recorded ledger. Returns a human-readable status.
+
+    THE ID CHECK ALONE WAS A HOLE. It compared the id sequence and nothing else, so editing
+    an existing entry's CONTENT -- a date, a known_from, a detail -- passed silently, while
+    the guard's own error message told the reader that existing entries may not be edited.
+    A calendar that can be quietly rewritten destroys every event study built on it, which is
+    the exact failure the append-only rule exists to prevent, so the ledger now carries a
+    per-entry digest and an edit is caught.
+    """
     if not ID_LEDGER.exists():
         return "no prior ledger (first validation)"
-    prior: list[str] = json.loads(ID_LEDGER.read_text())["ids"]
+    led = json.loads(ID_LEDGER.read_text())
+    prior: list[str] = led["ids"]
+    prior_digests: dict = led.get("entries", {})
+
+    if events is not None and prior_digests:
+        by_id = {e["id"]: e for e in events}
+        edited = [i for i in prior
+                  if i in by_id and _entry_digest(by_id[i]) != prior_digests.get(i)]
+        if edited:
+            raise EventSchemaError(
+                "append-only violation in events.yaml: EXISTING ENTRIES WERE EDITED.\n"
+                f"  changed: {edited}\n"
+                "The id sequence is intact, so only the content digests catch this. To "
+                "correct an event, append a new entry with `supersedes: <id>` and leave the "
+                "original in place -- the record of what was believed when is itself data."
+            )
     if ids[: len(prior)] != prior:
         raise EventSchemaError(
             "append-only violation in events.yaml.\n"
@@ -99,9 +132,12 @@ def check_append_only(ids: list[str]) -> str:
     return f"append-only ok (+{len(added)} new: {added})" if added else "append-only ok (unchanged)"
 
 
-def write_ledger(ids: list[str]) -> None:
+def write_ledger(ids: list[str], events: list[dict] | None = None) -> None:
     C.CHECKSUM_ROOT.mkdir(parents=True, exist_ok=True)
-    ID_LEDGER.write_text(json.dumps({"ids": ids, "updated_at_utc": C.utc_now_iso()}, indent=2) + "\n")
+    payload = {"ids": ids, "updated_at_utc": C.utc_now_iso()}
+    if events is not None:
+        payload["entries"] = {e["id"]: _entry_digest(e) for e in events}
+    ID_LEDGER.write_text(json.dumps(payload, indent=2) + "\n")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -112,7 +148,7 @@ def main(argv: list[str] | None = None) -> int:
     pulled_at = C.utc_now_iso()
     doc = load_events()
     ids = validate(doc)
-    status = check_append_only(ids)
+    status = check_append_only(ids, doc.get("events"))
     digest = C.sha256_file(EVENTS_PATH)
 
     print(f"\n=== {SOURCE} ===")
@@ -159,7 +195,7 @@ def main(argv: list[str] | None = None) -> int:
             sha256=digest, path=C.rel_to_repo(EVENTS_PATH), status="validated",
         ),
     )
-    write_ledger(ids)
+    write_ledger(ids, doc.get("events"))
     # allow_update: events.yaml is append-only, so its digest is *supposed* to move.
     # Integrity is enforced by the id ledger above, not by digest stability.
     C.update_checksums(SOURCE, {C.rel_to_repo(EVENTS_PATH): digest}, allow_update=True)

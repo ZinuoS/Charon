@@ -116,3 +116,25 @@ class TestEventCalendar:
         doc["append_only"] = False
         with pytest.raises(EventSchemaError, match="append_only"):
             validate(doc)
+
+
+def test_supersessions_resolve_so_consumers_see_one_event_per_correction():
+    """A corrected event must appear ONCE in the effective calendar, not twice.
+
+    events.yaml is append-only, so a correction is a new entry and the original stays on
+    disk. A consumer that reads the raw log draws both — the original and its correction —
+    as two events on the same date. This is the check that the resolver is wired in.
+    """
+    from pipeline.viz import theme
+
+    raw = theme.load_events(effective=False)
+    eff = theme.load_events()
+    superseded = {e["supersedes"] for e in raw if e.get("supersedes")}
+    assert superseded, "no supersessions in the calendar — this test has nothing to protect"
+
+    ids = {e["id"] for e in eff}
+    assert not (ids & superseded), (
+        f"superseded entries survived into the effective calendar: {sorted(ids & superseded)}. "
+        "Every consumer would draw them alongside their own corrections."
+    )
+    assert len(eff) == len(raw) - len(superseded)

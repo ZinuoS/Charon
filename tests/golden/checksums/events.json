@@ -1,6 +1,6 @@
 {
   "files": {
-    "data/raw/events/events.yaml": "ff7e71cdc00d55bf7b4838c9b395dfb39ce4a55192f6b0c363a640ad63ddcb16"
+    "data/raw/events/events.yaml": "59e461eb2403f7419de55fa03779401ef57fe9206aa577ee02a75860ec993d30"
   },
   "history": {
     "data/raw/events/events.yaml": [
@@ -11,9 +11,13 @@
       {
         "sha256": "0923891fb72f4e47bee639b610371913820397249b3c193d300c85d98c23cb6d",
         "superseded_at_utc": "2026-07-31T02:46:29+00:00"
+      },
+      {
+        "sha256": "ff7e71cdc00d55bf7b4838c9b395dfb39ce4a55192f6b0c363a640ad63ddcb16",
+        "superseded_at_utc": "2026-07-31T03:30:30+00:00"
       }
     ]
   },
   "source": "events",
-  "updated_at_utc": "2026-07-31T02:46:29+00:00"
+  "updated_at_utc": "2026-07-31T03:31:19+00:00"
 }

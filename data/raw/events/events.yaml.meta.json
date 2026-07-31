@@ -12,25 +12,25 @@
     "kr_2x_etf_curb_review",
     "fomc_20260916",
     "fomc_20261028",
-    "fomc_20261209"
+    "fomc_20261209",
+    "kr_single_stock_2x_etf_listing_known_from",
+    "kr_2x_etf_curb_review_known_from",
+    "eurex_krx_link_termination_known_from",
+    "krx_night_session_launch_known_from"
   ],
   "native_timezone": "per-event (see `market`)",
   "notes": "README \u00a74 D7. The one documented exception to raw-immutability; append-only.",
   "provider": "hand_maintained",
-  "pulled_at_utc": "2026-07-31T02:46:29+00:00",
-  "rows": 11,
+  "pulled_at_utc": "2026-07-31T03:31:19+00:00",
+  "rows": 15,
   "series_id": "events",
-  "sha256": "ff7e71cdc00d55bf7b4838c9b395dfb39ce4a55192f6b0c363a640ad63ddcb16",
+  "sha256": "59e461eb2403f7419de55fa03779401ef57fe9206aa577ee02a75860ec993d30",
   "transport": "none",
   "units": "discrete events",
   "unresolved_known_from": [
     "skhy_adr_listing",
     "skhy_conversion_open",
     "skhy_q2_earnings",
-    "eurex_krx_link_termination",
-    "krx_night_session_launch",
-    "krx_data_login_wall",
-    "kr_single_stock_2x_etf_listing",
-    "kr_2x_etf_curb_review"
+    "krx_data_login_wall"
   ]
 }
