@@ -18,16 +18,21 @@ material to do it.
 
 | | Notebook | What it is | Status |
 |---|---|---|---|
-| **00** | [`00_executive_pitch.ipynb`](00_executive_pitch.ipynb) | The full argument in prose: background, mechanism, trading insights, execution. The verbal research lives here. Organised around the prospectus finding that the barrier is a *corporate decision*, not an exhausted quota. | ✅ live, 6 figures |
-| 01 | `01_client_note.ipynb` | A desk-voice version of the same material for a prime-finance reader | not written |
-| **02** | [`02_premium_anatomy.ipynb`](02_premium_anatomy.ipynb) | How π is constructed and how much of it is measurement rather than economics | ✅ live, 8 figures |
-| 03 | `03_comparator_panel.ipynb` | The training universe: three regimes, corporate-action QA, calendar policy | not written — needs the taxonomy ratified |
-| 04 | `04_regimes_convergence.ipynb` | M2 regimes and M3 convergence dynamics | not written — models are quarantined pending taxonomy ratification |
-| **05** | [`05_hypothesis_engines.ipynb`](05_hypothesis_engines.ipynb) | H1–H5 status + results: H5 monitor (registered), H4 variance, M3 convergence metrics table | ✅ live, 4 figures |
+| **00** | [`00_executive_pitch.ipynb`](00_executive_pitch.ipynb) | The full argument in prose: background, mechanism, trading insights, execution. Organised around the prospectus finding that the barrier is a *corporate decision*, not an exhausted quota. | ✅ live |
+| **01** | [`01_client_note.ipynb`](01_client_note.ipynb) | A desk-voice version of the same material for a prime-finance reader. Derives its section order from the client pack, so the two cannot drift. | ✅ live |
+| **02** | [`02_premium_anatomy.ipynb`](02_premium_anatomy.ipynb) | How π is constructed and how much of it is measurement rather than economics. | ✅ live |
+| **03** | [`03_comparator_panel.ipynb`](03_comparator_panel.ipynb) | The training universe: three regimes, corporate-action QA, calendar policy. Where the sample is defined and every exclusion is declared with its cause — start here to disagree with anything downstream. | ✅ live |
+| **04** | [`04_regimes_convergence.ipynb`](04_regimes_convergence.ipynb) | M2 regimes and M3 convergence dynamics. | ✅ live |
+| **05** | [`05_hypothesis_engines.ipynb`](05_hypothesis_engines.ipynb) | H1–H5 status and results: the H5 monitor (registered), H4 variance, the M3 convergence metrics table. | ✅ live |
+| **06** | [`06_complexity_ledger.ipynb`](06_complexity_ledger.ipynb) | Parsimony against complexity under one harness. EXPERIMENT, deviation-gated (DEV-004). Verdict: complexity's edge dies in the vol-timing decomposition. | ✅ live |
+| **07** | [`07_macro_environment.ipynb`](07_macro_environment.ipynb) | The macro layer as an argument, not a backdrop: four claims, four mechanisms, four numbers — including H6/H6b, registered before testing and null both times. | ✅ live |
+| **08** | [`08_pitch_logic.ipynb`](08_pitch_logic.ipynb) | The argument in sentences: the chain, scenario P&L in return-on-margin, the hedge menu, exit discipline, and the P&L identity that settles the decay question. | ✅ live |
+| **09** | [`09_tsmc_lab.ipynb`](09_tsmc_lab.ipynb) | The comparator lab: 21.6 years of the nearest regime family. Structural audit first — the differences bound the claims — then the episode census, entry outcomes against the carry brackets, the excursion/stop case, and the FX channel per era. | ✅ live |
+| **10** | [`10_financing.ipynb`](10_financing.ipynb) | The carry bracket opened into components: what is measured, what is a desk quote, and the one piece that cannot be measured without a forward curve. The funding differential turns out to be a tailwind. | ✅ live |
 
-Numbers are reserved even where the notebook does not exist yet, so the sequence stays
-stable as it fills in. **00 and 02 were previously numbered 00_pitch and
-01_premium_anatomy**; the renumbering preserved git history via `git mv`.
+Numbers were reserved before the notebooks existed so the sequence stayed stable as it filled
+in. **00 and 02 were previously numbered 00_pitch and 01_premium_anatomy**; the renumbering
+preserved git history via `git mv`.
 
 ## Rendering
 
@@ -55,8 +60,3 @@ described as a pre-registered forward test unless the ledger says so on the reco
 **"Arbitrage" appears only for the conversion channel that does not work.** Everything live
 is relative value against a one-sided barrier, and the figures say so — see G4, which puts
 the unbounded-loss side on the same page as the convergence expression.
-| **06** | [`06_complexity_ledger.ipynb`](06_complexity_ledger.ipynb) | Parsimony vs. complexity head-to-head under one harness. EXPERIMENT, deviation-gated (DEV-004). Verdict: complexity's edge dies in the vol-timing decomposition. | ✅ live, 1 figure |
-| **07** | [`07_macro_environment.ipynb`](07_macro_environment.ipynb) | The environment the premium stands on: regulatory state, index, won, funding differential — with the foreign-flows gap named. Describes, never calls. | ✅ live |
-| **08** | [`08_pitch_logic.ipynb`](08_pitch_logic.ipynb) | The argument in sentences: the chain, scenario P&L in return-on-margin, the hedge menu, exit discipline. Opens with where each part of the assignment is answered. | ✅ live |
-| **09** | [`09_tsmc_lab.ipynb`](09_tsmc_lab.ipynb) | The comparator lab: 21.6 years of the nearest regime family. Structural audit first (differences bound the claims), then the episode census, entry outcomes against the carry brackets, the excursion/stop case, and the FX channel per era. Characterisation, never forecast. | ✅ live |
-| **10** | [`10_financing.ipynb`](10_financing.ipynb) | The carry bracket opened into components: what is measured, what is a desk quote, and the one piece that cannot be measured without a forward curve. The funding differential turns out to be a tailwind. | ✅ live |

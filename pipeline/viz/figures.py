@@ -2473,3 +2473,91 @@ def g29b_carry_decomposition(components, summary: dict, fed: dict):
                  "differential.")
     return fig, {"total_bp_mo": summary["total_bp_per_month"],
                  "critical_bp_mo": summary["critical_carry_bp_per_month"]}
+
+
+def g31_panel_coverage(cov, cal):
+    """G31 — what the training universe actually covers, including what it does not.
+
+    A panel described only by its surviving members overstates itself. This draws the
+    attempted universe: every registry pair, its span, its regime, and — for the ones that
+    are restricted or excluded — the bar it does NOT get to keep.
+    """
+    import pandas as pd
+
+    fig, (a, b) = theme.figure(1, 2, shape_name="wide", gridspec_kw={"width_ratios": [1.7, 1]})
+    EM, CON, FUN, CX, BA, WA = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["constrained"],
+                                theme.SEMANTIC["fungible"], theme.SEMANTIC["context"],
+                                theme.SEMANTIC["barrier"], theme.SEMANTIC["warning"])
+    colour = {"one_way_constrained": CON, "fungible": FUN,
+              "forward test (never fitted)": EM, "excluded": WA,
+              "unreachable — no data landed": CX}
+
+    live = cov[cov.n_obs > 0].copy()
+    live["first_dt"] = pd.to_datetime(live["first"])
+    live["last_dt"] = pd.to_datetime(live["last"])
+    live = live.sort_values(["regime", "first_dt"])
+    y = np.arange(len(live))
+
+    for yi, r in zip(y, live.itertuples()):
+        col = colour.get(r.regime, CX)
+        a.barh(yi, (r.last_dt - r.first_dt).days, left=r.first_dt, height=0.58,
+               color=col, zorder=3)
+        a.text(r.last_dt, yi, f"  {r.n_obs:,}", va="center", fontsize=theme.NOTE_SIZE,
+               color=col, fontfamily=theme.SERIF_STACK)
+        if r.sample_start:
+            a.plot([pd.to_datetime(r.sample_start)], [yi], marker="|", ms=13, mew=2.0,
+                   color=BA, zorder=5)
+        if r.sample_end:
+            a.plot([pd.to_datetime(r.sample_end)], [yi], marker="|", ms=13, mew=2.0,
+                   color=BA, zorder=5)
+    a.set_yticks(y); a.set_yticklabels(live.pair)
+    a.invert_yaxis()
+    a.set_xlabel("joined sessions — the span where all three legs exist")
+    handles = [mpatches.Patch(color=c, label=k.replace(" — no data landed", ""))
+               for k, c in colour.items() if k in set(live.regime)]
+    handles.append(mpatches.Patch(facecolor="none", edgecolor=BA,
+                                  label="| declared sample restriction"))
+    a.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.14),
+             fontsize=theme.NOTE_SIZE, ncol=4)
+
+    # --- right: what the calendar join costs, inside the overlapping span
+    c = cal[cal.pair.isin(live.pair)].sort_values("pct_lost_to_equity_calendars")
+    yy = np.arange(len(c))
+    b.barh(yy, c.pct_lost_to_equity_calendars, height=0.55, color=CX, zorder=3,
+           label="the two equity calendars disagree")
+    b.barh(yy, c.pct_lost_to_fx_calendar, height=0.55,
+           left=c.pct_lost_to_equity_calendars, color=WA, zorder=3,
+           label="the FX leg's own calendar")
+    b.set_yticks(yy); b.set_yticklabels(c.pair)
+    b.invert_yaxis()
+    b.set_xlabel("% of sessions the join drops")
+    b.legend(loc="upper right", fontsize=theme.NOTE_SIZE)
+
+    n_fit = int((live.regime.isin(["one_way_constrained", "fungible"])).sum())
+    n_excl = int((cov.regime == "excluded").sum())
+    n_gone = int((cov.regime == "unreachable — no data landed").sum())
+    theme.finalize(
+        fig, kicker="the training universe",
+        headline=f"{n_fit} pairs are fitted, one is never fitted, and {n_excl + n_gone} were "
+                 f"attempted and lost",
+        subtitle=f"Every registry pair, drawn over the span where all three of its legs "
+                 f"exist. {n_excl} delisted mid-sample and {n_gone} never landed a local leg. "
+                 "Vertical bars mark a DECLARED sample restriction — a corporate action or a "
+                 "delisting, each with its reason in the registry.",
+        stats=[(f"{n_fit}", "pairs in the\nfitted panel"),
+               (f"{int(cov[cov.regime == 'one_way_constrained'].n_obs.sum()):,}",
+                "constrained-class\nsessions"),
+               (f"{int(cov[cov.regime == 'fungible'].n_obs.sum()):,}",
+                "fungible-class\nsessions"),
+               (f"{c.pct_lost_to_equity_calendars.mean():.1f}%",
+                "average loss to\ncalendar mismatch")],
+        source="Repo-computed. pipeline.measurement.comparators.coverage_table / "
+               "calendar_cost; regimes from pipeline.convergence.jorda.",
+        footnote="THE PANEL'S BINDING LIMITATION IS ON THE LEFT AND IT IS NOT THE SESSION "
+                 "COUNT: all four one-way-constrained pairs are Taiwanese. They share one "
+                 "regulator and one currency regime, so they reduce issuer-idiosyncratic "
+                 "noise and give NO independent variation in the rule itself. Four pairs is "
+                 "not four draws on the mechanism, and every pooled constrained-class "
+                 "estimate in this repository inherits that.")
+    return fig, {"n_fitted": n_fit,
+                 "mean_calendar_loss_pct": round(float(c.pct_lost_to_equity_calendars.mean()), 2)}
