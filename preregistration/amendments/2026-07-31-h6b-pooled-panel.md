@@ -87,3 +87,52 @@ h6b_pooled_macro_conditional:
 A pooled odds ratio above 1 at p < 0.025, with the effect visible in most pairs individually
 rather than carried by one. If the effect lives in a single pair, the pooled p-value is a
 statement about that pair and the notebook will say so.
+
+---
+
+## RESULT — added 2026-07-31, after the registration commit
+
+**Verdict: NULL on both, and the informative part is HOW it nulled.**
+
+| scope | pairs | episodes | pooled odds ratio | p |
+|---|---|---|---|---|
+| constrained class (**primary**) | 4 | 145 | **1.31** | 0.53 |
+| all qualifying pairs (secondary) | 10 | 209 | **1.13** | 0.77 |
+
+Registered threshold was OR > 1 **and** p < 0.025. The odds ratio is above 1 in both — the
+registered direction — and neither p comes close.
+
+**The effect attenuated toward 1 as the sample grew.** TSM alone gave a 16.5-point gap; four
+constrained pairs give an odds ratio of 1.31; all ten give 1.13. That is the shape of a noise
+result under replication, and it is a stronger conclusion than "underpowered": the first
+result did not survive more data.
+
+**Per-pair local-leg share, strength versus weakness** — every pair, none dropped:
+
+| pair | regime | strength | weakness | direction |
+|---|---|---|---|---|
+| tsmc | constrained | 0.565 | 0.400 | **+16.5pp** as registered |
+| umc | constrained | 0.400 | 0.348 | +5.2pp as registered |
+| ase | constrained | 0.500 | 0.636 | **−13.6pp, OPPOSITE** |
+| cht | constrained | 0.643 | 0.571 | +7.2pp as registered |
+| baba | fungible | 0.545 | 0.222 | +32.3pp as registered |
+| vale | fungible | 0.400 | 0.800 | −40.0pp opposite |
+| itub | fungible | 0.500 | 0.600 | −10.0pp opposite |
+| abev | fungible | 0.333 | 1.000 | −66.7pp opposite |
+| pbr | fungible | 0.500 | 0.667 | −16.7pp opposite |
+| ggb | fungible | 0.500 | 0.556 | −5.6pp opposite |
+
+No pair was excluded: every one cleared the 1,000-session and 5-episode minimums fixed before
+the run.
+
+**The amendment predicted the diagnostic and it fired.** It said: *"A pooled odds ratio above 1
+at p < 0.025, with the effect visible in most pairs individually rather than carried by one. If
+the effect lives in a single pair, the pooled p-value is a statement about that pair."* Three of
+four constrained pairs point the registered way, but only TSM has a gap of any size and ASE
+points the other way. The effect lives in TSM.
+
+**What this closes.** H6 is not "awaiting more data" any more. More data arrived, twice, and
+the effect shrank both times. The macro chapter states the currency state as a **level** effect
+only — 0.86 premium points per 1% won, 1.3% of daily variance — and makes no channel claim. The
+pitch does not use the won as a signal, and now has two registered tests behind that restraint
+rather than one.

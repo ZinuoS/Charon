@@ -2167,7 +2167,7 @@ def g29_comparator_anchor(levels: list[tuple[str, float, str, str]], tsmc_band=N
     return fig, {"gap_to_norm_pp": float(gap)}
 
 
-def g30_macro_catalyst_map(table, verdict: dict, skhy: dict):
+def g30_macro_catalyst_map(table, verdict: dict, skhy: dict, pooled: dict | None = None):
     """G30 — which currency states resolved premiums, and through which leg.
 
     REGISTERED AS H6 ON 2026-07-30, BEFORE THIS WAS COMPUTED. The registered direction was
@@ -2234,18 +2234,34 @@ def g30_macro_catalyst_map(table, verdict: dict, skhy: dict):
         b.text(9.25, y, val, fontsize=theme.NOTE_SIZE, color=c, ha="right",
                fontfamily=theme.SERIF_STACK)
         y -= 0.85
-    b.text(0.75, 1.5,
-           "The pattern points the way it was predicted to and\n"
-           "the sample cannot carry it. 23 and 25 compressions\n"
-           "is not enough to separate 57% from 40%.",
-           fontsize=theme.NOTE_SIZE, color=theme.TEXT, va="top",
-           fontfamily=theme.SERIF_STACK, linespacing=1.6)
+    if pooled:
+        pr, sec = pooled["primary"], pooled["secondary"]
+        b.text(0.75, 1.9, "Second look — the whole panel, registered separately",
+               fontsize=theme.LABEL_SIZE, color=WA, weight="medium",
+               fontfamily=theme.SERIF_STACK)
+        b.text(0.75, 0.9,
+               f"{pr['n_pairs']} constrained pairs, {pr['n_episodes']} episodes: "
+               f"odds ratio {pr['odds_ratio']:.2f}, p = {pr['p_value']:.2f}.\n"
+               f"All {sec['n_pairs']} pairs, {sec['n_episodes']} episodes: "
+               f"odds ratio {sec['odds_ratio']:.2f}, p = {sec['p_value']:.2f}.\n"
+               f"The effect SHRANK toward 1 as the sample grew. That is what a\n"
+               f"noise result looks like when you replicate it.",
+               fontsize=theme.NOTE_SIZE, color=theme.TEXT, va="top",
+               fontfamily=theme.SERIF_STACK, linespacing=1.6)
+    else:
+        b.text(0.75, 1.5,
+               "The pattern points the way it was predicted to and\n"
+               "the sample cannot carry it. 23 and 25 compressions\n"
+               "is not enough to separate 57% from 40%.",
+               fontsize=theme.NOTE_SIZE, color=theme.TEXT, va="top",
+               fontfamily=theme.SERIF_STACK, linespacing=1.6)
 
     theme.finalize(
         fig, kicker="registered call H6",
-        headline=("The currency state does not yet explain which leg closes the gap"
-                  if not held else
-                  "The currency state predicts which leg closes the gap"),
+        headline=("The currency state predicts which leg closes the gap" if held else
+                  "Tested twice on more data each time. The currency state does not select "
+                  "the leg." if pooled else
+                  "The currency state does not yet explain which leg closes the gap"),
         subtitle=f"Compression episodes on the comparator pair, 21.6 years, split by the "
                  f"currency state READ AT THE EPISODE'S FIRST SESSION — never over the "
                  f"episode, because FX is one of the three terms that assigns the channel.",
@@ -2257,7 +2273,14 @@ def g30_macro_catalyst_map(table, verdict: dict, skhy: dict):
                (f"p={verdict['p_value']:.2f}", "against a\n0.05 threshold")],
         source="Repo-computed. pipeline.lab.tsmc.h6_conditional_channels; registration in "
                "preregistration/amendments/2026-07-30-h6-macro-conditional-resolution.md.",
-        footnote=f"This is what pre-registration is for. Unregistered, this reads as "
+        footnote=(f"REPLICATION: the TSM gap did not survive it. Pooled across "
+                  f"{pooled['primary']['n_pairs']} constrained pairs the odds ratio is "
+                  f"{pooled['primary']['odds_ratio']:.2f} (p={pooled['primary']['p_value']:.2f}), "
+                  f"and across all {pooled['secondary']['n_pairs']} it is "
+                  f"{pooled['secondary']['odds_ratio']:.2f} — the effect attenuates toward 1 "
+                  f"as the sample grows, and one of the four constrained pairs points the "
+                  f"other way entirely. " if pooled else "") +
+                 f"This is what pre-registration is for. Unregistered, this reads as "
                  f"\"{verdict['local_leg_share_strength']:.0%} versus "
                  f"{verdict['local_leg_share_weakness']:.0%} — the currency state predicts "
                  f"the channel\", and it would be wrong. SK Hynix sits in a "

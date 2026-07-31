@@ -116,8 +116,37 @@ and ADR-led or non-resolving when it is weakening.
 registered threshold required both a ≥10-point gap *and* p < 0.05. One cleared; one did not.
 """)
 code("""t = LAB.h6_conditional_channels(); v = LAB.h6_verdict(t); s = LAB.h6_skhy_descriptive()
-fig, _ = figures.g30_macro_catalyst_map(t, v, s)
+pooled = LAB.h6b_verdict()
+fig, _ = figures.g30_macro_catalyst_map(t, v, s, pooled=pooled)
 fig;""")
+
+md(r'''
+### The second look — registered separately, and it settles the question
+
+"Underpowered" is a hypothesis about what more data would show, so we got more data. H6b was
+registered on 2026-07-31 with a **stricter** threshold (p < 0.025, Bonferroni for a second look
+at a hypothesis that already failed) and the primary class fixed before the run.
+
+| scope | pairs | episodes | pooled odds ratio | p |
+|---|---|---|---|---|
+| constrained class (primary) | 4 | 145 | 1.31 | 0.53 |
+| all qualifying pairs (secondary) | 10 | 209 | 1.13 | 0.77 |
+
+**The effect attenuated toward 1 as the sample grew** — 16.5 points on TSM alone, an odds ratio
+of 1.31 across four constrained pairs, 1.13 across ten. That is the shape of a noise result
+under replication, and it is a firmer conclusion than the first null: the original did not
+survive more data.
+''')
+code("LAB.h6b_pair_tables()[['pair','regime','n_compressions','strength_local_share','weakness_local_share']]")
+md(r'''
+Three of the four constrained pairs point the registered way, but only TSM has a gap of any
+size and **ASE points the other way**. The amendment predicted exactly this diagnostic before
+the run: *if the effect lives in a single pair, the pooled p-value is a statement about that
+pair.* It does, and it is.
+
+**So H6 is closed, not parked.** The macro chapter states the won as a LEVEL effect only, and
+the pitch has two registered tests behind that restraint rather than one.
+''')
 md(figures.layman_block("g30_macro_catalyst_map") if "g30_macro_catalyst_map" in figures.LAYMAN else r"""
 **Why this is worth a slide anyway.** Unregistered, this reads as *"57% versus 40% — the
 currency state predicts which leg closes the gap"*, and it would have been the headline of this

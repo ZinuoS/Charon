@@ -751,3 +751,149 @@ if __name__ == "__main__":   # smallest runnable check of the two non-trivial ro
         f"the most-RISING sessions must be {FX_STATE_LABELS[2]!r}, got {st.iloc[-1]!r}")
     print(f"ok: {len(f)} sessions, {len(ep)} episodes, "
           f"beats carry (90th pctile, 252d, mid) = {eo.iloc[0]['frac_beats_carry']:.1%}")
+
+
+# --------------------------------------------------------------------------------
+# H6b — the pooled-panel test (registered 2026-07-31, amendment 003)
+# --------------------------------------------------------------------------------
+#
+# A SECOND LOOK at a hypothesis that already failed once on TSM alone, so the threshold is
+# p < 0.025 rather than 0.05 and the primary class was fixed before this ran. See the
+# amendment; the registration commit contains the design and no numbers.
+#
+# Mantel-Haenszel rather than a pooled 2x2, and the reason is not statistical taste. The
+# pairs have very different UNCONDITIONAL local-leg shares, so concatenating their episodes
+# lets whichever pair has the most episodes and the most extreme base rate decide the answer.
+# Stratifying holds each pair to its own baseline and asks only whether the STATE moves it.
+
+#: Minimum compression episodes for a pair to enter the test. Fixed before the run.
+H6B_MIN_EPISODES: int = 5
+
+#: Minimum joined sessions for a pair to qualify at all.
+H6B_MIN_SESSIONS: int = 1000
+
+#: Bonferroni threshold for the second look. NOT 0.05.
+H6B_ALPHA: float = 0.025
+
+
+def _pair_frame(pair: str) -> pd.DataFrame:
+    """The three legs and pi for any comparator pair, on its registry sample."""
+    from pipeline.measurement.premium import build_all_variants
+
+    spec = next(p for p in PAIRS if p.pair_id == pair)
+    source = "d1_prices" if pair == "skhy" else "d6_comparators"
+    pi = build_all_variants(pair)[0].series
+    adr = _load_close(source, spec.adr)
+    loc = _load_close(source, spec.local)
+    fx = _load_close(source, spec.fx)
+    return pd.DataFrame({"adr": adr, "local": loc, "fx": fx}).join(
+        pi.rename("pi"), how="inner").dropna()
+
+
+def h6b_pair_tables(min_move_pp: float = 5.0, min_days: int = 10) -> pd.DataFrame:
+    """One 2x2 per pair: (strength|weakness) x (local leg|ADR leg), plus why a pair is out.
+
+    Every pair is listed. A pair below the episode minimum is reported as EXCLUDED WITH ITS
+    COUNTS rather than dropped, because a panel test whose membership is decided after seeing
+    the numbers is not a panel test.
+    """
+    from pipeline.convergence.jorda import FORWARD_TEST_PAIRS, REGIME_OF_PAIR
+
+    rows = []
+    for pair, regime in REGIME_OF_PAIR.items():
+        if pair in FORWARD_TEST_PAIRS:
+            continue
+        try:
+            f = _pair_frame(pair)
+        except Exception as exc:                       # a missing leg is a coverage fact
+            rows.append({"pair": pair, "regime": regime, "n_sessions": 0,
+                         "included": False, "why": f"legs unavailable: {type(exc).__name__}"})
+            continue
+        if len(f) < H6B_MIN_SESSIONS:
+            rows.append({"pair": pair, "regime": regime, "n_sessions": len(f),
+                         "included": False, "why": f"under {H6B_MIN_SESSIONS} sessions"})
+            continue
+
+        ch = resolution_channel(f, episodes(f["pi"], min_move_pp, min_days))
+        if not len(ch):
+            rows.append({"pair": pair, "regime": regime, "n_sessions": len(f),
+                         "included": False, "why": "no episodes at the base rule"})
+            continue
+        state = _fx_state(f)
+        ch = ch.assign(fx_state=[state.get(d, None) for d in ch["start"]]).dropna(
+            subset=["fx_state"])
+        comp = ch[ch.direction == "compression"]
+        s = comp[comp.fx_state == FX_STATE_LABELS[0]]
+        w = comp[comp.fx_state == FX_STATE_LABELS[2]]
+        a, b = int((s.channel == "local_leg").sum()), int((s.channel == "adr_leg").sum())
+        c, d = int((w.channel == "local_leg").sum()), int((w.channel == "adr_leg").sum())
+        n = a + b + c + d
+        rows.append({
+            "pair": pair, "regime": regime, "n_sessions": len(f),
+            "n_compressions": len(comp),
+            "strength_local": a, "strength_adr": b, "weakness_local": c, "weakness_adr": d,
+            "strength_local_share": round(a / (a + b), 3) if a + b else None,
+            "weakness_local_share": round(c / (c + d), 3) if c + d else None,
+            "included": n >= H6B_MIN_EPISODES,
+            "why": "" if n >= H6B_MIN_EPISODES else f"under {H6B_MIN_EPISODES} usable episodes",
+        })
+    return pd.DataFrame(rows)
+
+
+def _mantel_haenszel(tables) -> dict:
+    """Pooled odds ratio and chi-square across strata. Plain arithmetic, no scipy.
+
+    Each stratum is (a, b, c, d) = (strength-local, strength-ADR, weakness-local, weakness-ADR).
+    An odds ratio above 1 is the registered direction: local-leg-led compressions are more
+    likely in strength than in weakness.
+    """
+    from math import erfc, sqrt
+
+    num = den = 0.0
+    obs = exp = var = 0.0
+    for a, b, c, d in tables:
+        n = a + b + c + d
+        if n == 0:
+            continue
+        num += a * d / n
+        den += b * c / n
+        r1, r2 = a + b, c + d          # row totals: strength, weakness
+        k1 = a + c                     # column total: local-leg
+        obs += a
+        exp += r1 * k1 / n
+        if n > 1:
+            var += (r1 * r2 * k1 * (n - k1)) / (n * n * (n - 1))
+    if den == 0 or var == 0:
+        return {"odds_ratio": None, "chi2": None, "p_value": None, "n_strata": len(tables)}
+    # Continuity-corrected MH chi-square, then the exact two-sided normal tail.
+    chi2 = (abs(obs - exp) - 0.5) ** 2 / var
+    z = sqrt(chi2)
+    return {"odds_ratio": round(num / den, 3), "chi2": round(chi2, 3),
+            "p_value": round(erfc(z / sqrt(2)), 4), "n_strata": len(tables),
+            "observed_strength_local": int(obs), "expected_strength_local": round(exp, 1)}
+
+
+def h6b_verdict(tables: pd.DataFrame | None = None) -> dict:
+    """The registered pooled test. Primary is the constrained class; both are reported."""
+    t = h6b_pair_tables() if tables is None else tables
+    inc = t[t.included.fillna(False)]
+
+    def run(sub, label):
+        cells = [(r.strength_local, r.strength_adr, r.weakness_local, r.weakness_adr)
+                 for r in sub.itertuples()]
+        mh = _mantel_haenszel(cells)
+        held = bool(mh["odds_ratio"] and mh["odds_ratio"] > 1.0
+                    and mh["p_value"] is not None and mh["p_value"] < H6B_ALPHA)
+        return {"scope": label, "pairs": list(sub.pair), "n_pairs": len(sub),
+                "n_episodes": int(sum(sum(c) for c in cells)),
+                **mh, "alpha": H6B_ALPHA,
+                "verdict": "HELD" if held else "NULL",
+                "direction_as_registered": bool(mh["odds_ratio"] and mh["odds_ratio"] > 1.0)}
+
+    primary = run(inc[inc.regime == "one_way_constrained"], "constrained class (PRIMARY)")
+    secondary = run(inc, "all qualifying pairs (secondary)")
+    return {"primary": primary, "secondary": secondary,
+            "excluded": t[~t.included.fillna(False)][["pair", "regime", "why"]]
+                        .to_dict("records"),
+            "note": ("Second look at H6, which nulled on TSM alone at p=0.25. Threshold is "
+                     f"{H6B_ALPHA} (Bonferroni), not 0.05.")}
