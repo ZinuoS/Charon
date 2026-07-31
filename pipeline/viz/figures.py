@@ -2165,3 +2165,104 @@ def g29_comparator_anchor(levels: list[tuple[str, float, str, str]], tsmc_band=N
                  "revolves and Hynix's does not, which is exactly why Hynix sits higher — and "
                  "it is also why nothing here promises the gap closes to the norm.")
     return fig, {"gap_to_norm_pp": float(gap)}
+
+
+def g30_macro_catalyst_map(table, verdict: dict, skhy: dict):
+    """G30 — which currency states resolved premiums, and through which leg.
+
+    REGISTERED AS H6 ON 2026-07-30, BEFORE THIS WAS COMPUTED. The registered direction was
+    local-leg-led compressions in local-currency strength. The registered threshold was a
+    >=10pp gap AND p < 0.05.
+
+    The gap came in at 16.5 points in the registered direction and the significance did not,
+    so the call is a NULL and this figure says so in its headline. That is the whole reason
+    the direction was frozen first: an unregistered version of this result would have been
+    written up as "56% versus 40%, the currency state predicts the channel", which is a
+    coin-flip-grade finding wearing a conclusion's clothes.
+    """
+    fig, (a, b) = theme.figure(1, 2, shape_name="wide", gridspec_kw={"width_ratios": [1.3, 1]})
+    EM, CON, FUN, CX, BA, WA = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["constrained"],
+                                theme.SEMANTIC["fungible"], theme.SEMANTIC["context"],
+                                theme.SEMANTIC["barrier"], theme.SEMANTIC["warning"])
+    t = table
+    x = np.arange(len(t))
+    uncond = table.attrs.get("unconditional_local_share", 0.437) * 100
+
+    a.bar(x - 0.19, t.local_leg_share * 100, width=0.36, color=FUN, label="local leg rises")
+    a.bar(x + 0.19, t.adr_leg_share * 100, width=0.36, color=EM, label="US leg falls")
+    for xi, r in zip(x, t.itertuples()):
+        a.text(xi - 0.19, r.local_leg_share * 100 + 1.6, f"{r.local_leg_share * 100:.0f}%",
+               ha="center", fontsize=theme.NOTE_SIZE, color=FUN,
+               fontfamily=theme.SERIF_STACK)
+        a.text(xi + 0.19, r.adr_leg_share * 100 + 1.6, f"{r.adr_leg_share * 100:.0f}%",
+               ha="center", fontsize=theme.NOTE_SIZE, color=EM, fontfamily=theme.SERIF_STACK)
+        a.text(xi, -6.5, f"n={r.n_compression}", ha="center", fontsize=theme.NOTE_SIZE,
+               color=CX, fontfamily=theme.SERIF_STACK)
+    a.axhline(uncond, color=BA, lw=1.2, ls="--")
+    a.annotate(f"unconditional {uncond:.0f}%", xy=(len(t) - 0.55, uncond), xytext=(0, 5),
+               textcoords="offset points", fontsize=theme.NOTE_SIZE, color=BA,
+               ha="right", fontfamily=theme.SERIF_STACK)
+    a.set_xticks(x)
+    a.set_xticklabels([s.replace("local currency ", "").replace(" ", "\n") for s in t.fx_state])
+    a.set_xlabel("currency state at the episode's first session\n(20-day trailing move, terciles)")
+    a.set_ylabel("share of compressions closed by this leg")
+    a.set_ylim(-8, 80)
+    a.legend(loc="upper right", ncol=2)
+
+    # --- right: the registered call, and what happened to it
+    b.set_xlim(0, 10); b.set_ylim(0, 10); b.axis("off")
+    held = verdict["verdict"] == "HELD"
+    col = FUN if held else WA
+    b.add_patch(mpatches.FancyBboxPatch((0.3, 6.4), 9.4, 3.2, boxstyle="round,pad=0.12",
+                facecolor=theme.PAPER, edgecolor=col, lw=1.6))
+    b.text(0.75, 9.0, f"H6 — {verdict['verdict']}", fontsize=theme.SUBTITLE_SIZE, color=col,
+           weight="medium", fontfamily=theme.SERIF_STACK)
+    b.text(0.75, 8.2, "registered 2026-07-30, before this was computed",
+           fontsize=theme.NOTE_SIZE, color=CX, fontfamily=theme.SERIF_STACK)
+    b.text(0.75, 7.1, f"threshold: {verdict['registered_threshold']}",
+           fontsize=theme.NOTE_SIZE, color=theme.TEXT, va="center",
+           fontfamily=theme.SERIF_STACK)
+
+    rows = [("gap, in the registered direction", f"{verdict['gap_pp']:+.1f}pp", FUN),
+            ("threshold on the gap", "10.0pp — cleared", FUN),
+            ("p-value, two-proportion test", f"{verdict['p_value']:.2f}", WA),
+            ("threshold on significance", "0.05 — NOT cleared", WA)]
+    y = 5.4
+    for label, val, c in rows:
+        b.text(0.75, y, label, fontsize=theme.NOTE_SIZE, color=CX,
+               fontfamily=theme.SERIF_STACK)
+        b.text(9.25, y, val, fontsize=theme.NOTE_SIZE, color=c, ha="right",
+               fontfamily=theme.SERIF_STACK)
+        y -= 0.85
+    b.text(0.75, 1.5,
+           "The pattern points the way it was predicted to and\n"
+           "the sample cannot carry it. 23 and 25 compressions\n"
+           "is not enough to separate 57% from 40%.",
+           fontsize=theme.NOTE_SIZE, color=theme.TEXT, va="top",
+           fontfamily=theme.SERIF_STACK, linespacing=1.6)
+
+    theme.finalize(
+        fig, kicker="registered call H6",
+        headline=("The currency state does not yet explain which leg closes the gap"
+                  if not held else
+                  "The currency state predicts which leg closes the gap"),
+        subtitle=f"Compression episodes on the comparator pair, 21.6 years, split by the "
+                 f"currency state READ AT THE EPISODE'S FIRST SESSION — never over the "
+                 f"episode, because FX is one of the three terms that assigns the channel.",
+        stats=[(f"{verdict['local_leg_share_strength']:.0%}",
+                f"local-leg-led in\nSTRENGTH (n={verdict['n_strength']})"),
+               (f"{verdict['local_leg_share_weakness']:.0%}",
+                f"local-leg-led in\nWEAKNESS (n={verdict['n_weakness']})"),
+               (f"{verdict['gap_pp']:+.1f}pp", "gap, registered\ndirection"),
+               (f"p={verdict['p_value']:.2f}", "against a\n0.05 threshold")],
+        source="Repo-computed. pipeline.lab.tsmc.h6_conditional_channels; registration in "
+               "preregistration/amendments/2026-07-30-h6-macro-conditional-resolution.md.",
+        footnote=f"This is what pre-registration is for. Unregistered, this reads as "
+                 f"\"{verdict['local_leg_share_strength']:.0%} versus "
+                 f"{verdict['local_leg_share_weakness']:.0%} — the currency state predicts "
+                 f"the channel\", and it would be wrong. SK Hynix sits in a "
+                 f"{skhy['state'].replace('local currency ', '').lower()} state today "
+                 f"({skhy['krw_move_20d_pct']:+.1f}% over 20 sessions), which is DESCRIPTIVE "
+                 f"placement on a map the test could not draw — it is not a signal, and the "
+                 f"pitch does not use it as one.")
+    return fig, {"verdict": verdict["verdict"], "gap_pp": verdict["gap_pp"]}

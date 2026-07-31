@@ -594,6 +594,128 @@ def lab_summary() -> dict:
     }
 
 
+# --------------------------------------------------------------------------------
+# H6 — the macro-conditional resolution channel (registered 2026-07-30, amendment 002)
+# --------------------------------------------------------------------------------
+#
+# The registered claim: the LEG a compression resolves through conditions on the currency
+# state. Local-currency strength -> disproportionately local-leg-led; weakness ->
+# disproportionately ADR-led or non-resolving.
+#
+# Two design points that decide whether the answer means anything.
+#
+# STATE IS READ AT EPISODE START, NEVER OVER THE EPISODE. Classifying by the currency move
+# DURING the episode would be circular: FX is one of the three terms in the decomposition
+# that assigns the channel, so a "strong currency" episode would partly be defined by the
+# thing being predicted. The state is the M6 fx_trend over the window ENDING at the episode's
+# first session, which is what an observer would have known when the episode opened.
+#
+# THE SIGN CONVENTION IS THE EASIEST THING TO GET BACKWARDS. The FX series is LOCAL PER USD,
+# so a FALLING series is local-currency STRENGTH. `_fx_state` inverts once, in one place, and
+# the module self-check asserts the direction against a constructed case.
+
+#: M6's own window, reused rather than re-chosen -- picking a new lookback for this test
+#: would be a free parameter nobody registered.
+FX_STATE_WINDOW: int = 20
+
+#: Terciles of the trailing FX move. Terciles rather than sign, so "no meaningful trend" is
+#: its own state instead of being split arbitrarily between the two directional ones.
+FX_STATE_LABELS = ("local currency STRENGTH", "flat", "local currency WEAKNESS")
+
+
+def _fx_state(frame: pd.DataFrame, window: int = FX_STATE_WINDOW) -> pd.Series:
+    """Currency state per session, from the trailing FX move. Local per USD, so inverted."""
+    fx_ret = frame["fx"] / frame["fx"].shift(window) - 1.0
+    # Local-currency strength = fewer local units per USD = a NEGATIVE fx_ret.
+    strength = -fx_ret
+    lo, hi = strength.quantile(1 / 3), strength.quantile(2 / 3)
+    return pd.cut(strength, [-np.inf, lo, hi, np.inf],
+                  labels=list(reversed(FX_STATE_LABELS)))
+
+
+def h6_conditional_channels(frame: pd.DataFrame | None = None,
+                            min_move_pp: float = 5.0, min_days: int = 10) -> pd.DataFrame:
+    """Resolution-channel split per currency state. Every state reported, testable or not."""
+    frame = legs() if frame is None else frame
+    ep = episodes(frame["pi"], min_move_pp, min_days)
+    ch = resolution_channel(frame, ep)
+    if not len(ch):
+        return pd.DataFrame()
+    state = _fx_state(frame)
+    ch = ch.assign(fx_state=[state.get(d, None) for d in ch["start"]]).dropna(subset=["fx_state"])
+
+    rows = []
+    for label in FX_STATE_LABELS:
+        sub = ch[ch["fx_state"] == label]
+        comp = sub[sub.direction == "compression"]
+        rows.append({
+            "fx_state": label, "n_episodes": len(sub), "n_compression": len(comp),
+            "compression_share": round(len(comp) / len(sub), 3) if len(sub) else None,
+            "local_leg_share": round(float((comp.channel == "local_leg").mean()), 3)
+                               if len(comp) else None,
+            "adr_leg_share": round(float((comp.channel == "adr_leg").mean()), 3)
+                             if len(comp) else None,
+            "testable": len(comp) >= 10,
+        })
+    out = pd.DataFrame(rows)
+    out.attrs["unconditional_local_share"] = round(
+        float((ch[ch.direction == "compression"].channel == "local_leg").mean()), 3)
+    out.attrs["n_classified"] = len(ch)
+    return out
+
+
+def h6_verdict(table: pd.DataFrame | None = None) -> dict:
+    """The registered threshold, applied. A null is a deliverable and reads as one."""
+    from math import sqrt
+
+    t = h6_conditional_channels() if table is None else table
+    strength = t[t.fx_state == FX_STATE_LABELS[0]].iloc[0]
+    weakness = t[t.fx_state == FX_STATE_LABELS[2]].iloc[0]
+    if not (strength.testable and weakness.testable):
+        return {"verdict": "UNTESTABLE", "reason": "a directional state has <10 compressions",
+                "registered_threshold": "gap >= 10pp and p < 0.05"}
+
+    p1, n1 = float(strength.local_leg_share), int(strength.n_compression)
+    p2, n2 = float(weakness.local_leg_share), int(weakness.n_compression)
+    gap_pp = (p1 - p2) * 100
+    pool = (p1 * n1 + p2 * n2) / (n1 + n2)
+    se = sqrt(pool * (1 - pool) * (1 / n1 + 1 / n2)) if 0 < pool < 1 else float("nan")
+    z = (p1 - p2) / se if se and se == se and se > 0 else float("nan")
+    # Two-sided normal tail without scipy: the registered test, not an approximation of
+    # convenience -- 0.5*erfc(|z|/sqrt(2)) IS the exact two-sided p for a normal.
+    from math import erfc
+    p_value = erfc(abs(z) / sqrt(2)) if z == z else float("nan")
+
+    held = bool(gap_pp >= 10.0 and p_value < 0.05)
+    return {
+        "verdict": "HELD" if held else "NULL",
+        "registered_threshold": "gap >= 10pp AND p < 0.05, two-proportion test",
+        "local_leg_share_strength": round(p1, 3), "n_strength": n1,
+        "local_leg_share_weakness": round(p2, 3), "n_weakness": n2,
+        "gap_pp": round(gap_pp, 1), "z": round(z, 2), "p_value": round(p_value, 4),
+        "direction_as_registered": bool(gap_pp > 0),
+        "unconditional_local_share": t.attrs.get("unconditional_local_share"),
+    }
+
+
+def h6_skhy_descriptive() -> dict:
+    """SKHY scored alongside, DESCRIPTIVELY. It never enters the test."""
+    from pipeline.measurement.premium import _load_close, latest_common_legs
+    snap = latest_common_legs("skhy")
+    fx = _load_close("d1_prices", "usdkrw_spot_daily")
+    fx = fx[fx.index <= snap["date"]]
+    if len(fx) <= FX_STATE_WINDOW:
+        return {"state": "insufficient history", "n": len(fx)}
+    move = float(fx.iloc[-1] / fx.iloc[-1 - FX_STATE_WINDOW] - 1.0)
+    return {
+        "as_of": str(snap["date"].date()),
+        "krw_move_20d_pct": round(move * 100, 2),
+        "state": ("local currency STRENGTH" if move < 0 else "local currency WEAKNESS"),
+        "note": ("Descriptive only. SKHY is the forward-test instrument and is never fitted "
+                 "or tested on. Its state is located on the map; it does not build the map."),
+    }
+
+
 if __name__ == "__main__":   # smallest runnable check of the two non-trivial routines
     f = legs()
     ep = episodes(f["pi"], 5.0, 10)
@@ -610,5 +732,22 @@ if __name__ == "__main__":   # smallest runnable check of the two non-trivial ro
     # Higher carry can never raise the fraction that beats carry.
     m = entry_outcomes(f["pi"], pctiles=(0.90,), horizons=(252,)).set_index("bracket")
     assert m.loc["low", "frac_beats_carry"] >= m.loc["high", "frac_beats_carry"]
+    # H6 sign convention, against a constructed case. The FX series is LOCAL PER USD, so the
+    # sessions that FELL the most must classify as local-currency STRENGTH. Getting this
+    # backwards inverts the whole registered result and still produces a plausible table.
+    # The case has to MIX directions: terciles of a monotonic series are degenerate and would
+    # pass or fail on floating-point noise rather than on the convention.
+    import pandas as _pd
+    idx = f.index[-90:]
+    mixed = _pd.concat([_pd.Series(np.linspace(1400.0, 1200.0, 30)),      # big fall
+                        _pd.Series(np.linspace(1200.0, 1205.0, 30)),      # flat
+                        _pd.Series(np.linspace(1205.0, 1450.0, 30))])     # big rise
+    mixed.index = idx
+    st = _fx_state(_pd.DataFrame({"fx": mixed}), window=5).dropna()
+    assert st.iloc[5] == FX_STATE_LABELS[0], (
+        f"the most-FALLING local-per-USD sessions must be {FX_STATE_LABELS[0]!r}, "
+        f"got {st.iloc[5]!r}")
+    assert st.iloc[-1] == FX_STATE_LABELS[2], (
+        f"the most-RISING sessions must be {FX_STATE_LABELS[2]!r}, got {st.iloc[-1]!r}")
     print(f"ok: {len(f)} sessions, {len(ep)} episodes, "
           f"beats carry (90th pctile, 252d, mid) = {eo.iloc[0]['frac_beats_carry']:.1%}")

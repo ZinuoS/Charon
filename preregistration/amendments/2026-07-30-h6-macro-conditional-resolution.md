@@ -69,3 +69,40 @@ say not merely that the local leg sometimes closes the gap, but *when*. A findin
 shape is exactly the kind that a reader is right to suspect was chosen after the fact. The
 only answer to that suspicion is a timestamp that precedes the result, which is what this
 file is.
+
+---
+
+## RESULT — added 2026-07-30, after the registration commit
+
+**Verdict: NULL.** The registered threshold required BOTH a gap of at least 10 points AND
+p < 0.05. One cleared and one did not.
+
+| currency state at episode start | compressions | closed by local leg | closed by US leg |
+|---|---|---|---|
+| local currency STRENGTH | 23 | **56.5%** | 43.5% |
+| flat | 23 | 34.8% | 65.2% |
+| local currency WEAKNESS | 25 | **40.0%** | 60.0% |
+
+Unconditional local-leg share across all 137 episodes: 43.7%.
+
+**Gap: +16.5 points, in the registered direction.** Threshold on the gap was 10 points, so
+that leg cleared. **p = 0.25** on the two-proportion test, z = 1.14. Threshold on
+significance was 0.05, so that leg did not. The call is NULL.
+
+**This is what the registration was for.** Unregistered, this result reads as "57% versus
+40% — the currency state predicts which leg closes the gap", and it would have been the
+headline of the macro chapter. It is a coin-flip-grade separation on 23 and 25 observations
+wearing a conclusion's clothes. The direction was frozen in a commit that contains no
+numbers, and the commit carrying these numbers comes after it; anyone can check the order.
+
+**What it does not license.** The pitch does not use the currency state as a signal, and G30
+says so on its face. SK Hynix currently sits in a local-currency-strength state (KRW +5.9%
+over 20 sessions to 2026-07-28). That is DESCRIPTIVE placement on a map the test could not
+draw, and quoting it as support would be exactly the error the registration exists to
+prevent.
+
+**What would settle it.** More episodes, which means more constrained pairs in the panel
+rather than a longer TSM history — the 21.6 years is already spent. The three landed Taiwan
+comparators (UMC, ASE, CHT) and the five Brazilian ones are candidates; pooling them needs a
+within-pair demeaning step and a decision about whether the currency state is pair-specific
+or regional, neither of which is registered. That is a next session, not a footnote.
