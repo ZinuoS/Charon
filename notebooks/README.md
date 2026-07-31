@@ -30,6 +30,8 @@ material to do it.
 | **09** | [`09_tsmc_lab.ipynb`](09_tsmc_lab.ipynb) | The comparator lab: 21.6 years of the nearest regime family. Structural audit first — the differences bound the claims — then the episode census, entry outcomes against the carry brackets, the excursion/stop case, and the FX channel per era. | ✅ live |
 | **10** | [`10_financing.ipynb`](10_financing.ipynb) | The carry bracket opened into components: what is measured, what is a desk quote, and the one piece that cannot be measured without a forward curve. The funding differential turns out to be a tailwind. | ✅ live |
 
+| **11** | [`11_pitch_book.ipynb`](11_pitch_book.ipynb) | The presentation material: the trade on page one, then durability, history, macro, structure, scenarios, risk and the ask. Sell-side register, live values, every figure shared with the slide layer. | ✅ live |
+
 Numbers were reserved before the notebooks existed so the sequence stayed stable as it filled
 in. **00 and 02 were previously numbered 00_pitch and 01_premium_anatomy**; the renumbering
 preserved git history via `git mv`.
