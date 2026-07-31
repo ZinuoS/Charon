@@ -2266,3 +2266,187 @@ def g30_macro_catalyst_map(table, verdict: dict, skhy: dict):
                  f"placement on a map the test could not draw — it is not a signal, and the "
                  f"pitch does not use it as one.")
     return fig, {"verdict": verdict["verdict"], "gap_pp": verdict["gap_pp"]}
+
+
+# ================================================================================
+# The financing chapter — G29a / G29b (notebooks/10_financing.ipynb)
+# ================================================================================
+
+
+def g29a_financing_structure(legs: dict, summary: dict):
+    """G29a — the swap-financed pair, drawn as legs rather than described as a table.
+
+    The product is not "financing". It is a cross-currency structure with four legs, and the
+    slide should say which ones the client faces and which ones the desk absorbs. The
+    counter-intuitive leg is drawn as such: USD rates are above KRW rates, so swapping USD
+    into KRW to fund the local long EARNS the differential rather than paying it.
+    """
+    fig, ax = theme.figure(shape_name="large")
+    EM, CON, FUN, CX, BA, WA = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["constrained"],
+                                theme.SEMANTIC["fungible"], theme.SEMANTIC["context"],
+                                theme.SEMANTIC["barrier"], theme.SEMANTIC["warning"])
+    ax.set_xlim(0, 100); ax.set_ylim(0, 62); ax.axis("off")
+
+    def box(x, y, w, h, title, body, col, fill=None):
+        ax.add_patch(mpatches.FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.5",
+                     facecolor=fill or theme.PAPER, edgecolor=col, linewidth=1.6))
+        ax.text(x + w / 2, y + h - 3.4, title, ha="center", fontsize=theme.LABEL_SIZE,
+                color=col, weight="medium", fontfamily=theme.SERIF_STACK)
+        ax.text(x + w / 2, y + h / 2 - 2.6, body, ha="center", va="center",
+                fontsize=theme.NOTE_SIZE, color=theme.TEXT,
+                fontfamily=theme.SERIF_STACK, linespacing=1.6)
+
+    def arrow(x0, y0, x1, y1, label, col, above=True):
+        ax.annotate("", xy=(x1, y1), xytext=(x0, y0),
+                    arrowprops=dict(arrowstyle="-|>", color=col, lw=1.5,
+                                    shrinkA=2, shrinkB=2))
+        ax.text((x0 + x1) / 2, (y0 + y1) / 2 + (2.2 if above else -3.4), label,
+                ha="center", va="bottom" if above else "top", fontsize=theme.NOTE_SIZE,
+                color=col, fontfamily=theme.SERIF_STACK, linespacing=1.5)
+
+    box(2, 40, 22, 16, "YOU", "post USD collateral\nhold one position\nface one counterparty",
+        EM)
+    box(39, 40, 22, 16, "THE DESK", "intermediates both\nfunding legs and\nthe borrow", CON)
+    box(76, 40, 22, 16, "USD MONEY MARKET",
+        f"collateral and short\nproceeds earn\n{legs['usd_rate_pct']:.2f}%", FUN)
+    box(39, 6, 22, 16, "KRW FUNDING",
+        f"local long funded\nat {legs['krw_rate_pct']:.2f}%", FUN)
+    box(2, 6, 22, 16, "LOCAL LONG", "000660.KS\nbought with the\nswapped KRW", CX)
+    box(76, 6, 22, 16, "ADR SHORT", "SKHY borrowed\nand sold;\nproceeds in USD", WA)
+
+    arrow(24, 48, 39, 48, "USD collateral", EM)
+    arrow(61, 48, 76, 48, "invested", FUN)
+    arrow(50, 40, 50, 22, "cross-currency swap\nUSD → KRW", CON, above=False)
+    arrow(39, 14, 24, 14, "funds the buy", CX)
+    arrow(61, 14, 76, 14, "borrow sourced\nby the desk", WA)
+
+    diff = summary["funding_differential_bp"]
+    ax.add_patch(mpatches.FancyBboxPatch((2, 26), 96, 10, boxstyle="round,pad=0.5",
+                 facecolor=theme.SEMANTIC["inert_fill"], edgecolor=BA, linewidth=1.2))
+    ax.text(50, 31.5,
+            f"USD rates sit {abs(diff):.0f}bp/yr ABOVE KRW rates, so swapping USD into KRW to "
+            f"fund the local long EARNS the differential.\nThe funding leg of this trade is a "
+            f"{abs(diff):.0f}bp/yr tailwind. What it costs is the borrow and the basis — "
+            f"not the swap.",
+            ha="center", va="center", fontsize=theme.NOTE_SIZE, color=theme.TEXT,
+            fontfamily=theme.SERIF_STACK, linespacing=1.7)
+
+    theme.finalize(
+        fig, kicker="the structure",
+        headline="A swap-financed pair: you post dollars, we fund the won side",
+        subtitle="Four legs. You face one of them. The cross-currency swap, the KRW funding "
+                 "and the ADR borrow sit on the desk's side of the line.",
+        stats=[(f"{legs['usd_rate_pct']:.2f}%", f"USD leg\n({legs['usd_series'].split(',')[0]})"),
+               (f"{legs['krw_rate_pct']:.2f}%", "KRW leg\n(3-month)"),
+               (f"{abs(diff):.0f}bp", "funding differential,\nin your favour"),
+               (f"{summary['total_bp_per_month']:.0f}bp", "all-in carry,\nper month")],
+        source=f"Repo-computed. USD {legs['usd_as_of']}, KRW {legs['krw_as_of']} — each at "
+               f"its own native frequency, not interpolated onto a common grid.",
+        footnote="The differential is the covered-interest quantity: hedging a foreign asset "
+                 "back into the base currency earns (base rate minus foreign rate). It is a "
+                 "tailwind only while USD rates stay above KRW rates, and it is quoted before "
+                 "the cross-currency basis, which this repository cannot measure without a "
+                 "forward curve and therefore does not estimate.")
+    return fig, {"differential_bp": diff}
+
+
+def g29b_carry_decomposition(components, summary: dict, fed: dict):
+    """G29b — the breakeven gets anatomy: the carry by component, against the critical level.
+
+    The bracket that stood for weeks was 250/600/1200bp for "four hatched components
+    combined". Two of the four are measurable from landed series, one is a desk quote, and
+    one is not measurable at all. Drawn as four different KINDS of bar, because a stacked
+    chart that renders a measurement and an assumption identically is worse than the single
+    bracket it replaces.
+    """
+    fig, (a, b) = theme.figure(1, 2, shape_name="wide", gridspec_kw={"width_ratios": [1.45, 1]})
+    EM, CON, FUN, CX, BA, WA = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["constrained"],
+                                theme.SEMANTIC["fungible"], theme.SEMANTIC["context"],
+                                theme.SEMANTIC["barrier"], theme.SEMANTIC["warning"])
+    style = {"MEASURED":    dict(color=FUN, hatch=None),
+             "BRACKETED":   dict(color=CON, hatch="///"),
+             "NOT MEASURED": dict(color=theme.SEMANTIC["inert_fill"], hatch="xxx"),
+             "DOCUMENTED":  dict(color=CX, hatch=None)}
+
+    c = components
+    x = np.arange(len(c))
+    vals = c.bp_per_month.values
+    for xi, v, st in zip(x, vals, c.status):
+        s = style[st]
+        a.bar(xi, v, width=0.62, color=s["color"], hatch=s["hatch"], edgecolor=BA,
+              linewidth=0.8, zorder=3)
+        a.text(xi, v + (0.9 if v >= 0 else -1.6), f"{v:+.1f}", ha="center",
+               va="bottom" if v >= 0 else "top", fontsize=theme.NOTE_SIZE,
+               color=theme.TEXT, fontfamily=theme.SERIF_STACK)
+    total = summary["total_bp_per_month"]
+    a.bar(len(c), total, width=0.62, color=EM, zorder=3)
+    a.text(len(c), total + 0.9, f"{total:+.1f}", ha="center", fontsize=theme.SUBTITLE_SIZE,
+           color=EM, fontfamily=theme.SERIF_STACK)
+
+    crit = summary["critical_carry_bp_per_month"]
+    a.axhline(crit, color=BA, lw=1.6, ls="--", zorder=4)
+    a.annotate(f"breakeven {crit:.0f}bp/mo — above this line\nthe base rate no longer pays",
+               xy=(len(c) * 0.62, crit), xytext=(0, 6), textcoords="offset points",
+               fontsize=theme.NOTE_SIZE, color=BA, ha="center",
+               fontfamily=theme.SERIF_STACK, linespacing=1.5)
+    a.axhline(0, color=BA, lw=1.0)
+    a.set_xticks(list(x) + [len(c)])
+    a.set_xticklabels(list(c.short) + ["ALL-IN"], linespacing=1.6)
+    a.set_ylabel("basis points per month — positive is a cost to you")
+    a.set_ylim(min(vals.min(), 0) * 1.5, max(crit * 1.25, total * 1.35))
+    a.legend(handles=[mpatches.Patch(facecolor=s["color"], hatch=s["hatch"], edgecolor=BA,
+                                     label=lbl.title()) for lbl, s in style.items()],
+             loc="upper left", ncol=2, fontsize=theme.NOTE_SIZE)
+
+    # --- right: what moves it
+    b.set_xlim(0, 10); b.set_ylim(0, 10); b.axis("off")
+    b.add_patch(mpatches.FancyBboxPatch((0.3, 6.1), 9.4, 3.5, boxstyle="round,pad=0.12",
+                facecolor=theme.PAPER, edgecolor=EM, lw=1.5))
+    b.text(0.75, 9.0, "The funding leg is long the front end",
+           fontsize=theme.LABEL_SIZE, color=EM, weight="medium",
+           fontfamily=theme.SERIF_STACK)
+    b.text(0.75, 7.5,
+           f"A 25bp HIKE cuts the carry to "
+           f"{fed['carry_after_hike_bp_per_year'] / 12:.1f}bp/mo.\n"
+           f"A 25bp CUT raises it to "
+           f"{fed['carry_after_cut_bp_per_year'] / 12:.1f}bp/mo.\n"
+           f"{fed['bp_per_month_per_25bp']:.1f}bp per month per 25bp, either way.",
+           fontsize=theme.NOTE_SIZE, color=theme.TEXT, va="center",
+           fontfamily=theme.SERIF_STACK, linespacing=1.7)
+
+    b.text(0.75, 5.0, "What is still not a measurement", fontsize=theme.LABEL_SIZE,
+           color=WA, weight="medium", fontfamily=theme.SERIF_STACK)
+    b.text(0.75, 3.6,
+           "The ADR borrow spread is a desk quote and is\n"
+           f"bracketed at {summary['borrow_bracket_bp']}bp of a "
+           "150-900bp range.\n\n"
+           "The cross-currency basis is drawn at zero and\n"
+           "hatched. Measuring it needs a USD/KRW forward\n"
+           "curve. A negative KRW basis — the usual sign —\n"
+           "eats directly into the differential above.",
+           fontsize=theme.NOTE_SIZE, color=theme.TEXT, va="top",
+           fontfamily=theme.SERIF_STACK, linespacing=1.7)
+
+    theme.finalize(
+        fig, kicker="the economics",
+        headline=("The carry is the borrow spread. The funding leg pays you."
+                  if summary["funding_is_tailwind"] else
+                  "The carry, opened up by component"),
+        subtitle="Two components measured from landed series, one a desk quote, one not "
+                 "measurable at all — drawn as three different kinds of bar so the chart "
+                 "cannot pass an assumption off as a measurement.",
+        stats=[(f"{summary['total_bp_per_month']:.0f}bp", "all-in carry,\nper month"),
+               (f"{summary['critical_carry_bp_per_month']:.0f}bp", "breakeven,\nper month"),
+               (f"{summary['headroom_bp_per_year'] / 12:.0f}bp", "headroom,\nper month"),
+               (f"{summary['legacy_bracket_bp'] / 12:.0f}bp", "the old single\nbracket, per month")],
+        source="Repo-computed. pipeline.package.financing; breakeven from "
+               "pipeline.package.breakeven.",
+        footnote="The all-in number falls below the old bracket for a reason that is an "
+                 "accounting change, not a discovery: the old bracket bundled a local short "
+                 "borrow this expression does not pay, and it treated the funding "
+                 "differential as a cost when at today's rates it is a credit. What has NOT "
+                 "improved is the uncertainty — the borrow is still a quote and the basis is "
+                 "still unmeasured, and either can move this by more than the whole "
+                 "differential.")
+    return fig, {"total_bp_mo": summary["total_bp_per_month"],
+                 "critical_bp_mo": summary["critical_carry_bp_per_month"]}
