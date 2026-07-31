@@ -296,3 +296,27 @@ make it.**
 > numbers, because every deck figure is rendered by a builder in this repository. What differs
 > is emphasis and ordering, never substance — and the deck's build script asserts that it
 > quotes no unbracketed cost and claims no convergence force this research disproved.
+
+---
+
+## Staged 2026-07-30 — the TSMC comparator sentence is now stale (author to apply)
+
+README §2 currently ends its comparator bullet with:
+
+> This repo measures its own: **mean +8.88% over 2,328 days**.
+
+That figure predates the deep-history recovery. The TSMC ADR leg had been truncated at
+2016-07-28 by a provider-chain choice — Nasdaq is the listing venue and outranks an
+aggregator on provenance, but its API serves a rolling ten-year window. EODHD serves the same
+leg from 1997-10-08 and agrees with Nasdaq **bit-for-bit over all 2,513 overlapping
+sessions**, so the deep history is admitted on evidence rather than on faith. After excluding
+the pre-2005 stock-dividend era (a declared corporate-action artefact, not a result screen):
+
+> This repo measures its own: **mean +6.24% over 5,064 sessions (2005-01-03 to 2026-07-24,
+> 21.6 years)** — and the five-year mean is +12.5%, which is the level the pitch's comparator
+> anchor uses. The gap between the two is the point: this premium's "normal" depends entirely
+> on which decade you sample, which is why a single five-year average is not an equilibrium
+> anchor for anyone.
+
+The surrounding sentences about 12.6% being untraceable and unused need no change — they were
+already correct, and the deep sample strengthens them.

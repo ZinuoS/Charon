@@ -232,3 +232,44 @@ So **both tracks run at the same capped N_train (200)** with **identical test fo
 makes it a true head-to-head at the sample size the capacity rule was written for, and it means
 the comparison isolates model class rather than sample size. Test-fold indices are asserted
 equal between tracks by test, not by assumption.
+
+---
+
+## 2026-07-30 — INCIDENT (resolved, alarm false): "the public repo is five commits behind"
+
+**Report.** A fetch of the public repository showed a five-commit history serving the day-one
+README — §0 "private", "quota exhausted", the 12.6% TSMC figure, the passed S0 deadline —
+while every recent session had reported a successful push. The working hypothesis was a push
+path that lies: wrong remote, second repo, non-main branch, or failed auth reported as
+success.
+
+**Diagnosis: the pushes landed. The observation was of a stale view.** Three independent live
+sources agree, and none of them is an agent's assertion:
+
+| source | result |
+|---|---|
+| `git ls-remote origin` (live query, not the local cache) | `refs/heads/main` = `8613f88` = local HEAD |
+| `git rev-list --count origin/main` after an explicit fetch | 59 |
+| the rendered HTML at github.com/ZinuoS/Charon | **59 commits**, `notebooks/` present, README's first heading "charon", and the words "private", "quota exhausted" and "charon arb" all ABSENT |
+
+The remote also carries one side branch (`claude/remote-control-sync-poster-0owlwe`, the
+head of PR #1) which is not main and does not affect what the public page serves.
+
+**Why the process was still unsound, and what changed.** For weeks the only evidence that a
+push had landed was an agent saying so. `git push` exiting 0 proves a ref moved on *some*
+remote under *some* refspec; it does not prove that the page a reader loads reflects it. Two
+real failure modes it cannot distinguish: `git push origin HEAD` silently creating a side
+branch when HEAD is not `main` (which is what every session in this project actually ran),
+and a default branch that is not the branch being pushed. Neither occurred here. Both would
+have looked identical to the caller.
+
+**Permanent remedy.** `scripts/publish.py` and the `just publish` / `just verify-public`
+targets. It pushes with an EXPLICIT refspec (`<branch>:main`, never bare `HEAD`), then fetches
+the rendered public page and fails unless the commit count matches local and the expected
+paths are visible. Verification is evidence, not assertion, and it now runs every time.
+
+**One genuinely stale artefact found while diagnosing.** `README.md` still reports the TSMC
+comparator as "mean +8.88% over 2,328 days". The deep-history recovery superseded that: the
+lab now runs 5,064 sessions over 21.6 years with a mean of +6.24%. README.md is
+author-reserved, so the correction is STAGED in `docs/README_staged.md` and is not applied
+here.

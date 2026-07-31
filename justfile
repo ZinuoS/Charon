@@ -94,3 +94,14 @@ pitch-refresh:
 # D2 — macro context (KOSPI, US/KR short rates).
 ingest-d2:
     uv run python -m pipeline.ingest.d2_macro
+
+# Push, then PROVE it: re-fetch the rendered public page and check the commit count moved
+# and the expected paths are visible. A `git push` that exits 0 proves a ref moved on some
+# remote, not that a reader sees it.
+publish:
+    uv run python -m scripts.pre_push_audit
+    uv run python -m scripts.publish --push
+
+# Verify the public page without pushing anything.
+verify-public:
+    uv run python -m scripts.publish
