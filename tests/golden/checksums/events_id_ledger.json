@@ -7,7 +7,10 @@
     "krx_night_session_launch",
     "krx_data_login_wall",
     "kr_single_stock_2x_etf_listing",
-    "kr_2x_etf_curb_review"
+    "kr_2x_etf_curb_review",
+    "fomc_20260916",
+    "fomc_20261028",
+    "fomc_20261209"
   ],
-  "updated_at_utc": "2026-07-29T00:52:58+00:00"
+  "updated_at_utc": "2026-07-31T02:46:29+00:00"
 }

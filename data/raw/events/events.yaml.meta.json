@@ -9,15 +9,18 @@
     "krx_night_session_launch",
     "krx_data_login_wall",
     "kr_single_stock_2x_etf_listing",
-    "kr_2x_etf_curb_review"
+    "kr_2x_etf_curb_review",
+    "fomc_20260916",
+    "fomc_20261028",
+    "fomc_20261209"
   ],
   "native_timezone": "per-event (see `market`)",
   "notes": "README \u00a74 D7. The one documented exception to raw-immutability; append-only.",
   "provider": "hand_maintained",
-  "pulled_at_utc": "2026-07-29T00:52:58+00:00",
-  "rows": 8,
+  "pulled_at_utc": "2026-07-31T02:46:29+00:00",
+  "rows": 11,
   "series_id": "events",
-  "sha256": "0923891fb72f4e47bee639b610371913820397249b3c193d300c85d98c23cb6d",
+  "sha256": "ff7e71cdc00d55bf7b4838c9b395dfb39ce4a55192f6b0c363a640ad63ddcb16",
   "transport": "none",
   "units": "discrete events",
   "unresolved_known_from": [

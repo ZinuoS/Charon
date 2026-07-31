@@ -159,3 +159,51 @@ events:
 #   - Korean short-sale regime changes (feeds D3/M2; the regulatory state is a regime
 #     variable, README §4 D3).
 #   - Lock-up expiry dates from the offering, if any.
+
+  - id: fomc_20260916
+    date: 2026-09-16
+    known_from: 2026-07-31   # date this calendar was fetched from federalreserve.gov
+    market: US
+    category: macro
+    title: FOMC decision (September 15-16)
+    detail: >-
+      Second day of the two-day meeting: the statement and implementation note land on
+      this date. Summary of Economic Projections released.
+      Relevant to this repository because the USD leg of the carry is EARNED, not paid --
+      see pipeline/package/financing.py -- so a hike reduces the cost of holding the pair
+      by roughly 2.1bp per month per 25bp and a cut raises it. Tentative until confirmed
+      at the preceding meeting, per the Federal Reserve's own note.
+    source: federalreserve.gov/monetarypolicy/fomccalendars.htm, fetched 2026-07-31
+    confounded_with: []
+
+  - id: fomc_20261028
+    date: 2026-10-28
+    known_from: 2026-07-31   # date this calendar was fetched from federalreserve.gov
+    market: US
+    category: macro
+    title: FOMC decision (October 27-28)
+    detail: >-
+      Second day of the two-day meeting: the statement and implementation note land on
+      this date.
+      Relevant to this repository because the USD leg of the carry is EARNED, not paid --
+      see pipeline/package/financing.py -- so a hike reduces the cost of holding the pair
+      by roughly 2.1bp per month per 25bp and a cut raises it. Tentative until confirmed
+      at the preceding meeting, per the Federal Reserve's own note.
+    source: federalreserve.gov/monetarypolicy/fomccalendars.htm, fetched 2026-07-31
+    confounded_with: []
+
+  - id: fomc_20261209
+    date: 2026-12-09
+    known_from: 2026-07-31   # date this calendar was fetched from federalreserve.gov
+    market: US
+    category: macro
+    title: FOMC decision (December 8-9)
+    detail: >-
+      Second day of the two-day meeting: the statement and implementation note land on
+      this date. Summary of Economic Projections released.
+      Relevant to this repository because the USD leg of the carry is EARNED, not paid --
+      see pipeline/package/financing.py -- so a hike reduces the cost of holding the pair
+      by roughly 2.1bp per month per 25bp and a cut raises it. Tentative until confirmed
+      at the preceding meeting, per the Federal Reserve's own note.
+    source: federalreserve.gov/monetarypolicy/fomccalendars.htm, fetched 2026-07-31
+    confounded_with: []

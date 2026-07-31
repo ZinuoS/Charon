@@ -299,7 +299,7 @@ make it.**
 
 ---
 
-## Staged 2026-07-30 — the TSMC comparator sentence is now stale (author to apply)
+## APPLIED 2026-07-31 — the TSMC comparator sentence was stale (author instructed; now live in README §2)
 
 README §2 currently ends its comparator bullet with:
 
