@@ -1,9 +1,13 @@
-"""Generate notebooks/07_macro_environment.ipynb — the environment, with its gaps named.
+"""Generate notebooks/07_macro_environment.ipynb — the macro layer, as an argument.
 
-07 and 08 are READING notebooks: the prose layer over panels that already exist. They exist so
-someone who wants the argument in sentences does not have to reconstruct it from twelve slides.
-They render the SAME panel builders the pack uses, so there is no third description of a figure
-to drift.
+UPGRADED FROM BACKDROP. The first version of this notebook described the environment: here
+are the rules, here are the currents, here is a gap we cannot close. Describing is the wrong
+job. Every macro claim in a pitch has to name a MECHANISM and attach a NUMBER, or it is
+atmosphere — and atmosphere is what a PM discounts first.
+
+Four claims, four mechanisms, four numbers, every one landed or cited. Where the number does
+not support the claim, the notebook says so; one of the four is a registered NULL and it is
+reported as one.
 """
 from __future__ import annotations
 
@@ -19,72 +23,154 @@ OUT = ROOT / "notebooks" / "07_macro_environment.ipynb"
 md, code, write = notebook()
 
 md(r"""
-# The macro environment — the stage the premium stands on
+# The macro layer — four claims, four mechanisms, four numbers
 
-The premium is not a company story. It sits inside a policy, flow and funding environment that
-can move it for reasons that have nothing to do with SK Hynix's earnings. This notebook presents
-that environment, **describes it, and does not call it** — there is no forecast here.
+The premium is not a company story, but "macro matters" is not a claim either. Each of the
+four statements below names the mechanism it runs through and the number that sizes it. Two
+are supported, one is supported and small, and one is a **registered null** — reported as a
+null, because the alternative is to let an untested conditional carry a slide.
 
-Panels: **P0a** (the stage) and **P0b** (the currents), both exported with the client pack.
+| # | claim | mechanism | number | status |
+|---|---|---|---|---|
+| 1 | The AI/HBM bid is what opened the gap | US demand meets a supply that cannot respond | ADR ADV **$8.8bn** on 12 sessions vs **$8.3bn** for the decade-old local line | landed |
+| 2 | The trade's cost is Fed-sensitive | USD rate is *earned* on collateral and short proceeds | **2.1bp/month per 25bp**, and a hike makes it *cheaper* | landed |
+| 3 | The won moves the premium's level | π is a currency-denominated ratio | **0.86 premium points per 1% KRW** (95% CI 0.65–1.06); FX is **1.3%** of daily variance | landed |
+| 4 | The won selects the resolution channel | strength should favour the local leg closing the gap | **+16.5pp in the predicted direction, p = 0.25** | **registered NULL** |
 """)
 
-code(r'''
+code(r"""
 %matplotlib inline
 import sys, pathlib
 ROOT = pathlib.Path.cwd().parent if pathlib.Path.cwd().name == "notebooks" else pathlib.Path.cwd()
 if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
-from pipeline.viz import theme
+import pandas as pd
+from pipeline.viz import theme, figures
+from pipeline.package import capacity as CAP, financing as F
+from pipeline.hedging.ratios import HedgeLegs, fx_sensitivity
+from pipeline.lab import tsmc as LAB
 from scripts.export_client_pack import panels
 theme.apply()
 PANELS = dict(panels())
-''')
+""")
 
 md(r"""
-## 1. Regulatory state — the constraints that shape every short leg
+## 1. The bid — demand meets a supply that cannot answer
 
-Three facts from the repo's event register, each with its premium relevance in one line.
+**Mechanism.** US buyers want the exposure. Ordinarily their demand is met by creating more
+ADRs, which is what keeps a fungible pair at zero. Here creation requires the Company's
+consent, so demand has nowhere to go except into the price of the existing line.
 
-- **Short selling resumed 2025-03-31.** The ban imposed in November 2023 was fully lifted, so
-  all listed stocks are shortable. *Relevance: without this the short leg does not exist at all.*
-- **Single-stock 2× ETF listings suspended 2026-07-16**, deposit requirement raised, accelerated
-  to **2026-07-31**. Eligibility rules admit only two names. *Relevance: concentrated in this
-  underlying, so it is a flow event for this pair specifically.*
-- **Eurex–KRX link terminated 2025-06-06**; KRX has run its own night session since
-  **2025-06-09**. *Relevance: the overnight hedging route changed, and the synthetic
-  contemporaneous premium depends on which session is available.*
+**Number.** The ADR is three weeks old and already trades more than the local line does.
+""")
+code("CAP.adv_table()")
+md(r"""
+An ADR turning over **$8.8bn a day after twelve sessions**, against **$8.3bn** for a line
+with 2,838 sessions of history, is the demand side of this trade stated as a fact rather than
+a narrative. The caveat travels with it and is printed in the table: twelve sessions is
+regime-fresh, not a cycle-average, and a listing's first weeks are its noisiest.
+
+**What is scheduled.** Q2 earnings sit in the event register at 2026-07-29. This notebook
+does not model the memory cycle and takes no view on it — the claim is about the *shape* of
+demand meeting sealed supply, not about the level of HBM pricing.
+
+## 2. The Fed path — the cost leg, and it points the unintuitive way
+""")
+code("pd.Series(F.fed_sensitivity())")
+md(r"""
+**Mechanism.** The client posts USD collateral and the ADR short generates USD proceeds. Both
+*earn* the USD rate. The KRW funding leg pays the Korean rate. So the USD rate enters the
+carry with a negative sign.
+
+**Number: 2.1bp per month per 25bp, and a hike makes the trade cheaper to hold.** That is the
+opposite of the reflex for a levered position, and it is worth saying out loud: the funding
+leg of this trade is long the front end.
+
+Full decomposition in [10 financing](10_financing.ipynb). The FOMC calendar is not landed, so
+meeting dates are not marked — public and routine to add, but typing them from memory is how a
+wrong date reaches a client chart.
+
+## 3. The won — a real link, correctly signed, and small
+""")
+code("pd.Series(fx_sensitivity(HedgeLegs.live('skhy').premium))")
+md(r"""
+**Mechanism.** π = P_ADR × FX / (n × P_local), so the currency is inside the premium
+identity. It is a leg, not a backdrop.
+
+**Number.** Empirically **0.86 premium points per 1% won move** (95% CI 0.65–1.06), estimated
+on 5,064 sessions of the comparator pair. Theory says 1.0 × (1+π); the empirical coefficient
+sits below it because both equity legs carry their own FX betas that partly offset.
+
+**And the honest size of it: FX explains 1.3% of daily premium variation.** The link is real
+and correctly signed. It is not the dominant daily risk, and a hedge built as though it were
+would be solving the wrong problem.
+""")
+
+md(r"""
+## 4. The won and the resolution channel — registered, tested, NULL
+
+**The claim, registered 2026-07-30 before it was computed** (amendment 002): compression
+episodes should be disproportionately local-leg-led when the local currency is strengthening,
+and ADR-led or non-resolving when it is weakening.
+
+**The result: the gap came in at +16.5 points in the predicted direction, and p = 0.25.** The
+registered threshold required both a ≥10-point gap *and* p < 0.05. One cleared; one did not.
+""")
+code("""t = LAB.h6_conditional_channels(); v = LAB.h6_verdict(t); s = LAB.h6_skhy_descriptive()
+fig, _ = figures.g30_macro_catalyst_map(t, v, s)
+fig;""")
+md(figures.layman_block("g30_macro_catalyst_map") if "g30_macro_catalyst_map" in figures.LAYMAN else r"""
+**Why this is worth a slide anyway.** Unregistered, this reads as *"57% versus 40% — the
+currency state predicts which leg closes the gap"*, and it would have been the headline of this
+chapter. It is a coin-flip-grade separation on 23 and 25 observations wearing a conclusion's
+clothes. The direction was frozen in a commit containing no numbers; the commit carrying the
+numbers came after it. Anyone can check the order.
+
+**What it does not license.** SK Hynix sits in a won-strength state today (KRW +5.9% over 20
+sessions). That is descriptive placement on a map the test could not draw, and the pitch does
+not use it as a signal.
+""")
+
+md(r"""
+## 5. The feasibility layer — three dated facts that make the trade possible at all
 """)
 code('fig, _ = PANELS["P0a_the_stage"]()\nfig;')
-md(figures.layman_block("g20_macro_map"))
-
 md(r"""
-## 2. The currents — index, currency, funding
+- **Short selling resumed 2025-03-31**, all listed stocks. Without it the short leg does not
+  exist and there is no trade to pitch.
+- **Single-stock 2× ETF listings suspended 2026-07-16**, deposit requirement accelerated to
+  **2026-07-31**; eligibility admits two names and this one is in scope. A flow event specific
+  to this underlying.
+- **The Eurex–KRX link terminated 2025-06-06**; KRX has run its own night session since
+  **2025-06-09**. The overnight hedging route changed, and the synthetic contemporaneous
+  premium depends on which session is available.
 
-Three series, three frequencies. The rate differential is presented **monthly** because its
-Korea leg is monthly: interpolating an OECD series to daily for a context panel would
-manufacture observations nobody published.
+These are not colour. Each one is a precondition: the first makes the structure possible, the
+second is a dated flow, the third determines how the position can be hedged overnight.
 
-**FX is not context here — it is a leg.** π = P_ADR · FX / (n · P_local) − 1, so the won enters
-the premium directly, and again through the hedge cost. That is why it appears on a macro panel
-and in the hedge menu.
+## 6. The currents, and the one thing this layer still cannot show
 """)
 code('fig, _ = PANELS["P0b_the_currents"]()\nfig;')
-md(figures.layman_block("g23_currents"))
-
 md(r"""
-## 3. What this layer cannot show
+**Foreign-investor flows remain a named gap.** The sanctioned route returns HTTP 401 without a
+service-key registration this repository does not hold. The panel says so rather than
+estimating a direction — a flow chart drawn from an unsourced estimate would be the single
+most quotable and least defensible object in the whole project.
 
-**Foreign-investor flows are a named gap.** No sanctioned route exists without a registration
-this repository does not hold: no KRX Open API key is present, and the `data.go.kr` catalogue
-route requires the same. The panel says so rather than estimating a direction.
+---
 
-Two series that *were* gaps closed this session, both through access already held — KOSPI via
-EODHD's index symbology (`KS11.INDX`; `^KS11` and `KOSPI.INDX` both 404), and both rate legs
-from FRED, which is public domain and the cleanest provenance in the repo.
+### What the macro layer entitles the pitch to say
 
-**US backdrop, three sentences.** The US leg of the funding differential is EFFR, landed daily.
-The demand side of the ADR bid is the AI-capex and HBM cycle, whose scheduled expression in this
-repo is the Q2 earnings date already in the event register. This notebook does not model that
-cycle and does not take a view on it.
+Three sentences, and no more than three.
+
+1. **The bid is real and the supply cannot answer it** — an ADR trading $8.8bn a day after
+   twelve sessions against a decade-old local line at $8.3bn.
+2. **The cost of holding it is Fed-sensitive and points the friendly way** — 2.1bp/month per
+   25bp, and a hike makes it cheaper.
+3. **The won moves the level a little and does not demonstrably select the channel** — 0.86
+   points per 1%, 1.3% of daily variance, and a registered null on the conditional.
+
+What the macro layer does **not** entitle anyone to say is that the won's current strength
+argues for the trade. It was tested. It did not clear.
 """)
 
 n = write(OUT)

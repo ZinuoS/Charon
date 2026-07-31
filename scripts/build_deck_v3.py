@@ -54,12 +54,23 @@ INDICATIVE_ECONOMICS: dict[str, float] | None = None
 
 
 def economics_line(brackets: dict) -> tuple[str, str]:
-    """(headline number, provenance clause) for the economics slide, both modes."""
+    """(headline number, provenance clause) for the economics slide, both modes.
+
+    The range comes from the FINANCING DECOMPOSITION, not the legacy bundled bracket: two
+    components are measured, the obol is documented, and the only thing still spanning a range
+    is the ADR borrow spread. Quoting the old bundle here while the appendix showed the stack
+    had the book disagreeing with itself about its own cost.
+    """
+    from pipeline.package import financing as FIN
+
     if INDICATIVE_ECONOMICS:
         bp = INDICATIVE_ECONOMICS["all_in_bp"]
-        return (f"{bp:.0f}bp", f"desk indication as of {INDICATIVE_ECONOMICS['as_of']}")
-    return (f"{brackets['low']:.0f}-{brackets['high']:.0f}bp",
-            "bracket, not a quote — four of five components are desk conversations")
+        return (f"{bp / 12:.0f}bp/mo", f"desk indication as of {INDICATIVE_ECONOMICS['as_of']}")
+    lo = FIN.carry_summary("low")["total_bp_per_month"]
+    hi = FIN.carry_summary("high")["total_bp_per_month"]
+    return (f"{lo:.0f}-{hi:.0f}bp/mo",
+            "range, not a quote — it is the ADR borrow spread, and it is the one component "
+            "still awaiting the desk")
 
 
 # --------------------------------------------------------------------------------
@@ -113,37 +124,51 @@ def build_slides(n) -> tuple[list[Slide], list[Slide]]:
                "answer demand, so the market cannot arbitrage this gap away.",
                "**What we build you.** One cross-margined position: synthetic local access "
                "through our booking chain, ADR borrow sourced, FX executed, monitored monthly.",
-               f"**Indicative economics.** All-in carry {econ_head} per year. "
+               f"**Indicative economics.** All-in carry {econ_head}, against an "
+               f"{n['critical_bp'] / 12:.0f}bp/mo breakeven. "
                f"Cross-margining saves {n['capital_saved']:.0f}% of capital on ordinary days "
                f"and {n['peak_saving']:.0f}% at the peak of the worst week this pair has "
                f"seen. Capacity is roughly {n['days_1bn']:.1f} sessions for $1bn at 10% "
                f"participation.",
                "Risk considerations are slide 08, sized for the PM's own assessment."],
               ["S01a_anchor"],
-              [(econ_head, "all-in carry, per year"),
+              [(econ_head, "all-in carry"),
                (f"{n['capital_saved']:.0f}%", "capital saved,\nordinary days"),
                (f"{n['days_1bn']:.1f}", "sessions to build\n$1bn at 10% ADV"),
                (f"{n['gap']:.0f}pts", "wide of the\nstructural norm")],
               f"Carry is a {econ_note}. Margining is illustrative; real schedules are ours "
               "to quote."),
 
-        Slide("03", "market_context",
-              "The Korean backdrop, the bid, and the currency",
-              ["Short selling resumed 2025-03-31 across all listed stocks. The short leg "
-               "exists and is not a regulatory question today.",
-               "Single-stock 2x ETF listings were suspended 2026-07-16 with the deposit "
-               "requirement accelerated to 2026-07-31. Eligibility admits two names, and "
-               "this one is in scope.",
-               "The Eurex-KRX link terminated 2025-06-06; KRX has run its own night session "
-               "since 2025-06-09. The overnight hedging route changed.",
-               "The won is a leg of this trade, not a backdrop: it enters the premium "
-               "directly and again through the hedge.",
-               "Every fact on this slide is dated and sourced in the line below it."],
-              ["P0a_the_stage", "P0b_the_currents"],
-              [],
-              "Regulatory dates from the KRX/FSC notices in the event register. Index, "
-              "currency and both rate legs are landed daily/monthly at native frequency — "
-              "no interpolation. The flow gap is stated on-panel."),
+        Slide("03", "why_now",
+              "Why now: the bid, the cost, the channel, the access",
+              [f"**The bid.** The ADR is three weeks old and trades "
+               f"${n['adr_adv_usd'] / 1e9:.1f}bn a day — more than the Korean line's "
+               f"${n['local_adv_usd'] / 1e9:.1f}bn, which has 2,838 sessions of history. "
+               f"US demand has nowhere to go: new ADRs need the Company's consent.",
+               f"**The cost.** The funding leg is long the front end. You earn the USD rate "
+               f"on collateral and short proceeds and pay the Korean rate on the local long, "
+               f"so a 25bp hike makes this "
+               f"{n['fed_bp_per_month_per_25bp']:.1f}bp per month CHEAPER to hold, not "
+               f"dearer.",
+               f"**The channel.** The won moves the premium's level — "
+               f"{n['fx_coef']:.2f} points per 1% — and explains {n['fx_r2']:.1%} of its "
+               f"daily variation. We registered the stronger claim, that won strength "
+               f"selects which leg closes the gap, and tested it: {n['h6_gap_pp']:+.1f} points "
+               f"in the predicted direction at p = {n['h6_p']:.2f}. It did not clear. We are "
+               f"not pitching the won as a signal.",
+               "**The access.** Short selling resumed 2025-03-31, so the short leg exists. "
+               "The 2x-ETF eligibility change lands 2026-07-31 and this name is in scope. "
+               "The Eurex-KRX link terminated 2025-06-06 and KRX runs its own night session, "
+               "which is what the overnight hedge routes through."],
+              ["S05a_catalysts", "S03a_macro_map"],
+              [(f"${n['adr_adv_usd'] / 1e9:.1f}bn", "ADR daily volume,\n12 sessions in"),
+               (f"{n['fed_bp_per_month_per_25bp']:.1f}bp", "per month,\nper 25bp of Fed"),
+               (f"{n['fx_coef']:.2f}pts", "premium move,\nper 1% won"),
+               ("tested", "and the channel claim\ndid not clear")],
+              "Volumes from measured ADV on both legs; the twelve-session caveat travels with "
+              "the number. Fed sensitivity from pipeline.package.financing. The channel claim "
+              "was registered 2026-07-30 in a commit containing no results — appendix A2 and "
+              "the public repository have the order."),
 
         Slide("04", "the_opportunity",
               "The market cannot arbitrage this premium. We can manufacture the exposure.",
@@ -216,15 +241,16 @@ def build_slides(n) -> tuple[list[Slide], list[Slide]]:
                f"points of premium.",
                f"**What that requires.** Roughly {n['gap']:.0f} points inside twelve months at "
                f"mid-bracket financing. That is a requirement, not a probability.",
-               f"**The known cost.** All-in carry of {econ_head} per year, drawn against the "
-               f"path rather than netted out of it.",
+               f"**The known cost.** All-in carry of {econ_head}, drawn against the path "
+               f"rather than netted out of it. Two of its components are measured from "
+               f"landed series; the range is the ADR borrow spread alone.",
                "**The other two paths are on the same slide at the same scale.** Static "
                "bleeds the carry. The realised widening is what it looks like when the gap "
                "goes the other way.",
                "We do not forecast which path happens. We price the financing and show you "
                "all three."],
               ["P3_economics", "P8_scenario_pnl"],
-              [(econ_head, "all-in carry,\nper year"),
+              [(econ_head, "all-in carry"),
                (f"{n['gap']:.0f}pts", "compression to\nthe norm"),
                (f"{n['critical_bp']:.0f}bp", "carry at which the\nbase rate breaks even"),
                ("3", "paths shown,\nnone forecast")],
@@ -369,23 +395,32 @@ def build_slides(n) -> tuple[list[Slide], list[Slide]]:
               "Exit discipline is a term of the trade, not a slide.",
               opens_with="You get the unwind decided while everyone is calm."),
 
-        Slide("A6", "the_breakeven_surface",
-              "What the carry has to be for the base rate alone to pay",
-              ["The breakeven half-life is the speed at which convergence exactly pays the "
-               "carry, across entry level, horizon and cost bracket.",
-               f"At today's entry over one year, the carry at which the estimated base rate "
-               f"exactly breaks even is {n['critical_bp']:.0f}bp.",
-               "Above that number a client entering the linear trade is expressing a "
-               "faster-than-base-rate view, and this book says so in those words.",
-               "This is the surface the two desk conversations collapse to a point."],
-              ["P3_economics"],
-              [(f"{n['critical_bp']:.0f}bp", "critical carry,\n1-year horizon"),
-               (f"{n['pi']:.1f}%", "entry level"),
-               ("4 of 5", "cost components\nstill bracketed")],
+        Slide("A6", "the_financing_stack",
+              "The carry, opened into components — and the funding leg pays you",
+              [f"Two of the four carry components are measured from landed series, one is a "
+               f"desk quote, and one cannot be measured at all with the data we hold. They "
+               f"are drawn as three different kinds of bar so the chart cannot pass an "
+               f"assumption off as a measurement.",
+               f"USD rates sit above Korean rates and you are long the Korean asset funded "
+               f"from dollars, so the funding differential is a TAILWIND. All-in carry is "
+               f"{n['carry_bp_per_month']:.0f}bp per month against a "
+               f"an {n['critical_bp'] / 12:.0f}bp breakeven.",
+               "The cross-currency basis is drawn hatched at zero. Measuring it needs a "
+               "USD/KRW forward curve we do not hold, and a negative won basis — the usual "
+               "sign — eats directly into that tailwind.",
+               f"The breakeven is the carry at which the estimated base rate exactly pays "
+               f"for itself: {n['critical_bp']:.0f}bp per year at today's entry over one "
+               f"year. Above it, a client is expressing a faster-than-base-rate view, and "
+               f"this book says so in those words."],
+              ["S0A6_financing", "P3_economics"],
+              [(f"{n['carry_bp_per_month']:.0f}bp", "all-in carry,\nper month"),
+               (f"{n['critical_bp'] / 12:.0f}bp", "breakeven,\nper month"),
+               (f"{n['fed_bp_per_month_per_25bp']:.1f}bp", "per month, per\n25bp of Fed"),
+               ("1 of 5", "components still\nunmeasurable")],
               "pipeline/package/breakeven.py. The estimated half-life is an interval with a "
               "support classification, not a point estimate.",
-              opens_with="You get the exact cost level at which our own argument stops "
-                         "working."),
+              opens_with="You get the cost broken into parts you can negotiate, and the "
+                         "exact level at which our own argument stops working."),
 
         Slide("A7", "methodology_and_sources",
               "Where every number in this book comes from",
@@ -472,7 +507,12 @@ def assert_costs_bracketed(main: list[Slide]) -> None:
     if INDICATIVE_ECONOMICS:
         return
     bare = re.compile(r"\b\d{2,4}\s*bp\b", re.IGNORECASE)
-    ok = re.compile(r"\d+\s*-\s*\d+\s*bp|bracket|range|breaks? even|critical", re.IGNORECASE)
+    # A POLICY SHIFT in basis points is not a cost quote. "2.1bp per month per 25bp of Fed"
+    # is a sensitivity, and banning it would push the copy into vaguer language in the name
+    # of a rule about precision.
+    ok = re.compile(r"\d+\s*-\s*\d+\s*bp|bracket|range|breaks? even|critical"
+                    r"|per\s+\d+\s*bp|\d+\s*bp\s+(hike|cut|shift|move)"
+                    r"|hike|cut\b", re.IGNORECASE)
     bad = [f"{s.stem}: {bare.search(t).group(0)!r}"
            for s in main for t in [" ".join([s.headline, *s.body])]
            if bare.search(t) and not ok.search(t)]
@@ -492,7 +532,8 @@ def numbers() -> dict:
     from pipeline.hedging.ratios import HedgeLegs
     from pipeline.lab import tsmc as LAB
     from pipeline.measurement.premium import build_all_variants, variant_spread
-    from pipeline.package import breakeven as BE, capacity as CAP, margin_path as MP, netting as NET
+    from pipeline.package import (breakeven as BE, capacity as CAP, financing as FIN,
+                                  margin_path as MP, netting as NET)
 
     sk = build_all_variants("skhy")[0].series
     tsm = build_all_variants("tsmc")[0].series
@@ -537,6 +578,14 @@ def numbers() -> dict:
         "fungible": float(bb[bb.index >= bb.index[-1] - five].mean()) * 100,
         "brackets": BE.CARRY_BRACKET_BP,
         "critical_bp": BE.critical_carry_bp(),
+        "adr_adv_usd": float(CAP.adv_table().iloc[0].adv_usd),
+        "local_adv_usd": float(CAP.adv_table().iloc[1].adv_usd),
+        "fed_bp_per_month_per_25bp": FIN.fed_sensitivity()["bp_per_month_per_25bp"],
+        "carry_bp_per_month": FIN.carry_summary()["total_bp_per_month"],
+        "fx_coef": float(LAB.fx_sensitivity_deep(f).iloc[0].empirical_coef),
+        "fx_r2": float(LAB.fx_sensitivity_deep(f).iloc[0].r2),
+        "h6_gap_pp": LAB.h6_verdict()["gap_pp"],
+        "h6_p": LAB.h6_verdict()["p_value"],
         "gap": float(sk.iloc[-1]) * 100 - float(tsm[tsm.index >= tsm.index[-1] - five].mean()) * 100,
         "skhy_sessions": int(len(sk)),
         "lab_obs": int(len(f)), "lab_first": str(f.index[0].date()),

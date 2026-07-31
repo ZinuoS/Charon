@@ -231,7 +231,26 @@ def extra_panels() -> list[tuple[str, callable]]:
         from pipeline.viz import figures as F
         return _catalyst_slide()
 
-    return [("S01a_anchor", s01a), ("S04a_identity", s04a), ("S05a_catalysts", s05a)]
+    def s03a():
+        """The macro-catalyst map — H6's registered result, in whichever form it took."""
+        from pipeline.lab import tsmc as LAB
+        t = LAB.h6_conditional_channels()
+        return figures.g30_macro_catalyst_map(t, LAB.h6_verdict(t), LAB.h6_skhy_descriptive())
+
+    def s0a6():
+        """The carry decomposition — the financing chapter's headline panel."""
+        from pipeline.package import financing as FIN
+        return figures.g29b_carry_decomposition(FIN.carry_components(), FIN.carry_summary(),
+                                                FIN.fed_sensitivity())
+
+    def s0a6b():
+        """The structure, drawn as legs rather than described as a table."""
+        from pipeline.package import financing as FIN
+        return figures.g29a_financing_structure(FIN.rate_legs(), FIN.carry_summary())
+
+    return [("S01a_anchor", s01a), ("S03a_macro_map", s03a), ("S04a_identity", s04a),
+            ("S05a_catalysts", s05a), ("S0A6_financing", s0a6),
+            ("S0A6b_structure", s0a6b)]
 
 
 def _catalyst_slide():
