@@ -32,9 +32,12 @@
     "data/raw/d6_comparators/2026-07-30.2/tsmc_local_daily.csv": "f481640a383393b15ae10de4301d37531aca873b005ab21124481a4f4cde33a3",
     "data/raw/d6_comparators/2026-07-30/tsm_adr_daily.csv": "fafb7b87de5738d88db41c354e8b5f6c866c58802a97789710ae7d15cd694fb5",
     "data/raw/d6_comparators/2026-07-30/tsmc_local_daily.csv": "98cf1ba6fde9ed297bc7a4a80e97bcf09aa6c18d3d9112945d566c4d73bbb7db",
-    "data/raw/d6_comparators/2026-07-30/usdtwd_spot_daily.csv": "cd3a7aec6a4b3cd8a7a5b415d5ad350d0a0ac04b41e88a49e39c989cd0502978"
+    "data/raw/d6_comparators/2026-07-30/usdtwd_spot_daily.csv": "cd3a7aec6a4b3cd8a7a5b415d5ad350d0a0ac04b41e88a49e39c989cd0502978",
+    "data/raw/d6_comparators/2026-07-31/pldt_adr_daily.csv": "640c59dffabbe7dcf40291e39be29f9bf04f14ef7d5092352df0cf65ed7af78a",
+    "data/raw/d6_comparators/2026-07-31/pldt_local_daily.csv": "5a184ed698d42bb43106f8f30fd2f3c3a12aafb9496fd3cb44e4c40a38801d64",
+    "data/raw/d6_comparators/2026-07-31/usdphp_spot_daily.csv": "254cabc76b52a077c82e8e6bec61485ba1b01091344da141f65ff78f9f9916b1"
   },
   "history": {},
   "source": "d6_comparators",
-  "updated_at_utc": "2026-07-30T12:33:00+00:00"
+  "updated_at_utc": "2026-07-31T04:40:52+00:00"
 }

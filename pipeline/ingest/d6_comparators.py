@@ -27,8 +27,8 @@ import argparse
 
 from ._puller import (add_common_flags, bypass_cache, print_report,
                       resolve_pull_date, run_specs, select_specs)
-from .registry import (D6_BRAZIL_SERIES, D6_EXTRA_SERIES, D6_TAIWAN_SERIES,
-                       D6_TSMC_SERIES)
+from .registry import (D6_BRAZIL_SERIES, D6_EXTRA_SERIES, D6_PHILIPPINES_SERIES,
+                       D6_TAIWAN_SERIES, D6_TSMC_SERIES)
 
 SOURCE = "d6_comparators"
 
@@ -37,7 +37,9 @@ TIERS = {
     "extended": D6_EXTRA_SERIES,
     "taiwan": D6_TAIWAN_SERIES,
     "brazil": D6_BRAZIL_SERIES,
-    "all": D6_TSMC_SERIES + D6_EXTRA_SERIES + D6_TAIWAN_SERIES + D6_BRAZIL_SERIES,
+    "philippines": D6_PHILIPPINES_SERIES,
+    "all": (D6_TSMC_SERIES + D6_EXTRA_SERIES + D6_TAIWAN_SERIES + D6_BRAZIL_SERIES
+            + D6_PHILIPPINES_SERIES),
 }
 
 

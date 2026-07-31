@@ -437,6 +437,47 @@ def _br_adr(series_id: str, symbol: str) -> SeriesSpec:
     )
 
 
+# ------------------------------------------------------------------------------------
+# D6 Philippines — the search for a constrained pair OUTSIDE Taiwan.
+#
+# WHY THIS TIER EXISTS. All four one-way-constrained pairs in the panel are Taiwanese, so
+# they share one regulator and one currency and give NO independent variation in the RULE.
+# PLDT is the strongest reachable candidate for breaking that: the Philippine constitution
+# caps foreign ownership of public utilities at 40%, which is a hard statutory ceiling of
+# exactly the kind the taxonomy is about, and it is a different legal system, currency and
+# regulator from Taiwan.
+#
+# WHAT THE DATA SAYS AND WHAT IT DOES NOT. The implied ratio is 1.000 and stable across all
+# 32 years (median 0.998, no year outside 0.98-1.01), so the pair is clean and the ratio is
+# empirically confirmed over 7,454 sessions. It also implies the premium sits at PARITY
+# throughout -- which is a PRICE fact and therefore says nothing about the pair's class,
+# because this repository classifies on the rule and never on the behaviour.
+# ------------------------------------------------------------------------------------
+D6_PHILIPPINES_SERIES: tuple[SeriesSpec, ...] = (
+    SeriesSpec(
+        series_id="pldt_adr_daily", symbol="PHI", asset_class="adr", currency="USD",
+        market="NYSE", timezone="America/New_York", close_local=time(16, 0),
+        availability_lag=_STD_LAG, availability_note="NYSE close 16:00 ET, +15min.",
+        units="USD per ADR", start=None, confirmed=False,
+        providers=("eodhd", "nasdaq"), provider_symbols={"eodhd": "PHI.US", "nasdaq": "PHI"},
+    ),
+    SeriesSpec(
+        series_id="pldt_local_daily", symbol="TEL.PSE", asset_class="local_equity",
+        currency="PHP", market="PSE", timezone="Asia/Manila", close_local=time(15, 30),
+        availability_lag=_STD_LAG,
+        availability_note="PSE regular-session close 15:30 PHT; bar assumed knowable 15:45.",
+        units="PHP per common share", start=None, confirmed=False,
+        providers=("eodhd",), provider_symbols={"eodhd": "TEL.PSE"},
+    ),
+    SeriesSpec(
+        series_id="usdphp_spot_daily", symbol="USDPHP", asset_class="fx", currency="PHP",
+        market="OTC FX", timezone="UTC", close_local=time(21, 0),
+        availability_lag=_STD_LAG, availability_note="OTC spot close.",
+        units="PHP per USD", start=None, confirmed=False,
+        providers=("eodhd",), provider_symbols={"eodhd": "USDPHP.FOREX"},
+    ),
+)
+
 D6_BRAZIL_SERIES: tuple[SeriesSpec, ...] = (
     _br_adr("vale_adr_daily", "VALE"),   _br_local("vale_local_daily", "VALE3.SA"),
     _br_adr("itub_adr_daily", "ITUB"),   _br_local("itub_local_daily", "ITUB4.SA"),
@@ -510,6 +551,38 @@ PAIRS: tuple[PairSpec, ...] = (
     # --- Brazil control cohort (S19). Every ratio verified against the implied ratio and
     # every one lands within 1.1% of an exact integer -- which is itself evidence of
     # fungibility, since a freely arbitraged pair has nowhere to drift TO.
+    PairSpec(
+        pair_id="pldt", adr="pldt_adr_daily", local="pldt_local_daily", fx="usdphp_spot_daily",
+        local_shares_per_adr=1.0,
+        ratio_source=(
+            "Empirically derived and stable: implied local-shares-per-ADR is 1.000 over all "
+            "7,454 joined sessions 1994-2026, median 0.998, no annual median outside "
+            "0.98-1.01. TODO(ash): confirm against the PLDT 20-F depositary terms."
+        ),
+        confirmed=False,
+        notes=(
+            "CLASSIFICATION DELIBERATELY WITHHELD -- this pair is NOT in REGIME_OF_PAIR and "
+            "therefore enters no fit or test. The Philippine constitution caps foreign "
+            "ownership of public utilities at 40%, which is the right SHAPE of rule for the "
+            "one_way_constrained class and comes from a different regulator, legal system "
+            "and currency than the four Taiwanese pairs -- exactly the independent variation "
+            "the panel lacks. What is NOT established is whether that ceiling constrains ADR "
+            "ISSUANCE at the margin: PLDT has historically managed the ratio through voting "
+            "preferred shares issued to Filipino holders, which would leave the depositary "
+            "unconstrained. Classifying it from the observed parity would be circular, and "
+            "the taxonomy forbids it: regime is a rule, binding-ness is a state. Resolve by "
+            "reading the 20-F foreign-ownership disclosure and the depositary agreement, "
+            "then add to REGIME_OF_PAIR.\n"
+            "ONE PERIOD NEEDS QA BEFORE ANY USE. 1997 shows an annual mean premium of +18.3% "
+            "and a single-day maximum of +103.5% against a 32-year median of -0.20%; every "
+            "other year sits inside +/-1.7%. That is the Asian Financial Crisis window, when "
+            "the peso went from roughly 26 to 42 per USD, and a large phantom premium is "
+            "exactly what a date-mismatched FX leg produces during a currency collapse. It "
+            "may be real dislocation or it may be measurement; nothing here depends on which, "
+            "because this pair enters no fit -- but a sample restriction is likely needed "
+            "before it ever does."
+        ),
+    ),
     PairSpec(
         pair_id="vale", adr="vale_adr_daily", local="vale_local_daily", fx="usdbrl_spot_daily",
         local_shares_per_adr=1.0, ratio_source="Vale ADR: 1 ADS = 1 ordinary share.",

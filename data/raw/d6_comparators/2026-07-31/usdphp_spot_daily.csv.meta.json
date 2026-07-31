@@ -1,0 +1,37 @@
+{
+  "asset_class": "fx",
+  "availability_confirmed": false,
+  "availability_lag": "close 21:00:00 UTC + 15min",
+  "availability_note": "OTC spot close.",
+  "close_local": "21:00:00",
+  "currency": "PHP",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-31T21:15:00+00:00",
+    "obs_date": "2026-07-31",
+    "observation_ts_utc": "2026-07-31T21:00:00+00:00"
+  },
+  "first_obs_date": "1992-05-18",
+  "last_obs_date": "2026-07-31",
+  "market": "OTC FX",
+  "native_timezone": "UTC",
+  "notes": "",
+  "provider": "eodhd",
+  "provider_chain": [
+    "eodhd"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-07-31T04:40:49+00:00",
+  "request_params": {
+    "fmt": "json",
+    "from": "1990-01-01",
+    "period": "d",
+    "to": "2026-07-31"
+  },
+  "rows": 8915,
+  "series_id": "usdphp_spot_daily",
+  "sha256": "254cabc76b52a077c82e8e6bec61485ba1b01091344da141f65ff78f9f9916b1",
+  "source_url": "https://eodhd.com/api/eod/USDPHP.FOREX",
+  "symbol": "USDPHP",
+  "transport": "eod_api_v1",
+  "units": "PHP per USD"
+}
