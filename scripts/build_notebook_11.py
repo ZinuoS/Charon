@@ -92,6 +92,7 @@ VOLS   = FIN.vol_context()
 STR_SK = FIN.stress_liquidity("skhy"); STR_TS = FIN.stress_liquidity("tsmc")
 VARSH  = float(_cp().set_index("pair").loc["tsmc", "share_pi"])
 TIERS  = FIN.segmentation()
+IND    = FIN.indicated_tier()
 WINS   = {b: float(EO.loc[b, "frac_beats_carry"]) for b in ("low", "mid", "high")}
 _k = VOLS[VOLS.leg.str.startswith("KOSPI")]; _v = VOLS[VOLS.leg.str.contains("VIX")]
 KOSPI_V, KOSPI_M = float(_k.latest_vol_pct.iloc[0]), float(_k.median_vol_pct.iloc[0])

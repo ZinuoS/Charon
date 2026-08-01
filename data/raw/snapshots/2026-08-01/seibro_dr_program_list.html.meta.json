@@ -1,0 +1,16 @@
+{
+  "availability_lag": "TODO(ash): KSD publication time for the daily capacity figure is unverified.",
+  "bytes": 37665,
+  "encoding": "UTF-8",
+  "native_timezone": "Asia/Seoul",
+  "provider": "https://m.seibro.or.kr/cnts/ovssec/selectOverSecDRPubSearch.do",
+  "pulled_at_utc": "2026-08-01T22:26:44+00:00",
+  "rationale": "D5. The program list; per-ISIN daily series needs a POST with ISIN + Korean name. NOTE the semantics: this is HEADROOM (issuance ceiling minus DRs outstanding), NOT DR outstanding. Level = barrier state (M2); first difference = creation/cancellation flow (H5). See docs/data_sources.md D5-a.",
+  "series_id": "seibro_dr_program_list",
+  "sha256": "ffb1c2b3dfc8ba62f47cbb594f8e10755cb77b66e2a465a474951b7d27603cc3",
+  "snapshot_semantics": "Point-in-time capture, append-only. This file is the RAW response; parsing is downstream so a parser bug cannot destroy an unrepeatable capture.",
+  "source_id": "seibro_dr_capacity",
+  "source_url": "https://m.seibro.or.kr/cnts/ovssec/selectOverSecDRPubSearch.do",
+  "transport": "http_get",
+  "units": "shares (DR\uc804\ud658\uac00\ub2a5\uc8fc\uc2dd\uc218\ub7c9 = remaining ordinary shares convertible into DRs)"
+}

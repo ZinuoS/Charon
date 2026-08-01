@@ -303,11 +303,13 @@ def stress_liquidity(pair: str = "skhy", window: int = 63) -> pd.DataFrame:
 # The segmentation — which expression fits which borrow, and who buys it
 # --------------------------------------------------------------------------------
 #
-# RATIFICATION STATUS: the cutoffs below are PROVISIONAL and are the author's to sign. They
-# are read off the entry-outcome win rates, which is evidence; where exactly to cut a
-# continuum is a judgement, and a model should not assert one silently.
+# RATIFICATION STATUS: RATIFIED 2026-07-31 by the author. The cutoffs are read off the
+# entry-outcome win rates -- 56% at low borrow, 42% at mid, 16% at high, on 90th-percentile
+# entries held 252 sessions over 21.6 years -- and placed where that crossing happens. The
+# evidence is the win rates; the placement was a judgement, and it is signed rather than
+# asserted by the model.
 
-SEGMENTATION_RATIFIED: str | None = None
+SEGMENTATION_RATIFIED: str | None = "2026-07-31"   # author-signed
 
 #: Borrow spread cutoffs in bp/yr. Derived, not chosen: the all-in carry is
 #: borrow - 65bp/yr at today's rate legs, so these correspond to roughly 15 and 45bp/mo,
@@ -363,3 +365,35 @@ def segmentation_note() -> str:
         return f"Cutoffs ratified {SEGMENTATION_RATIFIED}."
     return ("Cutoffs PROVISIONAL — read off the win rates, but where to cut a continuum is the "
             "author's judgement to sign.")
+
+
+def indicated_tier() -> dict:
+    """Which segmentation tier today's OBSERVABLE borrow state points at.
+
+    THE DISTINCTION THIS FUNCTION EXISTS TO PRESERVE. Utilization is not price. D3 measures how
+    many shares are out on loan, not what the desk will charge to lend one more, and the two
+    can disconnect: a name can be lightly utilised and still quote wide because the lendable
+    pool is concentrated in holders who will not lend. So this returns an INDICATION with the
+    state that produced it, and it never returns a bracket as though it were a quote. The quote
+    is the desk's, and the tier is not settled until it arrives.
+    """
+    from pipeline.measurement.utilization import utilization_state
+
+    u = utilization_state()
+    last = u.iloc[-1]
+    state, pctile = str(last["state"]), float(last["balance_pctile"])
+    tier = {"low": "linear pair", "mid": "standby", "high": "long-local via TRS"}.get(
+        state, "standby")
+    return {
+        "as_of": str(u.index[-1].date()),
+        "utilization_state": state,
+        "balance_pctile": round(pctile, 4),
+        "balance_shares": int(last["balance_shares"]),
+        "net_lending_shares": int(last["net_lending_shares"]),
+        "indicated_tier": tier,
+        "is_a_quote": False,
+        "caveat": ("Utilization, not price. D3 measures shares on loan, not the spread to "
+                   "borrow one more. A lightly-utilised name can still quote wide if the "
+                   "lendable pool sits with holders who will not lend. The tier is indicated, "
+                   "not settled — the desk quote settles it."),
+    }

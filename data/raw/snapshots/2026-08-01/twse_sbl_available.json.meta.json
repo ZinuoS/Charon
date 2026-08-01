@@ -1,0 +1,16 @@
+{
+  "availability_lag": "same-day figure, published intraday. TODO(ash): confirm the publication hour before this enters a same-day decision.",
+  "bytes": 128345,
+  "encoding": "UTF-8",
+  "native_timezone": "Asia/Taipei",
+  "provider": "https://openapi.twse.com.tw/v1/SBL/TWT96U",
+  "pulled_at_utc": "2026-08-01T22:26:44+00:00",
+  "rationale": "D3-e. Lendable supply for all four constrained pairs -- the denominator that is not public for Korea. PERISHABLE: the payload carries no date, so every uncaptured day is permanently lost and the cross-pair utilization ablation cannot be run until enough sessions accumulate.",
+  "series_id": "twse_sbl_available",
+  "sha256": "a83882fe7420c9747f66c46c6ed881d9e74e75beebc4676b5ac3eee42cbcab84",
+  "snapshot_semantics": "Point-in-time capture, append-only. This file is the RAW response; parsing is downstream so a parser bug cannot destroy an unrepeatable capture.",
+  "source_id": "twse_sbl_available",
+  "source_url": "https://openapi.twse.com.tw/v1/SBL/TWT96U",
+  "transport": "http_get",
+  "units": "shares available to borrow (TWSEAvailableVolume), thousands separators in source"
+}
