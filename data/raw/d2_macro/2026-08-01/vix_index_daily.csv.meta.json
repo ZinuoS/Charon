@@ -1,0 +1,37 @@
+{
+  "asset_class": "vol_index",
+  "availability_confirmed": false,
+  "availability_lag": "close 16:15:00 America/New_York + 15min",
+  "availability_note": "CBOE close; FRED publishes same evening.",
+  "close_local": "16:15:00",
+  "currency": "USD",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-30T20:30:00+00:00",
+    "obs_date": "2026-07-30",
+    "observation_ts_utc": "2026-07-30T20:15:00+00:00"
+  },
+  "first_obs_date": "1990-01-02",
+  "last_obs_date": "2026-07-30",
+  "market": "FRED (CBOE)",
+  "native_timezone": "America/New_York",
+  "notes": "The US vol leg. Implied rather than realised, and the asymmetry is stated wherever it is used: Korea has no freely reachable implied-vol series, so the Korean leg is REALISED and the two are not like-for-like.",
+  "provider": "fred",
+  "provider_chain": [
+    "fred"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-08-01T21:19:24+00:00",
+  "request_params": {
+    "file_type": "json",
+    "observation_end": "2026-08-01",
+    "observation_start": "1990-01-01",
+    "series_id": "VIXCLS"
+  },
+  "rows": 9241,
+  "series_id": "vix_index_daily",
+  "sha256": "f1a35ec4233b4f970cb72cc916735e05e7a2709ee7b09aa5b489e2014203d7a4",
+  "source_url": "https://api.stlouisfed.org/fred/series/observations",
+  "symbol": "VIXCLS",
+  "transport": "fred_observations_v1",
+  "units": "annualised implied vol, percentage points"
+}

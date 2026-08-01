@@ -1506,8 +1506,15 @@ def g24_exit_tree(days_to_exit: float, stop_points: float = 8.0,
     """G24 — the exit decision tree. Unifies the rules scattered across P4, P5 and P6.
 
     Since no timing signal is sold, exits are RULES, and rules are a tree. Each monitor node
-    carries the observable that fires it and points at the route that answers it — recall points
-    to cancellation because the borrow problem lives on the leg cancellation extinguishes.
+    carries the observable that fires it and points at the route that answers it.
+
+    CORRECTED 2026-07-31, and the error was material. This figure previously routed a BORROW
+    RECALL to cancellation, on the reasoning that cancellation extinguishes the borrow. That is
+    true of the LONG-ADR direction and false of the trade this book pitches. The pitched pair is
+    SHORT the ADR and long the local line: a short seller is not a holder, and cancellation is a
+    holder right, so there is no ADR to surrender. A recall is covered in the market like any
+    other short — which is why the capacity number belongs on that edge and why it is now
+    drawn there.
 
     The honesty note is drawn, not footnoted: a stop on a gapping spread limits INTENT, not
     loss. The realised excursion is marked against the stop to show by how much.
@@ -1534,7 +1541,7 @@ def g24_exit_tree(days_to_exit: float, stop_points: float = 8.0,
     mons = [
         (0.2, "DRAWDOWN", f"stop at {stop_points:.0f} premium pts\n(realised move was "
                           f"{excursion_points:.0f})", WA, 2),
-        (5.2, "BORROW", "recall, or a cost step\non the short leg", WA, 1),
+        (5.2, "BORROW", "recall, or a cost step\non the short leg", WA, 0),
         (10.2, "ISSUANCE", "DART disclosure —\nthe upper-barrier class", BA, 0),
         (15.2, "HEADROOM", f"D5 print on the capped\nprogramme · H5 {call['resolution']}", BA, 0),
         (20.2, "CARRY SPENT", "the bleed fan crosses\nyour tolerance", CX, 2),
@@ -1547,10 +1554,10 @@ def g24_exit_tree(days_to_exit: float, stop_points: float = 8.0,
 
     # Exit-route layer — three terminals, each with cost and timeline.
     routes = [
-        (0.2, "MARKET UNWIND", f"sell both legs\n~{days_to_exit:.1f} sessions at 10% ADV\n"
-                               "cost: spread + fees", EM),
-        (9.0, "CANCEL THROUGH\nTHE OPEN BARRIER", "surrender ADRs, take local\n0.07% round trip, "
-                                                  "KSD settle\nextinguishes the borrow", BA),
+        (0.2, "MARKET UNWIND", f"buy back the ADR, sell the local\n~{days_to_exit:.1f} "
+                               f"sessions at 10% ADV\ncovers a recall too", EM),
+        (9.0, "CANCEL THROUGH\nTHE OPEN BARRIER", "LONG-ADR DIRECTION ONLY —\nnot an exit for "
+                                                  "this pair.\nYou cannot cancel a short", BA),
         (17.8, "DE-RISK / REVERT\nTO STANDBY", "cut size, or never having\ninitiated: zero cost\n"
                                                "(event-conditional variant)", CX),
     ]
@@ -2561,3 +2568,134 @@ def g31_panel_coverage(cov, cal):
                  "estimate in this repository inherits that.")
     return fig, {"n_fitted": n_fit,
                  "mean_calendar_loss_pct": round(float(c.pct_lost_to_equity_calendars.mean()), 2)}
+
+
+def g31_execution_reality(vols, stress_skhy, stress_tsmc, var_share: float, days_1bn: float):
+    """G31 — the two execution numbers: whose volatility this is, and what stress does to it.
+
+    DAILY-RESOLUTION EVIDENCE. Volume and the high-low range are the only liquidity series this
+    repository holds. The range is a proxy for a spread, bounded below by the true spread and
+    inflated by genuine intraday direction. No intraday claim rests on any of it.
+    """
+    fig, (a, b) = theme.figure(1, 2, shape_name="wide", gridspec_kw={"width_ratios": [1.2, 1]})
+    EM, CON, FUN, CX, BA, WA = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["constrained"],
+                                theme.SEMANTIC["fungible"], theme.SEMANTIC["context"],
+                                theme.SEMANTIC["barrier"], theme.SEMANTIC["warning"])
+    v = vols.copy()
+    y = np.arange(len(v))[::-1]
+    for yi, r in zip(y, v.itertuples()):
+        prem = "PREMIUM" in r.leg
+        col = EM if prem else (CON if r.kind == "implied" else FUN)
+        a.barh(yi, r.latest_vol_pct, height=0.55, color=col, zorder=3)
+        a.text(r.latest_vol_pct + 3, yi, f"{r.latest_vol_pct:.0f}%", va="center",
+               fontsize=theme.NOTE_SIZE, color=col, fontfamily=theme.SERIF_STACK)
+        if r.median_vol_pct is not None and r.median_vol_pct == r.median_vol_pct:
+            a.plot([r.median_vol_pct], [yi], marker="|", ms=13, mew=2.0, color=BA, zorder=5)
+    a.set_yticks(y); a.set_yticklabels(v.leg)
+    a.set_xlabel("annualised volatility, %   |   bar = latest, tick = own median")
+    a.set_xlim(0, float(v.latest_vol_pct.max()) * 1.22)
+    a.legend(handles=[mpatches.Patch(color=FUN, label="realised"),
+                      mpatches.Patch(color=CON, label="implied (US only)"),
+                      mpatches.Patch(color=EM, label="what you actually hold")],
+             loc="upper right", fontsize=theme.NOTE_SIZE)
+
+    st = pd.concat([stress_skhy.assign(pair="SK hynix"), stress_tsmc.assign(pair="TSMC, GFC")])
+    x = np.arange(len(st))
+    b.bar(x - 0.19, st.range_multiple, width=0.36, color=WA, zorder=3, label="high-low range")
+    b.bar(x + 0.19, st.stress_volume_vs_trailing.fillna(0), width=0.36, color=CX, zorder=3,
+          label="volume")
+    b.axhline(1.0, color=BA, lw=1.2, ls="--")
+    b.annotate("normal", xy=(len(st) - 0.4, 1.0), xytext=(0, 4), textcoords="offset points",
+               fontsize=theme.NOTE_SIZE, color=BA, ha="right", fontfamily=theme.SERIF_STACK)
+    for xi, r in zip(x, st.itertuples()):
+        b.text(xi - 0.19, r.range_multiple + 0.25, f"{r.range_multiple:.0f}x", ha="center",
+               fontsize=theme.NOTE_SIZE, color=WA, fontfamily=theme.SERIF_STACK)
+    b.set_xticks(x)
+    b.set_xticklabels([f"{r.pair}\n{r.leg}" for r in st.itertuples()], linespacing=1.5)
+    b.set_ylabel("multiple of the normal day")
+    b.legend(loc="upper right", fontsize=theme.NOTE_SIZE)
+
+    kospi = v[v.leg.str.startswith("KOSPI")]
+    vix = v[v.leg.str.contains("VIX")]
+    theme.finalize(
+        fig, kicker="execution reality",
+        headline="The volatility is Korean, not global — and in stress the range moves, "
+                 "not the volume",
+        subtitle="Left: each leg's own volatility against its own median. Right: the worst "
+                 "session in each pair's declared sample, against its normal day. "
+                 "Daily bars — no intraday data is held and none is claimed.",
+        stats=[(f"{float(kospi.latest_vol_pct.iloc[0]):.0f}%" if len(kospi) else "—",
+                f"KOSPI realised\n(median {float(kospi.median_vol_pct.iloc[0]):.0f}%)"
+                if len(kospi) else ""),
+               (f"{float(vix.latest_vol_pct.iloc[0]):.0f}" if len(vix) else "—",
+                f"US VIX — at its own\nmedian of {float(vix.median_vol_pct.iloc[0]):.0f}"
+                if len(vix) else ""),
+               (f"{st.range_multiple.max():.0f}x", "worst range,\nvs a normal day"),
+               (f"{days_1bn:.1f}", "sessions for $1bn\non a normal day")],
+        source="Repo-computed. pipeline.package.financing.vol_context / stress_liquidity; "
+               "VIX from FRED VIXCLS.",
+        footnote="TWO HONEST QUALIFIERS. The US leg is IMPLIED and every other leg is REALISED, "
+                 "because no Korean implied series is freely reachable — implied normally sits "
+                 "above realised, so the comparison flatters the US leg rather than the Korean "
+                 "one. And the premium's own volatility is computed on eleven daily changes: it "
+                 "is the honest calculation and it is far too short to characterise. The "
+                 f"landed variance decomposition is the better-founded version of the same "
+                 f"point: on 6,771 comparator sessions the premium accounts for "
+                 f"{var_share:.0%} of the ADR leg's daily variance. One volume bar is absent "
+                 "because a 63-session trailing average needs more history than a "
+                 "three-week-old listing has.")
+    return fig, {"max_range_multiple": float(st.range_multiple.max()),
+                 "max_volume_multiple": float(st.stress_volume_vs_trailing.max())}
+
+
+def g33_segmentation(tiers, wins: dict, carry_of):
+    """G33 — which version of this trade fits which client, and where the switch sits.
+
+    The borrow quote is the product's viability switch. Below a level the linear pair pays for
+    itself; above it the same view is better expressed without paying for the borrow at all.
+    The cutoffs are CURATION and are marked as such until ratified — they are read off the
+    entry-outcome win rates, which is evidence, but where exactly to cut a continuum is a
+    judgement and the panel says whose.
+    """
+    fig, ax = theme.figure(shape_name="large")
+    EM, CON, FUN, CX, BA, WA = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["constrained"],
+                                theme.SEMANTIC["fungible"], theme.SEMANTIC["context"],
+                                theme.SEMANTIC["barrier"], theme.SEMANTIC["warning"])
+    ax.set_xlim(0, 100); ax.set_ylim(0, 100); ax.axis("off")
+    cols = {"linear pair": FUN, "standby": EM, "long-local via TRS": CON, "pass": WA}
+
+    y = 88.0
+    for t in tiers:
+        col = cols.get(t["expression"], CX)
+        ax.add_patch(mpatches.FancyBboxPatch((1.0, y - 19.5), 98.0, 19.0,
+                     boxstyle="round,pad=0.4", facecolor=theme.PAPER, edgecolor=col, lw=1.6))
+        ax.text(3.0, y - 3.6, t["expression"].upper(), fontsize=theme.SUBTITLE_SIZE,
+                color=col, weight="medium", fontfamily=theme.SERIF_STACK)
+        ax.text(97.0, y - 3.6, t["borrow"], fontsize=theme.NOTE_SIZE, color=col, ha="right",
+                fontfamily=theme.SERIF_STACK)
+        ax.text(3.0, y - 8.6, t["who"], fontsize=theme.LABEL_SIZE, color=theme.TEXT,
+                fontfamily=theme.SERIF_STACK)
+        ax.text(3.0, y - 13.4, t["why"], fontsize=theme.NOTE_SIZE, color=CX,
+                fontfamily=theme.SERIF_STACK)
+        ax.text(3.0, y - 17.4, f"DESK EARNS:  {t['earns']}", fontsize=theme.NOTE_SIZE,
+                color=col, style="italic", fontfamily=theme.SERIF_STACK)
+        y -= 21.5
+
+    theme.finalize(
+        fig, kicker="who this is for",
+        headline="The borrow quote decides which version of this trade a client should own",
+        subtitle="Three expressions of one view, plus the case for not doing it. The switch is "
+                 "the borrow, and sourcing it is the desk's edge — this is structuring, not "
+                 "selling.",
+        stats=[(f"{wins['low']:.0%}", "beat carry at\nLOW borrow"),
+               (f"{wins['mid']:.0%}", "at MID"),
+               (f"{wins['high']:.0%}", "at HIGH"),
+               (f"{carry_of('low'):.0f}-{carry_of('high'):.0f}bp", "all-in carry,\nper month")],
+        source="Repo-computed. Win rates from pipeline.lab.tsmc.entry_outcomes (90th-percentile "
+               "entries, 252 sessions, 21.6 years); carry from pipeline.package.financing.",
+        footnote="THE CUTOFFS ARE CURATION AND ARE MARKED PROVISIONAL. They are read off the "
+                 "entry-outcome win rates, which is evidence — but where exactly to cut a "
+                 "continuum is a judgement, and it is the author's to sign rather than the "
+                 "model's to assert. The win rates themselves come from a comparator whose "
+                 "facility revolves and whose four constrained pairs are all Taiwanese.")
+    return fig, {"n_tiers": len(tiers)}

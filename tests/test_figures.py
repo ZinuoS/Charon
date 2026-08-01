@@ -159,3 +159,32 @@ class TestAnnotationsStayInsideTheAxes:
         ax.set_ylim(-5.0, 1.0)
         theme.annotate_barrier(ax, 0.5, "one line", side="below")
         assert ax.get_ylim()[0] == -5.0, "expanded an axis that already had room"
+
+
+def test_g24_routes_a_borrow_recall_to_the_market_not_to_cancellation():
+    """A borrow recall on a SHORT ADR is covered in the market. It cannot be cancelled.
+
+    The exit tree shipped for weeks routing recall -> cancellation, on the reasoning that
+    cancellation extinguishes the borrow. That reasoning holds for the LONG-ADR direction and
+    is exactly backwards for the pair this book pitches: a short seller is not a holder, and
+    cancellation is a holder right (17 CFR 239.36(a)). There is no ADR to surrender.
+
+    This pins the direction-conditional edge so the correction cannot be undone by someone
+    reading the old docstring.
+    """
+    import inspect
+
+    from pipeline.viz import figures
+
+    src = inspect.getsource(figures.g24_exit_tree)
+    # The monitor tuples are (x, title, body, colour, route_index); route 0 is MARKET UNWIND.
+    borrow_line = next(l for l in src.splitlines() if '"BORROW"' in l)
+    assert borrow_line.rstrip().endswith("0),"), (
+        f"BORROW must route to the MARKET UNWIND terminal (route 0), got: {borrow_line.strip()}\n"
+        "You cannot cancel an ADR you are short — cancellation is a holder right."
+    )
+    cancel_body = src[src.index('"CANCEL THROUGH'):]
+    assert "LONG-ADR DIRECTION ONLY" in cancel_body[:400], (
+        "the cancellation terminal must state that it applies to the long-ADR direction only; "
+        "left unqualified it reads as an exit for the pitched pair, which it is not"
+    )

@@ -87,6 +87,16 @@ _days = CAP.days_to_unwind()
 D1BN  = float(_days[(_days.participation == 0.10) & (_days.size_usd == 1e9)].days_binding.iloc[0])
 ADV   = CAP.adv_table()
 AS_OF = str(sk.index[-1].date())
+from hypotheses.h4_vol_decomposition.realized import compare_pairs as _cp
+VOLS   = FIN.vol_context()
+STR_SK = FIN.stress_liquidity("skhy"); STR_TS = FIN.stress_liquidity("tsmc")
+VARSH  = float(_cp().set_index("pair").loc["tsmc", "share_pi"])
+TIERS  = FIN.segmentation()
+WINS   = {b: float(EO.loc[b, "frac_beats_carry"]) for b in ("low", "mid", "high")}
+_k = VOLS[VOLS.leg.str.startswith("KOSPI")]; _v = VOLS[VOLS.leg.str.contains("VIX")]
+KOSPI_V, KOSPI_M = float(_k.latest_vol_pct.iloc[0]), float(_k.median_vol_pct.iloc[0])
+VIX_V, VIX_M     = float(_v.latest_vol_pct.iloc[0]), float(_v.median_vol_pct.iloc[0])
+RNG_MAX = float(max(STR_SK.range_multiple.max(), STR_TS.range_multiple.max()))
 print(f"rendered {AS_OF} — pi {PI:.2f}% | carry {LO:.0f}-{HI:.0f}bp/mo vs {BE_MO:.0f} breakeven")
 """)
 
@@ -303,6 +313,44 @@ are in the appendix tree.
 code('fig, _ = PANELS["P4a_payoff"]()\nfig;')
 code('fig, _ = PANELS["P8d_lab_stops"]()\nfig;')
 
+# ---------------------------------------------------------------- §7b execution reality
+md("## 7b. Execution reality — four objections, answered")
+
+code(r"""Markdown(f'''
+**"Passive waiting is not viable without a strong view."** The hurdle is
+{LO:.0f}–{HI:.0f}bp/mo against an {BE_MO:.0f}bp/mo breakeven, because the funding leg is a
+{abs(CARRY["funding_differential_bp"]):.0f}bp/yr tailwind rather than a cost. At low borrow the
+wait is cheap, and what it asks of you is a view on the LEVEL, not on the timing — we tested
+the timing and the shallow model won, so there is no timing signal in this product to disagree
+with. What you are choosing to hold is the premium's own volatility: on 6,771 comparator
+sessions the premium accounts for {VARSH:.0%} of the ADR leg's daily variance, which is the
+point of pairing the legs at all.
+
+**"You cannot unwind through conversion."** Correct, and we had this wrong. Cancellation is a
+holder right, and in this pair you are SHORT the ADR — there is nothing to surrender. The
+pitched pair unwinds in the market, or in the standby variant by never having been initiated.
+Cancellation is an exit for the opposite direction only, and the exit tree has been corrected
+to route a borrow recall to a market cover with the capacity number attached.
+
+**"Covering the short moves the price."** On a normal day it does not: the ADR turns over
+\${ADV.iloc[0].adv_usd/1e9:.1f}bn and $1bn exits in {D1BN:.1f} sessions at 10%
+participation. In stress it is a different question, and the answer is the one that should
+worry you — through the worst sessions in each pair's history the high-low range ran up to
+{RNG_MAX:.0f}× a normal day while volume roughly doubled at best and did not rise at all in the
+GFC comparator. **The book does not disappear; the cost of crossing it multiplies far faster
+than the depth grows.** Normal unwind is cheap. Stressed unwind is the trade's real risk, and
+it is why the position is sized against a risk budget rather than defended with a stop.
+
+**"Why not just market-make it converged?"** That is a liquidity-provision business with a
+different balance sheet, a different holding period and a different P&L. It is not this
+product, and it is out of scope by design rather than by oversight.
+
+*Volatility context: KOSPI realised {KOSPI_V:.0f}% against its own median of {KOSPI_M:.0f}%,
+while US implied sits at {VIX_V:.0f} against a median of {VIX_M:.0f}. The volatility in this
+trade is Korean, not global.*
+''')""")
+code('fig, _ = figures.g31_execution_reality(VOLS, STR_SK, STR_TS, VARSH, D1BN)\nfig;')
+
 # ---------------------------------------------------------------- §8 the ask
 md(r"""
 ## 8. Monitoring, and the ask
@@ -330,6 +378,7 @@ Referenced rather than re-rendered, so no figure exists in two versions.
 | The 21.6-year distributions | [09](09_tsmc_lab.ipynb) — census, entry outcomes, excursions, the FX channel per era |
 | We tested the timing | [06](06_complexity_ledger.ipynb) — parsimony against complexity; the shallow model won, so there is no model behind this pitch |
 | Netting under stress | [01](01_client_note.ipynb) — the margin path through the realised week |
+| **Credit memo** | The 44-cents-on-the-dollar peak call on the worst realised week is not only the client's margin experience — it is **our own credit exposure to the client**, quantified on a path that happened rather than a scenario that was chosen. A risk officer reading this book should read that figure as the answer to "what does this counterparty owe us when it goes wrong", and the netted-versus-standalone comparison as the answer to "how much worse would it be booked separately". |
 | The exit tree | [08](08_pitch_logic.ipynb) — five monitors, three routes |
 | Breakeven surface | [10](10_financing.ipynb) — the carry opened into components |
 | H6 in detail | [07](07_macro_environment.ipynb) — registered direction, both tests, the pooled spec |

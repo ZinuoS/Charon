@@ -538,6 +538,17 @@ D2_MACRO_SERIES: tuple[SeriesSpec, ...] = (
         providers=("fred",), provider_symbols={"fred": "IR3TIB01KRM156N"},
     ),
     SeriesSpec(
+        series_id="vix_index_daily", symbol="VIXCLS", asset_class="vol_index", currency="USD",
+        market="FRED (CBOE)", timezone="America/New_York", close_local=time(16, 15),
+        availability_lag=_STD_LAG,
+        availability_note="CBOE close; FRED publishes same evening.",
+        units="annualised implied vol, percentage points", start=None, confirmed=False,
+        providers=("fred",), provider_symbols={"fred": "VIXCLS"},
+        notes=("The US vol leg. Implied rather than realised, and the asymmetry is stated "
+               "wherever it is used: Korea has no freely reachable implied-vol series, so the "
+               "Korean leg is REALISED and the two are not like-for-like."),
+    ),
+    SeriesSpec(
         series_id="us_rate_effr_daily", symbol="EFFR", asset_class="rate", currency="USD",
         market="FRED (NY Fed)", timezone="America/New_York", close_local=time(9, 0),
         availability_lag=timedelta(days=1),

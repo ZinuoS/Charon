@@ -13,7 +13,8 @@ from __future__ import annotations
 
 import argparse
 
-from ._puller import print_report, run_specs
+from ._puller import (add_common_flags, bypass_cache, print_report,
+                      resolve_pull_date, run_specs, select_specs)
 from .registry import D2_MACRO_SERIES
 
 SOURCE = "d2_macro"
@@ -21,9 +22,13 @@ SOURCE = "d2_macro"
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--pull-date", default=None)
+    add_common_flags(ap)
     args = ap.parse_args(argv)
-    ok, failed = run_specs(SOURCE, D2_MACRO_SERIES, pull_date=args.pull_date)
+    if args.no_cache:
+        bypass_cache()
+    ok, failed = run_specs(SOURCE, select_specs(D2_MACRO_SERIES, args.only),
+                           pull_date=resolve_pull_date(SOURCE, args.pull_date,
+                                                       args.new_partition))
     print_report(SOURCE, ok, failed)
     return 1 if failed else 0
 

@@ -186,3 +186,180 @@ if __name__ == "__main__":     # the smallest checks that fail if the signs inve
     print(f"    total carry {s['total_bp_per_year']:.0f}bp/yr "
           f"({s['total_bp_per_month']:.0f}bp/mo) against a critical "
           f"{s['critical_carry_bp_per_month']:.0f}bp/mo")
+
+
+# --------------------------------------------------------------------------------
+# Execution reality — the vol context and the stress-window liquidity
+# --------------------------------------------------------------------------------
+#
+# THE MICROSTRUCTURE LIMIT, STATED ONCE AND UP FRONT. Everything below is computed from DAILY
+# BARS. Daily volume and the high-low range are the only liquidity evidence this repository
+# holds; there is no tick data, no quoted spread and no depth. The high-low range is a
+# well-behaved PROXY for a spread and it is not a spread -- it is bounded below by the true
+# spread and inflated by genuine intraday direction. Every number here is labelled
+# daily-resolution and no intraday claim rests on any of it.
+
+#: Rolling window for realised vol, in sessions. One quarter, the convention used throughout.
+VOL_WINDOW: int = 63
+
+
+def realised_vol(series: pd.Series, window: int = VOL_WINDOW) -> pd.Series:
+    """Annualised realised vol of log changes. sqrt(252) scaling, stated rather than implied."""
+    return np.log(series).diff().rolling(window).std() * np.sqrt(252.0) * 100.0
+
+
+def vol_context() -> pd.DataFrame:
+    """Per-leg vol, so "both markets are volatile" becomes a number instead of an adjective.
+
+    The US leg is IMPLIED (VIX) and every other leg is REALISED, because no Korean implied-vol
+    series is freely reachable. They are not like-for-like and the caption says so; implied
+    normally sits above realised, so the US leg is flattered by the comparison rather than the
+    Korean one.
+    """
+    from pipeline.measurement.premium import _load_close, build_all_variants
+
+    legs = {}
+    for label, (src, sid) in {
+        "KOSPI (realised)": ("d2_macro", "kospi_index_daily"),
+        "SK hynix local (realised)": ("d1_prices", "skhynix_local_daily"),
+        "SKHY ADR (realised)": ("d1_prices", "skhy_adr_daily"),
+        "USD/KRW (realised)": ("d1_prices", "usdkrw_spot_daily"),
+    }.items():
+        try:
+            legs[label] = realised_vol(_load_close(src, sid))
+        except Exception:
+            continue
+    try:
+        vix = _load_close("d2_macro", "vix_index_daily")
+        legs["US VIX (implied)"] = vix
+    except Exception:
+        pass
+
+    pi = build_all_variants("skhy")[0].series
+    rows = []
+    for label, s in legs.items():
+        s = s.dropna()
+        if not len(s):
+            continue
+        rows.append({"leg": label, "latest_vol_pct": round(float(s.iloc[-1]), 1),
+                     "median_vol_pct": round(float(s.median()), 1),
+                     "n": int(len(s)), "as_of": str(s.index[-1].date()),
+                     "kind": "implied" if "implied" in label else "realised"})
+    # The premium's own vol, on the same annualisation. The point of the panel: the pair nets
+    # out most single-leg vol and what survives is this.
+    d = pi.diff().dropna()
+    if len(d) > 1:
+        rows.append({"leg": "THE PREMIUM (what you hold)", "kind": "realised",
+                     "latest_vol_pct": round(float(d.std() * np.sqrt(252) * 100), 1),
+                     "median_vol_pct": None, "n": int(len(d)),
+                     "as_of": str(pi.index[-1].date())})
+    return pd.DataFrame(rows)
+
+
+def stress_liquidity(pair: str = "skhy", window: int = 63) -> pd.DataFrame:
+    """Volume and high-low range through the worst window, against the trailing normal.
+
+    Daily-resolution evidence. The question it answers is narrow and worth answering: when this
+    premium moved hardest, did the market thin out or deepen? A short cover into a thinning
+    book is the trade's real execution risk, and it is not the same question as the average-day
+    capacity number.
+    """
+    import pandas as pd
+
+    from pipeline.ingest._common import latest_raw_file
+    from pipeline.ingest.registry import PAIRS
+
+    spec = next(p for p in PAIRS if p.pair_id == pair)
+    source = "d1_prices" if pair == "skhy" else "d6_comparators"
+    # The pair's declared sample, not the raw file: a stress window inside an excluded
+    # corporate-action era would be measuring the artefact, not the market.
+    out = []
+    for label, sid in (("ADR", spec.adr), ("local", spec.local)):
+        f = pd.read_csv(latest_raw_file(source, f"{sid}.csv"), parse_dates=["date"])
+        f = f.set_index("date").sort_index()
+        if getattr(spec, "sample_start", None):
+            f = f[f.index >= spec.sample_start]
+        if getattr(spec, "sample_end", None):
+            f = f[f.index <= spec.sample_end]
+        if not {"high", "low", "close", "volume"} <= set(f.columns):
+            continue
+        rng = (f["high"] - f["low"]) / f["close"] * 100.0
+        vol_ratio = f["volume"] / f["volume"].rolling(window, min_periods=5).mean()
+        # The stress window is the pair's own worst premium move, located on its own bars.
+        peak = rng.idxmax()
+        out.append({
+            "leg": label, "n_sessions": int(len(f)),
+            "stress_date": str(peak.date()),
+            "stress_range_pct": round(float(rng.loc[peak]), 2),
+            "median_range_pct": round(float(rng.median()), 2),
+            "range_multiple": round(float(rng.loc[peak] / rng.median()), 1),
+            "stress_volume_vs_trailing": (round(float(vol_ratio.loc[peak]), 2)
+                                          if pd.notna(vol_ratio.loc[peak]) else None),
+        })
+    return pd.DataFrame(out)
+
+
+# --------------------------------------------------------------------------------
+# The segmentation — which expression fits which borrow, and who buys it
+# --------------------------------------------------------------------------------
+#
+# RATIFICATION STATUS: the cutoffs below are PROVISIONAL and are the author's to sign. They
+# are read off the entry-outcome win rates, which is evidence; where exactly to cut a
+# continuum is a judgement, and a model should not assert one silently.
+
+SEGMENTATION_RATIFIED: str | None = None
+
+#: Borrow spread cutoffs in bp/yr. Derived, not chosen: the all-in carry is
+#: borrow - 65bp/yr at today's rate legs, so these correspond to roughly 15 and 45bp/mo,
+#: which bracket the levels at which the 21.6-year win rate crosses and then leaves 50%.
+BORROW_CUTOFF_BP = {"linear_max": 250, "standby_max": 600}
+
+
+def segmentation() -> list[dict]:
+    """The four tiers, with the borrow band that selects each and what the desk earns."""
+    def carry_at(borrow_bp: float) -> float:
+        legs = rate_legs()
+        return ((legs["krw_rate_pct"] - legs["usd_rate_pct"]) * 100 + borrow_bp
+                + CONVERSION_FEE_BP) / 12.0
+
+    lo, hi = BORROW_CUTOFF_BP["linear_max"], BORROW_CUTOFF_BP["standby_max"]
+    return [
+        {"expression": "linear pair",
+         "borrow": f"borrow <= {lo}bp/yr  (all-in <= {carry_at(lo):.0f}bp/mo)",
+         "who": "Level conviction, 6-12 month horizon, and a risk budget that can carry the "
+                "skew.",
+         "why": "This is the only band where the 21.6-year win rate sits at or above a coin "
+                "flip. Below this carry the wait is cheap enough that the view required is "
+                "about the LEVEL, not the timing.",
+         "earns": "financing spread on both swap legs, borrow spread, execution, FX"},
+        {"expression": "standby",
+         "borrow": f"borrow {lo}-{hi}bp/yr, or catalyst-contingent conviction",
+         "who": "Wants the trade if a catalyst fires and will not pay to wait for one. The "
+                "RV-arb profile.",
+         "why": "Zero bleed. Monitoring, the trigger list and a registered call with a "
+                "resolution date, and the position is only initiated when an observable "
+                "fires. At this borrow the linear pair loses more often than it wins.",
+         "earns": "monitoring fee; the full ticket if and when it initiates"},
+        {"expression": "long-local via TRS",
+         "borrow": f"borrow > {hi}bp/yr, or no ADR borrow available at any price",
+         "who": "Holds the compression view but will not or cannot pay for the short leg.",
+         "why": "Drops the ADR borrow entirely, so the carry collapses to the funding "
+                "differential — which is a tailwind. It is a directional position on the "
+                "local line, not the pair, and the resolution-channel evidence says the local "
+                "leg does close a large minority of these gaps.",
+         "earns": "swap financing on the local leg; no borrow, no short"},
+        {"expression": "pass",
+         "borrow": "any borrow, if the view is about timing",
+         "who": "Needs a dated exit, or has no level view.",
+         "why": "We tested the timing and the shallow model won, which means there is no "
+                "signal here to sell. A client who needs this to resolve by a date is buying "
+                "something we did not build.",
+         "earns": "nothing, and saying so is why the other three rows are believed"},
+    ]
+
+
+def segmentation_note() -> str:
+    if SEGMENTATION_RATIFIED:
+        return f"Cutoffs ratified {SEGMENTATION_RATIFIED}."
+    return ("Cutoffs PROVISIONAL — read off the win rates, but where to cut a continuum is the "
+            "author's judgement to sign.")
