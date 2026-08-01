@@ -50,8 +50,28 @@ def remote_ref() -> dict:
     return {"main": refs.get("refs/heads/main"), "head": refs.get("HEAD"), "all": refs}
 
 
+def api_head() -> dict:
+    """The authoritative HEAD of the default branch, uncached.
+
+    THE HTML PAGE LAGS AND THIS DOES NOT. GitHub caches the repository landing page, so its
+    commit count can sit a few minutes behind a push that has already landed. Verifying only
+    against the rendered page therefore has a FALSE-NEGATIVE mode -- and a false negative here
+    is not harmless, because it is indistinguishable from the real failure this module exists
+    to catch. It is also, precisely, what produced the 2026-07-30 "the remote is five commits
+    behind" report. The API is the primary check; the page is a secondary signal that may lag.
+    """
+    req = urllib.request.Request(
+        "https://api.github.com/repos/ZinuoS/Charon/commits/main",
+        headers={"User-Agent": "charon-publish-verify",
+                 "Accept": "application/vnd.github+json"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        j = json.load(r)
+    return {"sha": j["sha"], "date": j["commit"]["committer"]["date"],
+            "subject": j["commit"]["message"].splitlines()[0]}
+
+
 def rendered_page() -> dict:
-    """What a reader actually loads. The only evidence that counts."""
+    """What a reader actually loads. Secondary — it is cached and can lag a landed push."""
     req = urllib.request.Request(PUBLIC, headers={"User-Agent": "charon-publish-verify"})
     with urllib.request.urlopen(req, timeout=30) as r:
         html = r.read().decode("utf-8", "replace")
@@ -73,16 +93,28 @@ def verify(expect_count: int | None = None) -> tuple[bool, list[str]]:
         problems.append(f"remote HEAD {rem['head']!r} != refs/heads/main — the DEFAULT BRANCH "
                         "is not main, so the public page serves something else")
     try:
-        page = rendered_page()
+        api = api_head()
     except Exception as exc:                      # network refusal is not a pass
+        problems.append(f"could not reach the GitHub API: {type(exc).__name__}: {exc}")
+        api = {}
+    else:
+        if api["sha"] != loc["head"]:
+            problems.append(f"API HEAD on main is {api['sha'][:7]}, local is "
+                            f"{loc['head'][:7]} — the push did NOT land")
+
+    lag = None
+    try:
+        page = rendered_page()
+    except Exception as exc:
         problems.append(f"could not fetch {PUBLIC}: {type(exc).__name__}: {exc}")
         page = {}
     else:
-        if page["commits"] is None:
-            problems.append("could not read a commit count from the rendered page")
-        elif page["commits"] != loc["count"]:
-            problems.append(f"rendered page shows {page['commits']} commits, local has "
-                            f"{loc['count']} — the public view is STALE or behind")
+        if page["commits"] is not None and page["commits"] != loc["count"]:
+            # Not a problem when the API already agrees: the landing page is cached.
+            lag = page["commits"]
+            if api and api.get("sha") != loc["head"]:
+                problems.append(f"rendered page shows {page['commits']} commits, local has "
+                                f"{loc['count']}")
         missing = [p for p, ok in page["paths_present"].items() if not ok]
         if missing:
             problems.append(f"paths not visible on the rendered page: {missing}")
@@ -91,6 +123,11 @@ def verify(expect_count: int | None = None) -> tuple[bool, list[str]]:
 
     print(f"  local    {loc['branch']} @ {loc['head'][:7]}  ({loc['count']} commits)")
     print(f"  remote   refs/heads/main @ {(rem['main'] or '—')[:7]}")
+    if api:
+        print(f"  API      HEAD @ {api['sha'][:7]}  ({api['date']})")
+    if lag is not None:
+        print(f"  note     the rendered page still shows {lag} commits — GitHub caches the "
+              "landing page; the API above is authoritative")
     if page:
         print(f"  rendered {PUBLIC} shows {page['commits']} commits, "
               f"{sum(page['paths_present'].values())}/{len(EXPECT_PATHS)} expected paths")
