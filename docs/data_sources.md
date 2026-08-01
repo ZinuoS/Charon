@@ -606,9 +606,34 @@ TIGER SK하이닉스, AUM ₩1.53tn. Note the new six-character alphanumeric tic
   **If so, every day not captured is lost permanently** — which makes this the most
   time-sensitive item in this document.
 
+**[V] RESOLVED 2026-07-31 — and the answer is no.** The author approved this source; the
+robots check that had never been run refuses it. `finance.naver.com/robots.txt`:
+
+```
+User-agent: *
+Disallow: /
+User-agent: yeti
+Disallow: /
+Allow: /sise/
+...
+```
+
+The `Allow:` exceptions sit under the **`yeti`** group — Naver's own crawler. For every other
+agent the operative rule is `Disallow: /` with no exception. The target path
+`/api/sise/etfItemList.nhn` is not under `/sise/` in any case. README section 8's standing rule
+is that a terms prohibition on automated collection is a refusal regardless of enforcement, so
+this endpoint is closed and the `[U]` above is now `[V]` in the negative.
+
+The approval is therefore recorded as `no` with its reason, rather than left as a TODO that a
+future session might read as merely unfinished.
+
 ```yaml
 source: naver_etf_navlist
-approved: TODO(ash)
+approved: no
+reason: >-
+  robots.txt disallows all agents but Naver's own (yeti); the Allow exceptions belong to that
+  group and the API path is outside them regardless. Author approved the SOURCE 2026-07-31;
+  the refusal is the robots posture, not the approval. Checked 2026-07-31.
 ```
 
 ### D4-a2. ⚠️ Issuer disclosure — the cleaner provenance for the same numbers
@@ -622,6 +647,14 @@ themselves?" The answer looks like **yes, and with a better licence posture than
 |---|---|---|
 | Samsung **KODEX** (`kodex.com`) | `user-agent: *` / `allow: /etf` | permits the ETF section outright |
 | Mirae **TIGER** (`tigeretf.com`) | `Allow: /tigeretf/`, disallowing only `/member/` and `/my-page/` | permits product pages, blocks account areas |
+
+**Attempted 2026-07-31 via the in-session browser, since the 2026-07-29 correction established
+that both issuer pages need a browser to run the SPA and capture its XHR.** Navigation to
+`kodex.com` was DENIED by this environment's browsing policy, not by the site — `robots.txt`
+permits `/etf` outright. So the route remains the right one and remains unexecuted: it needs a
+browser session that is allowed to reach the host, or the JSON endpoint identified directly.
+D4 therefore still has NO landed AUM input, and every uncaptured day of a live-snapshot-only
+series is still lost permanently.
 
 This matters because it dissolves the D4 dilemma rather than trading it off. Naver is a
 **redistributor** with restrictive, unreviewed terms; the issuers are the **primary
