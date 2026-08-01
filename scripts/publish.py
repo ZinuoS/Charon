@@ -100,7 +100,23 @@ def verify(expect_count: int | None = None) -> tuple[bool, list[str]]:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--push", action="store_true", help="push before verifying")
+    ap.add_argument("--skip-tests", action="store_true",
+                    help="push without running the suite first. For recovery only.")
     args = ap.parse_args(argv)
+
+    if args.push and not args.skip_tests:
+        # A push that can outrun its own test suite is the same defect class as a push that
+        # reports success it never verified. Gated here rather than only in the justfile,
+        # because the justfile is not what every caller uses.
+        print("  running the suite before pushing")
+        r = subprocess.run(("uv", "run", "pytest", "-q", "-p", "no:warnings"),
+                           cwd=ROOT, capture_output=True, text=True)
+        if r.returncode != 0:
+            tail = [l for l in r.stdout.splitlines() if "failed" in l or l.startswith("FAILED")]
+            print("  SUITE FAILED — not pushing:", file=sys.stderr)
+            for l in tail[-8:]:
+                print(f"    {l}", file=sys.stderr)
+            return 1
 
     if args.push:
         branch = local_state()["branch"]

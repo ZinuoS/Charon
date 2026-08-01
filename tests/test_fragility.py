@@ -233,9 +233,19 @@ class TestApprovalGate:
             f"terms-prohibited source approved: {sorted(forbidden & approved)}"
         )
 
-    def test_require_approved_raises_for_pending_source(self):
+    def test_require_approved_raises_for_pending_source(self, tmp_path):
+        """A pending source raises, and the message says PENDING rather than declined.
+
+        This used to name a live source, `naver_etf_navlist`, as its example of pending. When
+        that source was resolved to `approved: no` the test broke -- not because the gate
+        regressed, but because the fixture had changed underneath it. A test coupled to the
+        current state of real data is testing the data, and the two tests below it already
+        show the right pattern.
+        """
+        doc = tmp_path / "d.md"
+        doc.write_text("```yaml\nsource: demo\napproved: TODO(ash)\n```\n")
         with pytest.raises(SourceNotApprovedError, match="has not been signed off"):
-            require_approved("naver_etf_navlist")
+            require_approved("demo", doc)
 
     def test_unknown_source_is_pending_not_crash(self):
         assert approval_status("no_such_source_xyz") == "pending"
