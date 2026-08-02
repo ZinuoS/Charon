@@ -81,8 +81,16 @@ EX    = LAB.excursions(LAB.premium()); SKW = LAB.skhy_week_one_excursion()
 FXS   = fx_sensitivity(HedgeLegs.live("skhy").premium)
 PEAK  = MP.peak_call()
 _cvs  = NET.calm_vs_stress().set_index("regime_label")
-CALM  = float(_cvs.loc[[i for i in _cvs.index if i.startswith("calm")][0], "capital_saving"]) * 100
-STRESS= float(_cvs.loc[[i for i in _cvs.index if i.startswith("stress")][0], "capital_saving"]) * 100
+_c0 = [i for i in _cvs.index if i.startswith("calm")][0]
+_s0 = [i for i in _cvs.index if i.startswith("stress")][0]
+N_CALM, N_STRESS = int(_cvs.loc[_c0, "n"]), int(_cvs.loc[_s0, "n"])
+CALM  = float(_cvs.loc[_c0, "capital_saving"]) * 100
+STRESS= float(_cvs.loc[_s0, "capital_saving"]) * 100
+from pipeline.convergence.jorda import run_panel as _rp
+HL = _rp()["one_way_constrained"].hl
+CRIT_FAST = BE.critical_carry_bp(half_life_days=HL.lower) / 12
+CRIT_PT   = BE.critical_carry_bp(half_life_days=HL.point) / 12
+CRIT_SLOW = BE.critical_carry_bp(half_life_days=HL.upper) / 12
 _days = CAP.days_to_unwind()
 D1BN  = float(_days[(_days.participation == 0.10) & (_days.size_usd == 1e9)].days_binding.iloc[0])
 ADV   = CAP.adv_table()
@@ -253,7 +261,8 @@ code(r"""Markdown(f'''
 | One counterparty | FX execution and the booking chain |
 
 **Cross-margining.** One netted ticket instead of two saves **{CALM:.0f}% of capital on
-ordinary days**. Through the worst week this pair has actually seen it called
+ordinary days** — on {N_CALM} ordinary and {N_STRESS} stressed sessions, because this
+programme is three weeks old and the sample says so. Through the worst week this pair has actually seen it called
 **{PEAK["peak_total_pair_pct"]*100:.0f} cents on the dollar against
 {PEAK["peak_total_standalone_pct"]*100:.0f} standalone** — {(1 - PEAK["peak_total_pair_pct"]/PEAK["peak_total_standalone_pct"])*100:.0f}%
 less capital through the stress itself. On the top 20% of move days the saving is
@@ -280,6 +289,7 @@ $$\text{P\&L} \;=\; \Delta\pi \cdot N \;-\; C \cdot t, \qquad \text{ROM} \;=\; \
 Two terms and no third. Δπ is the opportunity leg and has no assumed drift. C is the carry,
 which accrues whatever happens and is the only component known in advance.
 """)
+code('fig, _ = PANELS["S07a_breakeven"]()\nfig;')
 code('fig, _ = PANELS["P8_scenario_pnl"]()\nfig;')
 code(r"""Markdown(f'''
 **Compression to the comparable's five-year mean is {PI - NORM:.0f} points.** Against

@@ -248,8 +248,18 @@ def extra_panels() -> list[tuple[str, callable]]:
         from pipeline.package import financing as FIN
         return figures.g29a_financing_structure(FIN.rate_legs(), FIN.carry_summary())
 
+    def s07a():
+        """The breakeven boundary — the economics slide's new anchor."""
+        from pipeline.convergence.jorda import run_panel
+        from pipeline.package import breakeven as BE, financing as FIN
+        return figures.g34_breakeven_boundary(
+            run_panel()["one_way_constrained"].hl,
+            lambda b: FIN.carry_summary(b)["total_bp_per_month"],
+            lambda h: BE.critical_carry_bp(half_life_days=h),
+            FIN.ADR_BORROW_BRACKET_BP, FIN.BORROW_CUTOFF_BP)
+
     return [("S01a_anchor", s01a), ("S03a_macro_map", s03a), ("S04a_identity", s04a),
-            ("S05a_catalysts", s05a), ("S0A6_financing", s0a6),
+            ("S05a_catalysts", s05a), ("S07a_breakeven", s07a), ("S0A6_financing", s0a6),
             ("S0A6b_structure", s0a6b)]
 
 

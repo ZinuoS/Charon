@@ -2709,3 +2709,100 @@ def g33_segmentation(tiers, wins: dict, carry_of):
                  "model's to assert. The win rates themselves come from a comparator whose "
                  "facility revolves and whose four constrained pairs are all Taiwanese.")
     return fig, {"n_tiers": len(tiers)}
+
+
+def g34_breakeven_boundary(hl, carry_of, critical_of, borrow_bracket, cutoffs):
+    """G34 — the breakeven as a DECISION BOUNDARY, because it stopped being a number.
+
+    WHY THIS REPLACES A SINGLE FIGURE. The breakeven was quoted as one level -- "80bp/mo" --
+    because the convergence estimate was a point. It is now an INTERVAL (the upper tail closed
+    when a non-Taiwanese pair joined the constrained class), and a breakeven computed from an
+    interval is a boundary, not a number: 105bp/mo at the fast end, 82 at the point, 67 at the
+    slow end.
+
+    That is a better object for a pitch, not a worse one. A single number invites the question
+    "and what if you are wrong about the half-life?", which this now answers on its face: the
+    trade clears at every borrow level except in ONE corner -- slow convergence AND expensive
+    borrow -- and that corner is exactly the region where the segmentation already recommends
+    a different expression.
+    """
+    fig, ax = theme.figure(shape_name="standard")
+    EM, CON, FUN, CX, BA, WA = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["constrained"],
+                                theme.SEMANTIC["fungible"], theme.SEMANTIC["context"],
+                                theme.SEMANTIC["barrier"], theme.SEMANTIC["warning"])
+
+    H = np.linspace(hl.lower * 0.9, hl.upper * 1.08, 240)
+    crit = np.array([critical_of(h) / 12.0 for h in H])        # bp/mo
+    borrow_lo, borrow_hi = borrow_bracket["low"], borrow_bracket["high"]
+    carry_lo, carry_hi = carry_of("low"), carry_of("high")
+
+    # Everything under the contour pays; the shaded wedge above it does not.
+    ax.fill_between(H, crit, crit.max() * 1.25, color=WA, alpha=0.13, zorder=1)
+    ax.fill_between(H, 0, crit, color=FUN, alpha=0.10, zorder=1)
+    ax.plot(H, crit, color=BA, lw=2.0, zorder=4)
+
+    ax.axhspan(carry_lo, carry_hi, color=FUN, alpha=0.22, zorder=2)
+    ax.annotate(f"what it costs you: {carry_lo:.0f}–{carry_hi:.0f}bp/mo\n"
+                f"(the range is the ADR borrow, {borrow_lo}–{borrow_hi}bp/yr)",
+                xy=(H[3], carry_lo), xytext=(4, -30), textcoords="offset points",
+                fontsize=theme.NOTE_SIZE, color=FUN, fontfamily=theme.SERIF_STACK,
+                linespacing=1.5)
+
+    for x, lab, col in ((hl.lower, "fast end\nof the interval", FUN),
+                        (hl.point, "point\nestimate", EM),
+                        (hl.upper, "slow end\nof the interval", CON)):
+        c = critical_of(x) / 12.0
+        ax.plot([x, x], [0, c], color=col, lw=1.1, ls=":", zorder=3)
+        ax.plot([x], [c], marker="o", ms=6, color=theme.PAPER, mec=col, mew=1.8, zorder=6)
+        ax.annotate(f"{c:.0f}bp/mo", xy=(x, c), xytext=(0, 9), textcoords="offset points",
+                    ha="center", fontsize=theme.NOTE_SIZE, color=col,
+                    fontfamily=theme.SERIF_STACK)
+
+
+    # The one failing corner, named on the chart.
+    slow_c = critical_of(hl.upper) / 12.0
+    if carry_hi > slow_c:
+        ax.annotate("the only corner that does not pay:\nslow convergence AND expensive borrow",
+                    xy=(hl.upper, slow_c), xytext=(-14, 34),
+                    textcoords="offset points", ha="right", va="bottom",
+                    fontsize=theme.NOTE_SIZE, color=WA, fontfamily=theme.SERIF_STACK,
+                    linespacing=1.5)
+
+    ax.set_xticks([hl.lower, hl.point, hl.upper])
+    ax.set_xticklabels([f"{hl.lower:.0f}d\nfast end", f"{hl.point:.0f}d\npoint estimate",
+                        f"{hl.upper:.0f}d\nslow end"], linespacing=1.6)
+    ax.set_xlabel("convergence half-life — the 95% interval, end to end")
+    ax.set_ylabel("carry the trade can bear, bp/month")
+    ax.set_ylim(0, max(crit.max(), carry_hi) * 1.22)
+    ax.set_xlim(H[0], H[-1])
+
+    pays_lo = carry_lo < slow_c
+    theme.finalize(
+        fig, kicker="the economics",
+        headline=("It clears at every borrow level except one corner — slow convergence "
+                  "and expensive borrow together"),
+        subtitle="The breakeven stopped being a number when the convergence estimate stopped "
+                 "being a point. The black line is the carry the trade can bear at each "
+                 "half-life; the blue band is what it actually costs you.",
+        stats=[(f"{critical_of(hl.lower)/12:.0f}bp", f"bearable at the fast end\n({hl.lower:.0f}d)"),
+               (f"{critical_of(hl.point)/12:.0f}bp", f"at the point\n({hl.point:.0f}d)"),
+               (f"{critical_of(hl.upper)/12:.0f}bp", f"at the slow end\n({hl.upper:.0f}d)"),
+               (f"{carry_lo:.0f}–{carry_hi:.0f}bp", "what it costs you")],
+        source="Repo-computed. Half-life interval from pipeline.convergence.jorda; critical "
+               "carry from pipeline.package.breakeven; carry stack from "
+               "pipeline.package.financing.",
+        footnote=("At low borrow the trade clears across the WHOLE interval, which is why the "
+                  "segmentation puts that client in the linear pair. At high borrow it clears "
+                  "at the point estimate and fails at the slow end — the same client the "
+                  "segmentation already routes to the standby or the long-local expression. "
+                  "The interval itself closed only when a non-Taiwanese pair joined the "
+                  "constrained class; on four Taiwanese pairs the upper tail had no finite "
+                  "bound and this chart could not have been drawn."
+                  if not pays_lo else
+                  "The trade clears at the low borrow bracket across the entire interval. The "
+                  "high bracket is where the slow end bites, and that is the client the "
+                  "segmentation already routes elsewhere."))
+    return fig, {"critical_fast": critical_of(hl.lower) / 12,
+                 "critical_point": critical_of(hl.point) / 12,
+                 "critical_slow": critical_of(hl.upper) / 12,
+                 "high_borrow_fails_at_slow_end": bool(carry_hi > slow_c)}

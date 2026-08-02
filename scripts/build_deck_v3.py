@@ -124,20 +124,24 @@ def build_slides(n) -> tuple[list[Slide], list[Slide]]:
                "answer demand, so the market cannot arbitrage this gap away.",
                "**What we build you.** One cross-margined position: synthetic local access "
                "through our booking chain, ADR borrow sourced, FX executed, monitored monthly.",
-               f"**Indicative economics.** All-in carry {econ_head}, against an "
-               f"{n['critical_bp'] / 12:.0f}bp/mo breakeven. "
+               f"**Indicative economics.** All-in carry {econ_head}. The trade bears "
+               f"{n['crit_slow_mo']:.0f}–{n['crit_fast_mo']:.0f}bp/mo depending on how fast "
+               f"the gap closes, so it clears at every borrow level except one corner: slow "
+               f"convergence and expensive borrow together. "
                f"Cross-margining saves {n['capital_saved']:.0f}% of capital on ordinary days "
-               f"and {n['peak_saving']:.0f}% at the peak of the worst week this pair has "
-               f"seen. Capacity is roughly {n['days_1bn']:.1f} sessions for $1bn at 10% "
-               f"participation.",
+               f"(n={n['n_calm']}) and {n['peak_saving']:.0f}% at the peak of the worst week "
+               f"this pair has seen. Capacity is roughly {n['days_1bn']:.1f} sessions for "
+               f"$1bn at 10% participation.",
                "Risk considerations are slide 08, sized for the PM's own assessment."],
               ["S01a_anchor"],
               [(econ_head, "all-in carry"),
-               (f"{n['capital_saved']:.0f}%", "capital saved,\nordinary days"),
+               (f"{n['crit_slow_mo']:.0f}–{n['crit_fast_mo']:.0f}bp", "what it can bear,\nacross the interval"),
                (f"{n['days_1bn']:.1f}", "sessions to build\n$1bn at 10% ADV"),
                (f"{n['gap']:.0f}pts", "wide of the\nstructural norm")],
               f"Carry is a {econ_note}. Margining is illustrative; real schedules are ours "
-              "to quote."),
+              f"to quote. The netting figures rest on {n['n_calm']} ordinary and "
+              f"{n['n_stress']} stressed sessions — this programme is three weeks old and "
+              f"the sample says so."),
 
         Slide("03", "why_now",
               "Why now: the bid, the cost, the channel, the access",
@@ -236,7 +240,7 @@ def build_slides(n) -> tuple[list[Slide], list[Slide]]:
               "Capacity from measured ADV on both legs. Appendix A4."),
 
         Slide("07", "indicative_economics",
-              "What has to happen, and what it costs while you wait",
+              "What has to happen, what it costs, and the one case where it does not work",
               [f"**The featured path.** Compression to the structural norm is {n['gap']:.0f} "
                f"points of premium.",
                f"**What that requires.** Roughly {n['gap']:.0f} points inside twelve months at "
@@ -244,16 +248,24 @@ def build_slides(n) -> tuple[list[Slide], list[Slide]]:
                f"**The known cost.** All-in carry of {econ_head}, drawn against the path "
                f"rather than netted out of it. Two of its components are measured from "
                f"landed series; the range is the ADR borrow spread alone.",
+               f"**What the trade can bear.** Convergence is an interval, not a point — "
+               f"{n['hl_lower']:.0f} to {n['hl_upper']:.0f} sessions at 95% — so the "
+               f"breakeven is a boundary rather than a number: "
+               f"{n['crit_fast_mo']:.0f}bp/mo at the fast end, "
+               f"{n['crit_point_mo']:.0f} at the point, {n['crit_slow_mo']:.0f} at the slow "
+               f"end. It clears at every borrow level except one corner — slow convergence "
+               f"AND expensive borrow together — and that corner is exactly the client we "
+               f"route to a different expression on slide 1b.",
                "**The other two paths are on the same slide at the same scale.** Static "
                "bleeds the carry. The realised widening is what it looks like when the gap "
                "goes the other way.",
                "We do not forecast which path happens. We price the financing and show you "
                "all three."],
-              ["P3_economics", "P8_scenario_pnl"],
+              ["S07a_breakeven", "P8_scenario_pnl"],
               [(econ_head, "all-in carry"),
                (f"{n['gap']:.0f}pts", "compression to\nthe norm"),
-               (f"{n['critical_bp']:.0f}bp", "carry at which the\nbase rate breaks even"),
-               ("3", "paths shown,\nnone forecast")],
+               (f"{n['crit_slow_mo']:.0f}–{n['crit_fast_mo']:.0f}bp", "bearable, across\nthe interval"),
+               ("1", "corner where it\ndoes not clear")],
               f"Carry is a {econ_note}. The breakeven surface is appendix A6."),
 
         Slide("08", "risk_considerations",
@@ -532,8 +544,10 @@ def numbers() -> dict:
     from pipeline.hedging.ratios import HedgeLegs
     from pipeline.lab import tsmc as LAB
     from pipeline.measurement.premium import build_all_variants, variant_spread
+    from pipeline.convergence.jorda import run_panel
     from pipeline.package import (breakeven as BE, capacity as CAP, financing as FIN,
                                   margin_path as MP, netting as NET)
+    HL = run_panel()["one_way_constrained"].hl
 
     sk = build_all_variants("skhy")[0].series
     tsm = build_all_variants("tsmc")[0].series
@@ -578,6 +592,10 @@ def numbers() -> dict:
         "fungible": float(bb[bb.index >= bb.index[-1] - five].mean()) * 100,
         "brackets": BE.CARRY_BRACKET_BP,
         "critical_bp": BE.critical_carry_bp(),
+        "hl_lower": HL.lower, "hl_point": HL.point, "hl_upper": HL.upper,
+        "crit_fast_mo": BE.critical_carry_bp(half_life_days=HL.lower) / 12,
+        "crit_point_mo": BE.critical_carry_bp(half_life_days=HL.point) / 12,
+        "crit_slow_mo": BE.critical_carry_bp(half_life_days=HL.upper) / 12,
         "adr_adv_usd": float(CAP.adv_table().iloc[0].adv_usd),
         "local_adv_usd": float(CAP.adv_table().iloc[1].adv_usd),
         "fed_bp_per_month_per_25bp": FIN.fed_sensitivity()["bp_per_month_per_25bp"],
@@ -603,6 +621,7 @@ def numbers() -> dict:
         "peak_standalone": peak_standalone,
         "peak_saving": (1.0 - peak_pair / peak_standalone) * 100,
         "capital_saved": capital_saved,
+        "n_calm": int(cvs.loc[calm, "n"]), "n_stress": int(cvs.loc[stress, "n"]),
         "capital_saved_stress": max(capital_saved_stress, 0.0),
         "days_1bn": d1bn,
         "f6_variants": int(len(build_all_variants("skhy"))),
