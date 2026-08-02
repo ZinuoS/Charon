@@ -47,11 +47,19 @@ OUT = ROOT / "data" / "derived" / "deck_v2"
 # presenter already has when the obvious question comes, which is a better place for it than
 # volunteered in six-point type nobody reads.
 
-ORDER: list[tuple[str, str, str, str]] = [
+def order() -> list[tuple[str, str, str, str]]:
+    """The slide order, with every number rendered LIVE.
+
+    Previously a module-level list of literal strings, which meant its numbers were
+    correct on the day they were typed and silently wrong afterwards -- it still read
+    22.6% when the premium was 31.4%. Levels move; the copy has to move with them.
+    """
+    n = _live()
+    return [
     ("S01_anchor", "The opportunity, in one chart",
-     "Hynix's US line trades 22.6% above its Korean line. The comparable Taiwanese pair "
-     "averages 12.5%, and a pair whose share supply is fully fungible sits at zero. Same "
-     "instrument, three levels, one structural cause.",
+     f"Hynix's US line trades {n['pi']:.1f}% above its Korean line. The comparable Taiwanese "
+     f"pair averages {n['norm']:.1f}%, and a pair whose share supply is fully fungible sits at "
+     f"{n['ctrl']:.1f}%. Same instrument, three levels, one structural cause.",
      "Q: why should it converge to TSMC's level? A: nothing forces it to, and I would not "
      "pitch it that way. TSMC's ADR facility revolves and Hynix's does not, which is exactly "
      "why Hynix sits higher. The chart establishes that the level is extreme, not that it "
@@ -69,12 +77,15 @@ ORDER: list[tuple[str, str, str, str]] = [
      "Q: what if the borrow disappears? A: it is the binding constraint on size, it is priced "
      "into the capacity slide, and the standby terms are a desk conversation."),
     ("S03_opportunity", "The opportunity math",
-     "Compression to the family norm is roughly 10 points of premium. Against illustrative "
-     "20% margin that is the featured path on this slide, drawn against a financing cost we "
-     "quote as a range because four of its five components are not yet desk-confirmed.",
-     "Q: what has to happen for this to work? A: about 10 points of compression inside a year "
-     "at mid-bracket financing. That is the honest framing -- not a probability, a "
-     "requirement. The static and widening paths are on the same slide at the same scale."),
+     f"Compression to the family norm is {n['pi'] - n['norm']:.0f} points of premium. Against "
+     f"illustrative 20% margin that is the featured path, drawn against a carry we quote as a "
+     f"range because the ADR borrow is a desk quote.",
+     f"Q: what has to happen for this to work? A: about {n['pi'] - n['norm']:.0f} points of "
+     f"compression inside a year. And the breakeven is a BOUNDARY, not a number, because "
+     f"convergence is an interval: the trade bears {n['crit_fast']:.0f}bp/mo at the fast end "
+     f"of the 95% range, {n['crit_pt']:.0f} at the point and {n['crit_slow']:.0f} at the slow "
+     f"end, against a carry of {n['carry_lo']:.0f}-{n['carry_hi']:.0f}. It clears everywhere "
+     f"except one corner -- slow convergence AND expensive borrow together."),
     ("S04_identity", "What actually drives the P&L",
      "Two components and no third: financing, which is deterministic and which the desk "
      "prices, and the change in the gap, which has no assumed drift and moves on identifiable "
@@ -107,7 +118,8 @@ ORDER: list[tuple[str, str, str, str]] = [
      "The shape of the exposure, what it did in its first week, and the wrong-way note -- "
      "presented for the PM's own risk assessment, which is where this decision belongs.",
      "Q: how bad can it get? A: the loss side is not capped by anything on file, and the "
-     "position moved 36 points against an early seller in three sessions. Full distributions, "
+     f"position moved {n['excursion']:.0f} points against an early seller in {n['sessions']} "
+     f"sessions. Full distributions, "
      "the stop analysis and the exit tree are in the research notebooks."),
     ("S10_methods", "Methods backup",
      "The P&L identity, the comparator evidence base, and where every number comes from.",
@@ -115,12 +127,41 @@ ORDER: list[tuple[str, str, str, str]] = [
      "public filings; the repository reproduces every figure from source."),
 ]
 
+
+def _live() -> dict:
+    """Every number the copy interpolates. Computed once per build, never typed."""
+    import pandas as pd
+
+    from pipeline.convergence.jorda import run_panel
+    from pipeline.lab import tsmc as LAB
+    from pipeline.measurement.premium import build_all_variants
+    from pipeline.package import breakeven as BE, financing as FIN
+
+    sk = build_all_variants("skhy")[0].series
+    tsm = build_all_variants("tsmc")[0].series
+    bb = build_all_variants("baba")[0].series
+    five = pd.Timedelta(days=365 * 5)
+    hl = run_panel()["one_way_constrained"].hl
+    return {
+        "pi": float(sk.iloc[-1]) * 100,
+        "norm": float(tsm[tsm.index >= tsm.index[-1] - five].mean()) * 100,
+        "ctrl": float(bb[bb.index >= bb.index[-1] - five].mean()) * 100,
+        "carry_lo": FIN.carry_summary("low")["total_bp_per_month"],
+        "carry_hi": FIN.carry_summary("high")["total_bp_per_month"],
+        "hl_lo": hl.lower, "hl_pt": hl.point, "hl_hi": hl.upper,
+        "crit_fast": BE.critical_carry_bp(half_life_days=hl.lower) / 12,
+        "crit_pt": BE.critical_carry_bp(half_life_days=hl.point) / 12,
+        "crit_slow": BE.critical_carry_bp(half_life_days=hl.upper) / 12,
+        "excursion": LAB.skhy_week_one_excursion()["excursion_pp"],
+        "sessions": LAB.skhy_week_one_excursion()["sessions"],
+    }
+
 #: Panels that ship on each slide, by stem. Builders are reused verbatim from the pack.
 SLIDE_PANELS: dict[str, list[str]] = {
     "S01_anchor": ["S01a_anchor"],
     "S02_thesis": ["P1_situation"],
     "S02b_ops": ["P2_structure"],
-    "S03_opportunity": ["P8_scenario_pnl"],
+    "S03_opportunity": ["S07a_breakeven", "P8_scenario_pnl"],
     "S04_identity": ["S04a_identity"],
     "S05_catalysts": ["S05a_catalysts"],
     "S06_economics": ["P3_economics"],
@@ -159,7 +200,7 @@ _BRACKET_WORD = re.compile(r"bracket|range|between|to\s+\d|low.*high|assumption"
 def assert_no_decay_claim() -> None:
     """No caption or note may claim a convergence force the research disproved."""
     bad = []
-    for stem, title, line, answer in ORDER:
+    for stem, title, line, answer in order():
         for field, text in (("title", title), ("line", line), ("answer", answer)):
             m = _DECAY_CLAIM.search(text)
             # "no ... decay" and "nothing forces it" are DENIALS of the claim, not the claim.
@@ -176,7 +217,7 @@ def assert_no_decay_claim() -> None:
 def assert_costs_bracketed() -> None:
     """A cost in basis points must appear with its range, never as a single quoted level."""
     bad = []
-    for stem, title, line, answer in ORDER:
+    for stem, title, line, answer in order():
         for field, text in (("line", line), ("answer", answer)):
             if _BARE_COST.search(text) and not _BRACKET_WORD.search(text):
                 bad.append(f"{stem}.{field}: {_BARE_COST.search(text).group(0)!r}")
@@ -368,7 +409,8 @@ def main() -> int:
         "",
     ]
     written = 0
-    for i, (stem, title, line, answer) in enumerate(ORDER, 1):
+    slides = order()
+    for i, (stem, title, line, answer) in enumerate(slides, 1):
         for j, panel in enumerate(SLIDE_PANELS[stem]):
             fig, _ = builders[panel]()
             suffix = "" if len(SLIDE_PANELS[stem]) == 1 else f"{chr(96 + j + 1)}"
@@ -381,7 +423,7 @@ def main() -> int:
     notes += [f"    {k} — {v}" for k, v in MOVED_TO_RESEARCH.items()]
     (OUT / "speaker_notes.txt").write_text("\n".join(notes))
 
-    print(f"  {len(ORDER)} slides, {written} images -> {OUT}")
+    print(f"  {len(slides)} slides, {written} images -> {OUT}")
     print(f"  speaker notes -> {OUT / 'speaker_notes.txt'}")
     print("  NOT COMMITTED — data/derived is gitignored; move it to firm systems yourself.")
     return 0

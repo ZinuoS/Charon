@@ -114,6 +114,24 @@ code('fig, _ = PANELS["S04a_identity"]()\nfig;')
 md(figures.layman_block("g28_pnl_identity"))
 
 md(r"""
+### And the second term has a boundary, not a threshold
+
+The identity says financing is deterministic and Δπ is not. It does not say how much financing
+the trade can absorb — that depends on how fast the gap closes, and **convergence is an
+interval rather than a point.** The upper tail was open until 2026-08-02, when KT Corporation
+joined the constrained class and bounded it; the estimate is now 211 to 391 sessions at 95%.
+
+A breakeven computed from an interval is a **boundary**. The trade bears roughly 105bp/mo at
+the fast end, 82 at the point, and 67 at the slow end — against an all-in carry of 7–70bp/mo.
+
+**It clears at every borrow level except one corner: slow convergence and expensive borrow
+together.** That is a better object than a single number, because a single number invites the
+question *"and what if you are wrong about the half-life?"* — which this answers on its face,
+and answers by naming the one combination that fails rather than by widening a band.
+""")
+code('fig, _ = PANELS["S07a_breakeven"]()\nfig;')
+
+md(r"""
 ## 6. Two registers, one analysis
 
 This repository presents the **research register**: full distributions, the risk analysis,
