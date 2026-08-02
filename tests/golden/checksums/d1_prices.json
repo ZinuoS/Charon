@@ -18,9 +18,10 @@
     "data/raw/d1_prices/2026-07-30/skhy_adr_daily.csv": "5f623dd5395f161166cb028b301fdca6f5eba33691b987f5c9b78c30ba4d9fe0",
     "data/raw/d1_prices/2026-07-30/skhynix_local_daily.csv": "707674aeb9df2477e1e1a715739def2bc2aeca2877cb9113cfe86e1f8d789506",
     "data/raw/d1_prices/2026-08-02.2/skhynix_local_daily.csv": "51b0ad51cb39433f284ed6039a33bf3796a8348e3ae7ca76d710386ceccb0545",
+    "data/raw/d1_prices/2026-08-02.3/usdkrw_spot_daily.csv": "8edcee9027149285ff06c4e57b43f9351d7f6b69938481fdef165b8bf9abe1f3",
     "data/raw/d1_prices/2026-08-02/skhynix_local_daily.csv": "d3b275af6d0f405c818a8542cb3e4aa9f87185eac20e27ed34024bfa595dfe52"
   },
   "history": {},
   "source": "d1_prices",
-  "updated_at_utc": "2026-08-02T03:47:12+00:00"
+  "updated_at_utc": "2026-08-02T04:01:11+00:00"
 }

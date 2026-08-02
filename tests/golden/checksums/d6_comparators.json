@@ -35,9 +35,13 @@
     "data/raw/d6_comparators/2026-07-30/usdtwd_spot_daily.csv": "cd3a7aec6a4b3cd8a7a5b415d5ad350d0a0ac04b41e88a49e39c989cd0502978",
     "data/raw/d6_comparators/2026-07-31/pldt_adr_daily.csv": "640c59dffabbe7dcf40291e39be29f9bf04f14ef7d5092352df0cf65ed7af78a",
     "data/raw/d6_comparators/2026-07-31/pldt_local_daily.csv": "5a184ed698d42bb43106f8f30fd2f3c3a12aafb9496fd3cb44e4c40a38801d64",
-    "data/raw/d6_comparators/2026-07-31/usdphp_spot_daily.csv": "254cabc76b52a077c82e8e6bec61485ba1b01091344da141f65ff78f9f9916b1"
+    "data/raw/d6_comparators/2026-07-31/usdphp_spot_daily.csv": "254cabc76b52a077c82e8e6bec61485ba1b01091344da141f65ff78f9f9916b1",
+    "data/raw/d6_comparators/2026-08-02/kt_adr_daily.csv": "e65dfb64f795db98937dee7341837e505d974f293a89a7385be923c8eb16efde",
+    "data/raw/d6_comparators/2026-08-02/kt_local_daily.csv": "d939d0080a65fea75ab85095a4c56feafbf1d56c8ddf26b51557d09aa7c4e225",
+    "data/raw/d6_comparators/2026-08-02/skm_adr_daily.csv": "0526934df2b2ba8e2543dc731eefb3199092422ce9b4b8a9ba8ff6426fed3280",
+    "data/raw/d6_comparators/2026-08-02/skm_local_daily.csv": "821d7caf7cf2cf414b97c30fe0dab005fc8cb28c3ad4e969a259e5fefd572d4f"
   },
   "history": {},
   "source": "d6_comparators",
-  "updated_at_utc": "2026-07-31T04:40:52+00:00"
+  "updated_at_utc": "2026-08-02T04:01:53+00:00"
 }

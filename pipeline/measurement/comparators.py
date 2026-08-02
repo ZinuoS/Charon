@@ -84,9 +84,16 @@ def coverage_table() -> pd.DataFrame:
             n, first, last = v.n_obs, v.first, v.last
         except Exception:
             n, first, last = 0, None, None
+        # "not in REGIME_OF_PAIR" has TWO causes and conflating them mislabels the panel:
+        # a pair with no data landed, and a pair whose data landed but whose class is
+        # deliberately withheld pending a filing. The second is a research position, not a
+        # coverage gap, and reporting 6,449 sessions as "no data landed" is simply false.
         regime = ("forward test (never fitted)" if p.pair_id in FORWARD_TEST_PAIRS
                   else "excluded" if getattr(p, "excluded", False)
-                  else REGIME_OF_PAIR.get(p.pair_id, "unreachable — no data landed"))
+                  else REGIME_OF_PAIR.get(
+                      p.pair_id,
+                      "candidate — classification withheld" if n
+                      else "unreachable — no data landed"))
         rows.append({
             "pair": p.pair_id, "regime": regime, "n_obs": n, "first": first, "last": last,
             "ratio": p.local_shares_per_adr, "ratio_confirmed": p.confirmed,

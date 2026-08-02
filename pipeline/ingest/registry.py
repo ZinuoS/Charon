@@ -184,7 +184,10 @@ D1_SERIES: tuple[SeriesSpec, ...] = (
         availability_lag=timedelta(0),
         availability_note=_FX_NOTE,
         units="KRW per 1 USD",
-        start="2015-01-01",
+        start=None,   # was "2015-01-01", the same stale window the local leg carried.
+        # Frankfurter serves USD/KRW from 1999-01-04. The window was chosen when
+        # the equity legs stopped at 2015 and it silently became the binding
+        # constraint on every Korean pair once they did not,
         confirmed=False,
         notes="Quoted LOCAL-per-USD. Direction is load-bearing for pi; see tests/test_premium_formula.py.",
         providers=("frankfurter", "fred", "yahoo_finance"),
@@ -488,6 +491,62 @@ D6_PHILIPPINES_SERIES: tuple[SeriesSpec, ...] = (
     ),
 )
 
+# ------------------------------------------------------------------------------------
+# D6 Korea — the search for a constrained pair OUTSIDE Taiwan, second attempt.
+#
+# WHY THESE TWO. Every one-way-constrained pair in the panel is Taiwanese, so the class has
+# one regulator and one currency and gives no independent variation in the RULE. KT and SK
+# Telecom are facilities-based carriers under Korea's Telecommunications Business Act, which
+# caps foreign ownership — the right SHAPE of rule, a different regulator from Taiwan, and
+# the SAME currency and regulator as the traded instrument. That last point makes them a
+# better analogue for SKHY than anything else reachable.
+#
+# NEITHER IS CLASSIFIED. Both are absent from REGIME_OF_PAIR and enter no fit or test. What
+# is established is that the rule exists and has the right shape; what is NOT established is
+# whether the ceiling binds ADR ISSUANCE at the margin, which is a filing question. Reading
+# the class off the observed premium would be the circularity the taxonomy forbids.
+# ------------------------------------------------------------------------------------
+D6_KOREA_SERIES: tuple[SeriesSpec, ...] = (
+    SeriesSpec(
+        series_id="kt_adr_daily", symbol="KT", asset_class="adr", currency="USD",
+        market="NYSE", timezone="America/New_York", close_local=time(16, 0),
+        availability_lag=_STD_LAG, availability_note="NYSE close 16:00 ET, +15min.",
+        units="USD per ADR", start=None, confirmed=False,
+        providers=("eodhd", "nasdaq"),
+        provider_symbols={"eodhd": "KT.US", "nasdaq": "KT"},
+        notes="KT Corporation ADR.",
+    ),
+    SeriesSpec(
+        series_id="kt_local_daily", symbol="030200.KS", asset_class="local_equity", currency="KRW",
+        market="KRX", timezone="Asia/Seoul", close_local=time(15, 30),
+        availability_lag=_STD_LAG,
+        availability_note="KRX regular-session close 15:30 KST; bar assumed knowable 15:45.",
+        units="KRW per common share", start=None, confirmed=False,
+        providers=("eodhd", "yahoo_finance"),
+        provider_symbols={"eodhd": "030200.KO", "yahoo_finance": "030200.KS"},
+        notes="KT Corporation local line. EODHD Korea code is KO, not the Yahoo-convention KS.",
+    ),
+    SeriesSpec(
+        series_id="skm_adr_daily", symbol="SKM", asset_class="adr", currency="USD",
+        market="NYSE", timezone="America/New_York", close_local=time(16, 0),
+        availability_lag=_STD_LAG, availability_note="NYSE close 16:00 ET, +15min.",
+        units="USD per ADR", start=None, confirmed=False,
+        providers=("eodhd", "nasdaq"),
+        provider_symbols={"eodhd": "SKM.US", "nasdaq": "SKM"},
+        notes="SK Telecom ADR.",
+    ),
+    SeriesSpec(
+        series_id="skm_local_daily", symbol="017670.KS", asset_class="local_equity", currency="KRW",
+        market="KRX", timezone="Asia/Seoul", close_local=time(15, 30),
+        availability_lag=_STD_LAG,
+        availability_note="KRX regular-session close 15:30 KST; bar assumed knowable 15:45.",
+        units="KRW per common share", start=None, confirmed=False,
+        providers=("eodhd", "yahoo_finance"),
+        provider_symbols={"eodhd": "017670.KO", "yahoo_finance": "017670.KS"},
+        notes="SK Telecom local line. EODHD Korea code is KO, not the Yahoo-convention KS.",
+    ),
+)
+
 D6_BRAZIL_SERIES: tuple[SeriesSpec, ...] = (
     _br_adr("vale_adr_daily", "VALE"),   _br_local("vale_local_daily", "VALE3.SA"),
     _br_adr("itub_adr_daily", "ITUB"),   _br_local("itub_local_daily", "ITUB4.SA"),
@@ -602,6 +661,51 @@ PAIRS: tuple[PairSpec, ...] = (
             "may be real dislocation or it may be measurement; nothing here depends on which, "
             "because this pair enters no fit -- but a sample restriction is likely needed "
             "before it ever does."
+        ),
+    ),
+    PairSpec(
+        pair_id="kt", adr="kt_adr_daily", local="kt_local_daily", fx="usdkrw_spot_daily",
+        local_shares_per_adr=0.5,
+        ratio_source=(
+            "Empirically derived and stable: implied local-shares-per-ADR has a median of "
+            "0.504 over 2,730 joined sessions, with every annual median between 0.50 and "
+            "0.58 and no step. Two ADRs to one common share. TODO(ash): confirm against the "
+            "KT 20-F depositary terms."
+        ),
+        confirmed=False,
+        notes=(
+            "CONSTRAINED CANDIDATE, CLASSIFICATION WITHHELD. Not in REGIME_OF_PAIR; enters "
+            "no fit or test. Korea's Telecommunications Business Act caps foreign ownership "
+            "of facilities-based carriers, which is the right shape of rule and — unlike the "
+            "four Taiwanese pairs — comes from the SAME regulator and currency as the traded "
+            "instrument. Whether that ceiling binds ADR ISSUANCE at the margin is a filing "
+            "question. Resolve by reading the 20-F foreign-ownership disclosure and the "
+            "depositary agreement, then add to REGIME_OF_PAIR."
+        ),
+    ),
+    PairSpec(
+        pair_id="skm", adr="skm_adr_daily", local="skm_local_daily", fx="usdkrw_spot_daily",
+        local_shares_per_adr=0.55,
+        ratio_source=(
+            "Empirically derived, and the ratio REGIME BREAKS. Implied local-shares-per-ADR "
+            "sits at 0.04 from 1999 to 2021 and at 0.55 from 2022 onward — a ~13x step "
+            "consistent with SK Telecom's 2021 share split combined with a depositary ratio "
+            "change. 0.55 is the post-break regime only. TODO(ash): confirm both the split "
+            "and the ratio change against the 20-F."
+        ),
+        confirmed=False,
+        sample_start="2022-01-01",
+        sample_reason=(
+            "RATIO REGIME BREAK, the ASE failure mode. A constant ratio across the 2021-22 "
+            "step would put a ~13x error into every pre-break observation, and a spline "
+            "would need the exact effective date of both the split and the depositary change "
+            "— neither of which is sourced. Restricted to the post-break regime rather than "
+            "spliced."
+        ),
+        notes=(
+            "CONSTRAINED CANDIDATE, CLASSIFICATION WITHHELD, same standing as kt. The "
+            "restriction costs most of the history, which is exactly why kt is the better "
+            "of the two candidates despite both carrying the same rule."
         ),
     ),
     PairSpec(

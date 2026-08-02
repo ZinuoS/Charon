@@ -2497,6 +2497,7 @@ def g31_panel_coverage(cov, cal):
                                 theme.SEMANTIC["barrier"], theme.SEMANTIC["warning"])
     colour = {"one_way_constrained": CON, "fungible": FUN,
               "forward test (never fitted)": EM, "excluded": WA,
+              "candidate — classification withheld": BA,
               "unreachable — no data landed": CX}
 
     live = cov[cov.n_obs > 0].copy()
@@ -2542,13 +2543,16 @@ def g31_panel_coverage(cov, cal):
 
     n_fit = int((live.regime.isin(["one_way_constrained", "fungible"])).sum())
     n_excl = int((cov.regime == "excluded").sum())
+    n_cand = int((cov.regime == "candidate — classification withheld").sum())
     n_gone = int((cov.regime == "unreachable — no data landed").sum())
     theme.finalize(
         fig, kicker="the training universe",
-        headline=f"{n_fit} pairs are fitted, one is never fitted, and {n_excl + n_gone} were "
-                 f"attempted and lost",
+        headline=f"{n_fit} pairs are fitted, one is never fitted, {n_cand} are landed but "
+                 f"unclassified, and {n_excl + n_gone} were attempted and lost",
         subtitle=f"Every registry pair, drawn over the span where all three of its legs "
-                 f"exist. {n_excl} delisted mid-sample and {n_gone} never landed a local leg. "
+                 f"exist. {n_cand} carry a rule of the right SHAPE but are unclassified until "
+                 f"a filing settles whether it binds; {n_excl} delisted mid-sample and "
+                 f"{n_gone} never landed a local leg. "
                  "Vertical bars mark a DECLARED sample restriction — a corporate action or a "
                  "delisting, each with its reason in the registry.",
         stats=[(f"{n_fit}", "pairs in the\nfitted panel"),

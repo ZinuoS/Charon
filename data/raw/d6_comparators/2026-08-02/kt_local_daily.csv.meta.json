@@ -1,0 +1,38 @@
+{
+  "asset_class": "local_equity",
+  "availability_confirmed": false,
+  "availability_lag": "close 15:30:00 Asia/Seoul + 15min",
+  "availability_note": "KRX regular-session close 15:30 KST; bar assumed knowable 15:45.",
+  "close_local": "15:30:00",
+  "currency": "KRW",
+  "example_timing_last_row": {
+    "availability_ts_utc": "2026-07-31T06:45:00+00:00",
+    "obs_date": "2026-07-31",
+    "observation_ts_utc": "2026-07-31T06:30:00+00:00"
+  },
+  "first_obs_date": "1999-01-08",
+  "last_obs_date": "2026-07-31",
+  "market": "KRX",
+  "native_timezone": "Asia/Seoul",
+  "notes": "KT Corporation local line. EODHD Korea code is KO, not the Yahoo-convention KS.",
+  "provider": "eodhd",
+  "provider_chain": [
+    "eodhd",
+    "yahoo_finance"
+  ],
+  "provider_note": "This series was served by the provider named above, selected from `provider_chain` in preference order. Provenance ordering is by source authority (issuer exchange > aggregator), not availability.",
+  "pulled_at_utc": "2026-08-02T04:01:46+00:00",
+  "request_params": {
+    "fmt": "json",
+    "from": "1990-01-01",
+    "period": "d",
+    "to": "2026-08-02"
+  },
+  "rows": 6795,
+  "series_id": "kt_local_daily",
+  "sha256": "d939d0080a65fea75ab85095a4c56feafbf1d56c8ddf26b51557d09aa7c4e225",
+  "source_url": "https://eodhd.com/api/eod/030200.KO",
+  "symbol": "030200.KS",
+  "transport": "eod_api_v1",
+  "units": "KRW per common share"
+}

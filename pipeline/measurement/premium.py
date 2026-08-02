@@ -225,6 +225,22 @@ def latest_common_legs(pair_id: str = "skhy") -> dict:
                            if v.index[-1] != frame.index[-1]}}
 
 
+def _load_fx(source: str, fx_series_id: str) -> pd.Series:
+    """The FX leg, wherever it lives.
+
+    An FX leg may be SHARED with the SKHY pair and therefore sit in D1 rather than in the
+    comparator source -- USD/KRW is, now that Korean comparators exist. This resolution used
+    to be written out separately in `build_variant` and in `_build_native`, and that
+    duplication is exactly why fixing one of them did not fix the bug: `build_all_variants`
+    swallows FileNotFoundError by design, so the unfixed path returned an EMPTY LIST, which
+    reads as "no data" rather than "wrong directory".
+    """
+    try:
+        return _load_close(source, fx_series_id)
+    except FileNotFoundError:
+        return _load_close("d1_prices", fx_series_id)
+
+
 def build_variant(
     pair: PairSpec,
     fx_leg: str,
@@ -248,7 +264,7 @@ def build_variant(
         fx = _load_close("d1_prices", fx_series_id)
     else:
         fx_series_id = pair.fx
-        fx = _load_close(source, fx_series_id)
+        fx = _load_fx(source, fx_series_id)
 
     # Registry-declared sample restriction (corporate actions, delistings) applies FIRST and
     # unconditionally; the `start` argument may only narrow further, never widen.
@@ -295,7 +311,7 @@ def _build_native(pair: PairSpec, close_def: str, start: str | None) -> PremiumV
     source = PAIR_SOURCE.get(pair.pair_id, DEFAULT_SOURCE)
     adr = _load_close(source, pair.adr)
     local = _load_close(source, pair.local)
-    fx = _load_close(source, pair.fx)
+    fx = _load_fx(source, pair.fx)
     # Registry-declared sample restriction (corporate actions, delistings) applies FIRST and
     # unconditionally; the `start` argument may only narrow further, never widen.
     if getattr(pair, "sample_start", None):
