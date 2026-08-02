@@ -152,7 +152,10 @@ D1_SERIES: tuple[SeriesSpec, ...] = (
             "regular-session close and not an after-hours print."
         ),
         units="KRW per common share",
-        start="2015-01-01",
+        start=None,   # was "2015-01-01" — a window chosen when the only route was
+        # Yahoo. EODHD serves this line from 1997-01-03, and the deep history is
+        # admitted on evidence: bit-for-bit agreement with the Yahoo series across
+        # all 2,840 overlapping sessions, checked by reconcile() before the switch,
         confirmed=False,
         notes=(
             "SK Hynix common. >=5y history per Task 3.1. UNROUTED: no keyless provider "
@@ -161,7 +164,14 @@ D1_SERIES: tuple[SeriesSpec, ...] = (
             "binding gap — without the local leg the SKHY premium cannot be computed."
         ),
         providers=("eodhd", "yahoo_finance"),
-        provider_symbols={"eodhd": "000660.KO"},
+        # EODHD's Korea code is KO, not the Yahoo-convention KS. Probing ".KS" against
+        # EODHD returns 404, which was read for weeks as an ENTITLEMENT wall and recorded
+        # as one. It was a symbology mismatch: "000660.KO" serves 7,275 sessions from
+        # 1997-01-03 and agrees with the Yahoo series BIT-FOR-BIT across all 2,840
+        # overlapping days. Same lesson as the KOSPI index, where KS11.INDX worked after
+        # ^KS11 and KOSPI.INDX both 404d: a 404 is a statement about the REQUEST, and the
+        # request includes the symbol.
+        provider_symbols={"eodhd": "000660.KO", "yahoo_finance": "000660.KS"},
     ),
     SeriesSpec(
         series_id="usdkrw_spot_daily",

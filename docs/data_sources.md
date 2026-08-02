@@ -1228,3 +1228,46 @@ behind a paid tier.
 expected value. Every free, terms-clean route has been tried and documented. The
 `two_way_headroom` regime class stays an empty labelled panel until an account decision is
 made.
+
+---
+
+## 2026-08-01 — Korea was never an entitlement wall. It was a symbology mismatch.
+
+**[V] Corrected.** This document and the project memory both recorded EODHD Korea coverage as
+absent, on the evidence that `.KS` symbols return HTTP 404 — and 404 is the repository's own
+signal for an entitlement or coverage wall, permanent and not to be retried.
+
+The diagnosis was wrong. **EODHD's Korea Stock Exchange code is `KO`**, per its own
+`exchanges-list` endpoint (`Korea Stock Exchange`, code `KO`, MIC `XKRX`). `.KS` is the Yahoo
+convention. Probing one provider with another's suffix returns 404 for a reason that has
+nothing to do with entitlement, and the repo's own doctrine already contained the correction:
+*a 404 is a statement about the REQUEST* — and the request includes the symbol.
+
+This is the second time the same mistake has cost this project real data. The KOSPI index was
+recorded unreachable after `^KS11` and `KOSPI.INDX` both 404d, until `KS11.INDX` worked.
+
+| symbol | sessions | from |
+|---|---|---|
+| `000660.KO` SK hynix | **7,275** | 1997-01-03 |
+| `030200.KO` KT Corp | 6,795 | 1999-01-08 |
+| `017670.KO` SK Telecom | 7,526 | 1995-12-01 |
+| `034220.KO` LG Display | 5,458 | 2004-07-23 |
+| `005490.KO` POSCO | 7,550 | 1995-12-01 |
+
+**The switch was made on evidence, not on the symbol working.** `reconcile()` compared the
+EODHD series against the landed Yahoo series over their whole overlap: **2,840 shared sessions,
+maximum relative difference 0.000e+00, zero mismatches.** The apparent price gap on first
+inspection was a date difference — EODHD carries 2026-07-31 and the Yahoo capture stopped at
+07-29; on 07-29 the two agree exactly.
+
+**What it changes.** `skhynix_local_daily` now runs from 1997-01-03 rather than 2015-01-01, on
+the entitled provider instead of the throttled one. It does NOT lengthen the SKHY premium
+series, which is bounded by the ADR leg's 2026-07-10 listing — but it removes Yahoo from the
+critical path for the traded pair's local leg, and it makes the four Korean pairs above
+reachable without touching a rate-limited host.
+
+**What it does not settle.** KT and SK Telecom are the constrained-beyond-Taiwan candidates —
+the Telecommunications Business Act caps foreign ownership of facilities-based carriers, which
+is the right shape of rule and a different regulator from Taiwan. Whether that ceiling binds
+ADR issuance at the margin is a filing question, not a price question, and no classification
+is proposed here.
