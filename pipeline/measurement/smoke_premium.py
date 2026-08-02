@@ -109,7 +109,10 @@ def build_pair(pair: PairSpec, start: str | None = None) -> tuple[pd.Series, dic
     source = PAIR_SOURCE.get(pair.pair_id, DEFAULT_SOURCE)
     adr = _load_leg(source, pair.adr)
     local = _load_leg(source, pair.local)
-    fx = _load_leg(source, pair.fx)
+    try:
+        fx = _load_leg(source, pair.fx)
+    except FileNotFoundError:
+        fx = _load_leg("d1_prices", pair.fx)   # shared FX legs live in D1
 
     if start:
         adr, local, fx = (s[s.index >= start] for s in (adr, local, fx))

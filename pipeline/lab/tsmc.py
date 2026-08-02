@@ -228,7 +228,8 @@ def legs(sample_start: str | None = None) -> pd.DataFrame:
     start = sample_start or spec.sample_start
     adr = _load_close("d6_comparators", spec.adr)
     loc = _load_close("d6_comparators", spec.local)
-    fx = _load_close("d6_comparators", spec.fx)
+    from pipeline.measurement.premium import _load_fx
+    fx = _load_fx("d6_comparators", spec.fx)
     adr, loc, fx = (s[s.index >= start] for s in (adr, loc, fx))
     pi = compute_premium(adr, loc, fx, spec.local_shares_per_adr)
     out = pd.DataFrame({"adr": adr, "local": loc, "fx": fx}).join(pi.rename("pi"), how="inner")
@@ -785,7 +786,8 @@ def _pair_frame(pair: str) -> pd.DataFrame:
     pi = build_all_variants(pair)[0].series
     adr = _load_close(source, spec.adr)
     loc = _load_close(source, spec.local)
-    fx = _load_close(source, spec.fx)
+    from pipeline.measurement.premium import _load_fx
+    fx = _load_fx(source, spec.fx)
     return pd.DataFrame({"adr": adr, "local": loc, "fx": fx}).join(
         pi.rename("pi"), how="inner").dropna()
 
@@ -897,3 +899,57 @@ def h6b_verdict(tables: pd.DataFrame | None = None) -> dict:
                         .to_dict("records"),
             "note": ("Second look at H6, which nulled on TSM alone at p=0.25. Threshold is "
                      f"{H6B_ALPHA} (Bonferroni), not 0.05.")}
+
+
+# --------------------------------------------------------------------------------
+# H6c — the third look, with a non-Taiwanese member (registered 2026-08-02, amd. 004)
+# --------------------------------------------------------------------------------
+#
+# THE THIRD LOOK AT ONE HYPOTHESIS, so the threshold is 0.0167 -- Bonferroni for three --
+# and 0.05 and 0.025 are both spent. What makes a third look defensible is not that more
+# data arrived: KT is the first observation of this hypothesis under a DIFFERENT REGULATOR,
+# where H6 and H6b were one jurisdiction asked twice.
+#
+# The machinery is H6b's, unchanged. Only membership and the threshold differ, and KT is
+# reported ALONE beside the pooled result because it is the only independent draw on the rule.
+
+H6C_ALPHA: float = 0.0167
+
+
+def h6c_verdict(tables: pd.DataFrame | None = None) -> dict:
+    """Extended primary (constrained class incl. KT) and KT alone. Both always reported."""
+    t = h6b_pair_tables() if tables is None else tables
+    inc = t[t.included.fillna(False)]
+
+    def run(sub, label):
+        cells = [(r.strength_local, r.strength_adr, r.weakness_local, r.weakness_adr)
+                 for r in sub.itertuples()]
+        mh = _mantel_haenszel(cells)
+        held = bool(mh["odds_ratio"] and mh["odds_ratio"] > 1.0
+                    and mh["p_value"] is not None and mh["p_value"] < H6C_ALPHA)
+        return {"scope": label, "pairs": list(sub.pair), "n_pairs": len(sub),
+                "n_episodes": int(sum(sum(c) for c in cells)), **mh, "alpha": H6C_ALPHA,
+                "verdict": "HELD" if held else "NULL",
+                "direction_as_registered": bool(mh["odds_ratio"] and mh["odds_ratio"] > 1.0)}
+
+    con = inc[inc.regime == "one_way_constrained"]
+    # A test whose registered headline member silently drops out and still reports NULL is
+    # worse than one that errors: the first run of H6c did exactly that, because KT's FX leg
+    # lives in D1 and the loader looked only in the comparator source. The extended primary
+    # came back byte-identical to the Taiwan-only contrast and read as a clean null.
+    if "kt" not in set(con.pair):
+        why = next((r["why"] for r in t.to_dict("records") if r["pair"] == "kt"), "unknown")
+        raise AssertionError(
+            "H6c's registered primary requires `kt` and it is absent from the fitted set "
+            f"({why!r}). The extended primary would be identical to the Taiwan-only contrast "
+            "and would read as a null on evidence it never saw."
+        )
+    return {
+        "extended_primary": run(con, "constrained class incl. KT (PRIMARY)"),
+        "kt_alone": run(con[con.pair == "kt"], "KT alone — the only non-Taiwanese draw"),
+        "taiwan_only": run(con[con.pair != "kt"], "the four Taiwanese pairs, for contrast"),
+        "excluded": t[~t.included.fillna(False)][["pair", "regime", "why"]].to_dict("records"),
+        "note": (f"Third look at H6. Threshold {H6C_ALPHA} (Bonferroni for three); H6 nulled at "
+                 "p=0.25 on TSM alone and H6b at p=0.53 pooled, with the effect attenuating "
+                 "toward 1 as the sample grew."),
+    }

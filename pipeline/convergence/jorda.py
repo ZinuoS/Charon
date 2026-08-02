@@ -84,6 +84,15 @@ import pandas as pd
 #     spent most of their lives near parity. Binding-ness is observed separately as
 #     (shares on deposit / programme cap) -- a quantity, and what H5 monitors.
 REGIME_OF_PAIR = {
+    # Added 2026-08-02 under amendment 004, on the FILING and not on the price.
+    # KT's 20-F: the Telecommunications Business Act caps aggregate foreign holding
+    # at 49.0% "including equivalent securities with voting rights, e.g., depositary
+    # certificates"; 49.0% was held by foreign investors at 2025-12-31, so the ceiling
+    # BINDS; and the deposit agreement says the depositary "cannot accept deposits of
+    # shares and deliver ADSs ... unless (1) we have consented". Withdrawal always
+    # works, re-deposit needs consent -- the same clause family as SKHY's F-6
+    # Ex. 99(a) undertaking. First constrained pair outside Taiwan.
+    "kt": "one_way_constrained",
     # one_way_constrained -- all ROC `revolving`. ROC 華僑及外國人投資證券管理辦法 Art. 31
     # permits domestic purchase for re-issuance only "within the scope of the originally
     # cancelled share count". TSMC FY2024 20-F Ex. 2(a)(1) states it; Chunghwa Telecom's
@@ -111,6 +120,13 @@ REGIME_OF_PAIR = {
 CONSTRAINT_SUBTYPE = {
     "tsmc": "revolving", "umc": "revolving", "ase": "revolving", "cht": "revolving",
     "skhy": "consent",
+    # KT is `consent`, not `hard_cap`, and the distinction is the point of this mapping. The
+    # 49% statutory ceiling is real and fully utilised, but a ceiling on its own only sets a
+    # LEVEL -- what makes the channel ONE-WAY is the deposit agreement: the depositary
+    # "cannot accept deposits of shares and deliver ADSs ... unless (1) we have consented".
+    # That is the same mechanism as SKHY's, which is why KT is the closest structural
+    # analogue in the panel despite being the newest member of it.
+    "kt": "consent",
 }
 
 # The taxonomy is ratified; the PANEL is not. Both of these are stated wherever the pooled
@@ -119,8 +135,9 @@ CONSTRAINT_SUBTYPE = {
 #   - one country on the control side (five of six fungible pairs are Brazilian)
 TAXONOMY_RATIFIED = "2026-07-29"
 PANEL_CAVEATS = (
-    "constrained class is four issuers under ONE regulator -- reduces issuer noise, gives no "
-    "independent variation in the rule",
+    "constrained class is five issuers under TWO regulators since 2026-08-02 (four ROC, one "
+    "Korean) -- KT is the only independent draw on the rule, and adding it CLOSED the pooled "
+    "upper tail that four Taiwanese pairs alone left open",
     "fungible class is five Brazilian pairs plus Alibaba -- one country dominates the control",
 )
 FORWARD_TEST_PAIRS = {"skhy"}
@@ -614,7 +631,8 @@ def _fx_trend(pair: str, window: int = 20) -> pd.Series:
     from pipeline.ingest.registry import PAIRS
     from pipeline.measurement.premium import DEFAULT_SOURCE, PAIR_SOURCE, _load_close
     spec = next(p for p in PAIRS if p.pair_id == pair)
-    fx = _load_close(PAIR_SOURCE.get(pair, DEFAULT_SOURCE), spec.fx)
+    from pipeline.measurement.premium import _load_fx
+    fx = _load_fx(PAIR_SOURCE.get(pair, DEFAULT_SOURCE), spec.fx)
     return (fx / fx.shift(window) - 1.0)
 
 

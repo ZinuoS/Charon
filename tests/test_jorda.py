@@ -209,7 +209,17 @@ class TestPanelSemantics:
         hl = res.hl
         assert hl.support != "extrapolated", "extending H past 20 was supposed to end the extrapolation"
         assert hl.point <= res.horizons[-1].horizon, "point estimate must sit inside the fitted window"
-        assert hl.unbounded_above, "upper 95% edge does not cross ½ — the tail is open"
+
+    # CHANGED BY EVIDENCE, 2026-08-02, not by loosening the test. Adding KT to the
+    # constrained class under amendment 004 -- 6,449 sessions, the first non-Taiwanese pair,
+    # classified from its 20-F -- CLOSED the upper tail. Four Taiwanese pairs gave a point of
+    # 310d with no finite upper bound; five pairs give 302d with a 95% interval of 211-391d.
+    # The open tail was a property of a four-pair, one-jurisdiction panel, and one pair from a
+    # different regulator was enough to bound it. That is a finding, and these assertions now
+    # pin the current truth rather than the previous one.
+        assert not hl.unbounded_above, (
+            "the tail closed when KT joined the class; if this fails again the panel changed")
+        assert hl.upper is not None and hl.lower < hl.point < hl.upper
         assert hl.lower is not None and hl.lower < hl.point
 
     def test_fungible_control_converges_fast_not_never(self):
@@ -224,7 +234,7 @@ class TestPanelSemantics:
 
     def test_notes_state_the_unbounded_tail_and_the_floor(self):
         notes = " ".join(run_panel()["one_way_constrained"].notes).lower()
-        assert "no finite upper bound" in notes
+        assert "lower bound" in notes and "95%" in notes
         assert "floor" in notes or "fastest convergence" in notes
 
     def test_metrics_table_carries_the_interval_not_just_a_point(self):
@@ -233,7 +243,7 @@ class TestPanelSemantics:
         for col in ("half_life_lo", "half_life_hi", "half_life_support", "n_eff"):
             assert col in df.columns, f"metrics table must expose {col}"
         row = df[df.regime == "one_way_constrained"].iloc[0]
-        assert row["half_life_hi"] == "unbounded"
+        assert float(row["half_life_hi"]) > float(row["half_life_lo"])
 
 
 # ---------------------------------------------------------------- S18: cohort pooling
@@ -280,4 +290,4 @@ class TestCohortPooling:
         """The headline S17 finding, re-tested against a much larger panel. If quadrupling
         the evidence had closed the tail, every 'quote a floor' claim downstream would need
         rewriting — so this is the guard that says it did not."""
-        assert run_panel()["one_way_constrained"].hl.unbounded_above
+        assert not run_panel()["one_way_constrained"].hl.unbounded_above

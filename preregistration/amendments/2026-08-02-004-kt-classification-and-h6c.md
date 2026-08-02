@@ -1,6 +1,8 @@
 # Amendment 004 — KT's classification, and the H6c third look it would license
 
-**Status: DRAFTED FOR THE AUTHOR'S SIGNATURE. Nothing in it has been applied.** `kt` is not in
+**Status: SIGNED BY THE AUTHOR 2026-08-02, both parts.** Read as both because Part B's primary is "the four Taiwanese pairs plus `kt`", which cannot execute unless Part A classifies `kt`. Applied below.
+
+**Original status when drafted:** awaiting signature; nothing had been applied. `kt` is not in
 `REGIME_OF_PAIR`, enters no fit or test, and the H6c spec below has not been run. Two separate
 things need signing and they can be signed separately.
 
@@ -130,3 +132,47 @@ h6c_kt_extended_pooled:
 
 **If Part A is signed and Part B is not, nothing runs** — KT simply joins the class for
 description, and the H6 line in the macro chapter stands as it is today.
+
+---
+
+## RESULT — H6c, added 2026-08-02 after the signature
+
+**Verdict: NULL on every scope, and the KT-alone row is the finding.**
+
+| scope | pairs | episodes | pooled OR | p |
+|---|---|---|---|---|
+| constrained class incl. KT (**primary**) | 5 | 184 | 1.221 | 0.61 |
+| **KT alone — the only non-Taiwanese draw** | 1 | 39 | **0.937** | 0.82 |
+| the four Taiwanese pairs, for contrast | 4 | 145 | 1.311 | 0.53 |
+
+Registered threshold was OR > 1 **and** p < 0.0167. Nothing comes close.
+
+**KT's odds ratio is BELOW 1 — the opposite of the registered direction.** Its shares are
+42.9% local-leg-led in currency-strength states against 44.4% in weakness: a gap of −1.5
+points, where the hypothesis predicted a positive one. The amendment pre-specified this exact
+contingency — *"If KT alone points opposite to the Taiwanese pairs, that is the finding and it
+is reported as the headline rather than diluted by pooling"* — so it is the headline.
+
+**The three looks now read as one coherent story, and it is not the hypothesis's.**
+
+| look | scope | effect |
+|---|---|---|
+| H6 | TSM alone | +16.5pp gap, p = 0.25 |
+| H6b | 4 Taiwanese pairs | OR 1.31 → 1.13 across all pairs; attenuating |
+| H6c | + a different regulator | KT alone **0.937** — reversed |
+
+The effect shrank as Taiwanese data was added and disappeared under a different jurisdiction.
+That is what a noise result looks like when it is replicated properly, and it took three
+registered looks to say so with confidence. **H6 is closed.**
+
+**What the whole exercise bought.** Not a finding — a defensible negative. The macro chapter
+states the won as a LEVEL effect only (0.86 premium points per 1% move, 1.3% of daily
+variance) and makes no channel claim, and it now has three registered tests behind that
+restraint, the last one under a regulator the first two never saw.
+
+**One engineering note, because it nearly cost the result.** The first H6c run reported KT with
+zero sessions and the extended primary came back byte-identical to the Taiwan-only contrast —
+a clean-looking null computed on evidence it never saw. KT's FX leg lives in D1 while its
+equity legs live in D6, and six separate call sites each resolved the FX source their own way.
+All six now route through one resolver, and `h6c_verdict` raises rather than returns if its
+registered headline member is missing from the fitted set.

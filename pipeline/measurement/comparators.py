@@ -24,6 +24,7 @@ from pipeline.measurement.premium import (
     PAIR_SOURCE,
     PremiumVariant,
     _load_close,
+    _load_fx,
     build_all_variants,
     compute_premium,  # re-exported: identical construction, not a copy
 )
@@ -116,11 +117,10 @@ def calendar_cost() -> pd.DataFrame:
     rows = []
     for p in PAIRS:
         source = PAIR_SOURCE.get(p.pair_id, DEFAULT_SOURCE)
-        fx_source = "d1_prices" if p.pair_id == "skhy" else source
         try:
             adr = _load_close(source, p.adr)
             local = _load_close(source, p.local)
-            fx = _load_close(fx_source, p.fx)
+            fx = _load_fx(source, p.fx)
         except Exception:
             continue
         lo = max(s.index.min() for s in (adr, local, fx))

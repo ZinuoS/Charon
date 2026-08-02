@@ -116,8 +116,8 @@ and ADR-led or non-resolving when it is weakening.
 registered threshold required both a ≥10-point gap *and* p < 0.05. One cleared; one did not.
 """)
 code("""t = LAB.h6_conditional_channels(); v = LAB.h6_verdict(t); s = LAB.h6_skhy_descriptive()
-pooled = LAB.h6b_verdict()
-fig, _ = figures.g30_macro_catalyst_map(t, v, s, pooled=pooled)
+pooled = LAB.h6b_verdict(); third = LAB.h6c_verdict()
+fig, _ = figures.g30_macro_catalyst_map(t, v, s, pooled=pooled, third=third)
 fig;""")
 
 md(r'''
@@ -144,8 +144,29 @@ size and **ASE points the other way**. The amendment predicted exactly this diag
 the run: *if the effect lives in a single pair, the pooled p-value is a statement about that
 pair.* It does, and it is.
 
-**So H6 is closed, not parked.** The macro chapter states the won as a LEVEL effect only, and
-the pitch has two registered tests behind that restraint rather than one.
+### The third look — a different regulator, and the effect reverses
+
+KT Corporation was classified `one_way_constrained` on 2026-08-02 from its 20-F, not from its
+price: the Telecommunications Business Act caps aggregate foreign holding at 49.0% *"including
+equivalent securities with voting rights, e.g., depositary certificates"*; 49.0% was foreign-held
+at 2025-12-31, so the ceiling binds; and the deposit agreement says the depositary *"cannot
+accept deposits of shares and deliver ADSs ... unless (1) we have consented"*. Withdrawal always
+works, re-deposit needs consent — the same clause family as SK Hynix's. It is the first
+constrained pair outside Taiwan.
+
+| scope | pairs | episodes | pooled OR | p |
+|---|---|---|---|---|
+| constrained class incl. KT | 5 | 184 | 1.221 | 0.61 |
+| **KT alone** | 1 | 39 | **0.937** | 0.82 |
+| the four Taiwanese pairs | 4 | 145 | 1.311 | 0.53 |
+
+**KT's odds ratio sits below 1 — the opposite of the registered direction**, on 42.9% local-led
+in strength against 44.4% in weakness. The amendment pre-specified that a reversal in the
+non-Taiwanese draw would be the headline rather than diluted by pooling, so it is.
+
+Three looks: +16.5pp on one pair, attenuating to 1.13 across ten, reversed under a different
+regulator. **H6 is closed.** The macro chapter states the won as a LEVEL effect only, and has
+three registered tests behind that restraint.
 ''')
 md(figures.layman_block("g30_macro_catalyst_map") if "g30_macro_catalyst_map" in figures.LAYMAN else r"""
 **Why this is worth a slide anyway.** Unregistered, this reads as *"57% versus 40% — the

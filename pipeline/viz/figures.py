@@ -2174,7 +2174,8 @@ def g29_comparator_anchor(levels: list[tuple[str, float, str, str]], tsmc_band=N
     return fig, {"gap_to_norm_pp": float(gap)}
 
 
-def g30_macro_catalyst_map(table, verdict: dict, skhy: dict, pooled: dict | None = None):
+def g30_macro_catalyst_map(table, verdict: dict, skhy: dict, pooled: dict | None = None,
+                           third: dict | None = None):
     """G30 — which currency states resolved premiums, and through which leg.
 
     REGISTERED AS H6 ON 2026-07-30, BEFORE THIS WAS COMPUTED. The registered direction was
@@ -2243,17 +2244,22 @@ def g30_macro_catalyst_map(table, verdict: dict, skhy: dict, pooled: dict | None
         y -= 0.85
     if pooled:
         pr, sec = pooled["primary"], pooled["secondary"]
-        b.text(0.75, 1.9, "Second look — the whole panel, registered separately",
+        b.text(0.75, 1.9, "Replication — two further registered looks",
                fontsize=theme.LABEL_SIZE, color=WA, weight="medium",
                fontfamily=theme.SERIF_STACK)
-        b.text(0.75, 0.9,
-               f"{pr['n_pairs']} constrained pairs, {pr['n_episodes']} episodes: "
-               f"odds ratio {pr['odds_ratio']:.2f}, p = {pr['p_value']:.2f}.\n"
-               f"All {sec['n_pairs']} pairs, {sec['n_episodes']} episodes: "
-               f"odds ratio {sec['odds_ratio']:.2f}, p = {sec['p_value']:.2f}.\n"
-               f"The effect SHRANK toward 1 as the sample grew. That is what a\n"
-               f"noise result looks like when you replicate it.",
-               fontsize=theme.NOTE_SIZE, color=theme.TEXT, va="top",
+        kt = (third or {}).get("kt_alone")
+        body = (f"{pr['n_pairs']} Taiwanese pairs, {pr['n_episodes']} episodes: "
+                f"odds ratio {pr['odds_ratio']:.2f}, p = {pr['p_value']:.2f}.\n"
+                f"All {sec['n_pairs']} pairs: odds ratio {sec['odds_ratio']:.2f}.\n")
+        if kt and kt.get("odds_ratio"):
+            body += (f"KT — a DIFFERENT REGULATOR, {kt['n_episodes']} episodes:\n"
+                     f"odds ratio {kt['odds_ratio']:.2f}, the wrong side of 1.\n"
+                     f"Shrank with more Taiwanese data, then reversed\n"
+                     f"under a jurisdiction the first two never saw.")
+        else:
+            body += ("The effect SHRANK toward 1 as the sample grew. That is\n"
+                     "what a noise result looks like when you replicate it.")
+        b.text(0.75, 0.9, body, fontsize=theme.NOTE_SIZE, color=theme.TEXT, va="top",
                fontfamily=theme.SERIF_STACK, linespacing=1.6)
     else:
         b.text(0.75, 1.5,

@@ -32,7 +32,9 @@ def _legs(pair: str) -> pd.DataFrame:
     """ADR in USD, local converted to USD, and the premium — on one joined index."""
     spec = next(p for p in PAIRS if p.pair_id == pair)
     src = PAIR_SOURCE.get(pair, DEFAULT_SOURCE)
-    adr, loc, fx = (_load_close(src, s) for s in (spec.adr, spec.local, spec.fx))
+    from pipeline.measurement.premium import _load_fx
+    adr, loc = (_load_close(src, s) for s in (spec.adr, spec.local))
+    fx = _load_fx(src, spec.fx)
     df = pd.concat({"adr": adr, "loc": loc, "fx": fx}, axis=1).dropna()
     # Local leg in USD terms, scaled to one ADR-equivalent so the two legs are comparable.
     df["loc_usd"] = spec.local_shares_per_adr * df["loc"] / df["fx"]

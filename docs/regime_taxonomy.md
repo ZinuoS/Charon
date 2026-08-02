@@ -123,3 +123,37 @@ series is not the regime under study. The strongest remaining candidates are **R
 (2003–Feb 2022, with a pre-announced cap abolition on 2021-11-28 as a within-name experiment)
 and the **Thai foreign/local board**, which is structurally the cleanest one-way regime found
 anywhere but has no US DR.
+
+---
+
+## 2026-08-02 — `kt` (KT Corporation) added to `one_way_constrained` (amendment 004)
+
+**Subtype: `consent`** — a statutory foreign-ownership ceiling with a depositary-consent
+gate, and the consent gate is what makes it one-way. Distinct from
+the Taiwanese pairs, whose constraint is a revolving-facility ratio, and closer in kind to SK
+Hynix's own discretionary-consent structure.
+
+Classified from KT's Form 20-F for FY2025 (filed 2026-04-29), on three findings and none of
+them a price:
+
+1. The Telecommunications Business Act caps aggregate foreign shareholding at **49.0%**
+   *"including equivalent securities with voting rights, e.g., depositary certificates"* — ADRs
+   count against the ceiling.
+2. **49.0% was foreign-held at 2025-12-31.** The ceiling is fully utilised: it binds now.
+3. The deposit agreement: the depositary *"cannot accept deposits of shares and deliver ADSs
+   ... unless (1) we have consented"*. Withdrawal always works; re-deposit requires consent.
+
+**What its arrival changed, and it is not small.** The pooled constrained-class half-life had an
+OPEN upper tail on four Taiwanese pairs: point 310 days, lower bound 217, no finite upper. With
+KT the interval closes — **point 302 days, 95% interval 211–391**. The open tail was a property
+of a four-pair, single-jurisdiction panel, and one pair from a different regulator bounded it.
+
+**The caveat that belongs with it.** KT's ceiling is *fully utilised* while SK Hynix's is a
+discretionary consent with no published level. They are the same SHAPE of rule in different
+STATES, and pooling across that difference is what closed the interval. A reader who cares
+about the open tail should read the four-pair estimate as the SKHY-relevant one and this
+five-pair estimate as the better-identified one; they answer slightly different questions.
+
+**SK Telecom is NOT classified.** Its filing confirms the same statute, but its own
+deposit-agreement consent clause and utilisation were not located. The statute is necessary and
+the deposit agreement is what makes the channel one-way.

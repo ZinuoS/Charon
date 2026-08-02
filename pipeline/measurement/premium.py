@@ -210,10 +210,9 @@ def latest_common_legs(pair_id: str = "skhy") -> dict:
     from pipeline.ingest.registry import PAIRS
     pair = next(p for p in PAIRS if p.pair_id == pair_id)
     source = PAIR_SOURCE.get(pair_id, DEFAULT_SOURCE)
-    fx_source = "d1_prices" if pair_id == "skhy" else source
     legs = {"adr": _load_close(source, pair.adr),
             "local": _load_close(source, pair.local),
-            "fx": _load_close(fx_source, pair.fx)}
+            "fx": _load_fx(source, pair.fx)}
     frame = pd.DataFrame(legs).dropna()
     if not len(frame):
         raise ValueError(f"{pair_id}: legs share no observation date")
