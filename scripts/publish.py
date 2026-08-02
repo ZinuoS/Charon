@@ -53,12 +53,17 @@ def remote_ref() -> dict:
 def api_head() -> dict:
     """The authoritative HEAD of the default branch, uncached.
 
-    THE HTML PAGE LAGS AND THIS DOES NOT. GitHub caches the repository landing page, so its
-    commit count can sit a few minutes behind a push that has already landed. Verifying only
-    against the rendered page therefore has a FALSE-NEGATIVE mode -- and a false negative here
-    is not harmless, because it is indistinguishable from the real failure this module exists
-    to catch. It is also, precisely, what produced the 2026-07-30 "the remote is five commits
-    behind" report. The API is the primary check; the page is a secondary signal that may lag.
+    CORRECTED 2026-08-02: THIS CACHES TOO. An earlier version of this module treated the API
+    as authoritative because the HTML page had been caught lagging. Then the opposite happened
+    -- `ls-remote` and the rendered page both showed a landed push while this endpoint still
+    returned the previous sha. Both HTTP surfaces cache; neither is authoritative.
+
+    THE ONLY UNCACHED SOURCE IS `git ls-remote`, which speaks the git protocol rather than
+    HTTP. That is the primary check and it is done in `remote_ref()`. The API and the page are
+    CORROBORATING signals: useful, because they are what a reader and a script actually see,
+    and each can lag a push by minutes. A disagreement between them and ls-remote is reported
+    as lag, not as failure -- reporting it as failure is what produced the false alarm this
+    module was written to diagnose in the first place.
     """
     req = urllib.request.Request(
         "https://api.github.com/repos/ZinuoS/Charon/commits/main",
@@ -92,6 +97,7 @@ def verify(expect_count: int | None = None) -> tuple[bool, list[str]]:
     if rem["head"] != rem["main"]:
         problems.append(f"remote HEAD {rem['head']!r} != refs/heads/main — the DEFAULT BRANCH "
                         "is not main, so the public page serves something else")
+    api_lag = None
     try:
         api = api_head()
     except Exception as exc:                      # network refusal is not a pass
@@ -99,8 +105,9 @@ def verify(expect_count: int | None = None) -> tuple[bool, list[str]]:
         api = {}
     else:
         if api["sha"] != loc["head"]:
-            problems.append(f"API HEAD on main is {api['sha'][:7]}, local is "
-                            f"{loc['head'][:7]} — the push did NOT land")
+            # ls-remote above is the authority. This endpoint caches, so a mismatch here
+            # while the ref matches is lag, not failure.
+            api_lag = api["sha"][:7]
 
     lag = None
     try:
@@ -124,7 +131,8 @@ def verify(expect_count: int | None = None) -> tuple[bool, list[str]]:
     print(f"  local    {loc['branch']} @ {loc['head'][:7]}  ({loc['count']} commits)")
     print(f"  remote   refs/heads/main @ {(rem['main'] or '—')[:7]}")
     if api:
-        print(f"  API      HEAD @ {api['sha'][:7]}  ({api['date']})")
+        note = "  (cached — lagging)" if api["sha"] != loc["head"] else ""
+        print(f"  API      HEAD @ {api['sha'][:7]}  ({api['date']}){note}")
     if lag is not None:
         print(f"  note     the rendered page still shows {lag} commits — GitHub caches the "
               "landing page; the API above is authoritative")
