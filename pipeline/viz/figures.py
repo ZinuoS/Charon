@@ -2998,3 +2998,79 @@ def g34r_evidence_availability(visibility, criteria):
                  "it, which is the strong form of the claim: a competitor cannot copy the trade "
                  "from filings, and its buyer cannot be found in them either.")
     return fig, {"cells_with_route": n_filled, "criteria_with_none": len(blank)}
+
+
+def g37_filing_screen(screen: dict, dart_filers: set) -> tuple:
+    """G37 — the public-filings screen, as two populations that do not overlap.
+
+    WHY THIS CHART EARNS ITS SPACE. The screen's result is not a ranking, it is a SHAPE: the
+    managers whose structure resembles this trade have no demonstrated local leg, and the
+    managers who demonstrably execute the local leg are long-only institutions. A table makes a
+    reader assemble that; a scatter states it. Both axes are log because the book sizes span
+    four orders of magnitude, and a linear axis would render fifteen of nineteen managers as a
+    single point at the origin.
+    """
+    fig, ax = theme.figure(shape_name="wide")
+    LOCAL, ADR = theme.SEMANTIC["constrained"], theme.SEMANTIC["emphasis"]
+
+    pts = []
+    for name, e in screen.items():
+        qs = e.get("quarters", [])
+        if not qs:
+            continue
+        book = max((q.get("total_value", 0) for q in qs), default=0) / 1e9
+        korea = 0.0
+        for q in qs:
+            if q["korea"]:
+                korea = sum(k["value"] for k in q["korea"]) / 1e6
+                break
+        if book <= 0:
+            continue
+        pts.append((name, book, max(korea, 0.05), name in dart_filers))
+
+    # Zero is not plottable on a log axis, so managers with no Korean ADR holding sit on a
+    # drawn floor and are marked as such. Placing them at an arbitrary small value WITHOUT
+    # saying so would render "holds nothing" as "holds a little", which is a different claim.
+    pts.sort(key=lambda t: t[1])
+    for i, (name, book, korea, has_local) in enumerate(pts):
+        dy = 5 if i % 2 == 0 else -11          # stagger: eight managers share the floor
+        ax.scatter(book, korea, s=132 if has_local else 92,
+                   marker="o" if has_local else "^",
+                   facecolor=LOCAL if has_local else "none",
+                   edgecolor=LOCAL if has_local else ADR,
+                   linewidth=1.6, alpha=0.9, zorder=3)
+        ax.annotate(name, (book, korea), textcoords="offset points", xytext=(8, dy),
+                    fontsize=theme.NOTE_SIZE - 1.5, color=theme.MUTED,
+                    fontfamily=theme.SERIF_STACK)
+    ax.axhline(0.05, color=theme.RULE, lw=0.9, ls=":", zorder=1)
+    ax.text(200, 0.056, "no Korean ADR holding reported",
+            fontsize=theme.NOTE_SIZE - 1.5, color=theme.MUTED, style="italic",
+            fontfamily=theme.SERIF_STACK, va="bottom")
+
+    ax.set_xscale("log"); ax.set_yscale("log")
+    ax.set_xlabel("13F-reported US-listed long book ($bn, log)")
+    ax.set_ylabel("Korean ADR complex holdings ($M, log)")
+    ax.grid(True, which="major", color=theme.RULE, lw=0.6, alpha=0.7)
+
+    n_local = sum(1 for *_, h in pts if h)
+    both = sum(1 for _, _, k, h in pts if h and k > 1)
+    theme.finalize(
+        fig, kicker="the screen",
+        headline="Capability for this trade is split across two populations that do not overlap",
+        subtitle="Circles file 5%+ of a Korean local line (DART). Triangles do not. Both axes "
+                 "log: the books span four orders of magnitude.",
+        stats=[(f"{len(pts)}", "managers screened,\nrule-determined roster"),
+               (f"{n_local}", "with a Korean\nLOCAL-leg filing"),
+               (f"{both}", "with both the local leg\nand US Korea longs"),
+               ("0", "shown holding\nthis pair's ADR")],
+        source="Repo-computed. 13F-HR information tables (Q1 2026) via EDGAR; DART majorstock "
+               "pull 2026-08-02; ADV registration via IAPD firm search 2026-08-03.",
+        footnote="EVERY MANAGER WITH THE LOCAL LEG IS LONG-ONLY OR SOVEREIGN; every "
+                 "multi-strategy and event-driven manager here has Korean ADR exposure and no "
+                 "local-leg filing. Both axes are proxies and neither is this trade: 13F reports "
+                 "US-listed LONGS, so a short-ADR/long-local pair is invisible in it by "
+                 "construction, and Korea's 5% regime aggregates depositary receipts with the "
+                 "underlying into one stake. SK hynix's ADR listed 2026-03-24, so its first "
+                 "possible 13F appearance is the Q3 report due about 2026-11-14 — no chart drawn "
+                 "today can show a holder of the actual pair.")
+    return fig, {"screened": len(pts), "with_local_leg": n_local, "both": both}

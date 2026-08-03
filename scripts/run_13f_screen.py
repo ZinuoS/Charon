@@ -39,6 +39,7 @@ def main() -> int:
                     # `positions` is the breadth confound made visible: a discount-family hit
                     # from a 15,000-line book is not the same observation as one from 60 lines.
                     "positions": len(rows),
+                    "total_value": sum(r["value"] for r in rows),
                     "korea": [{"issuer": k["issuer"], "cusip": k["cusip"],
                                "value": k["value"], "shares": k["shares"]} for k in korea],
                     "discount_dna": D9.discount_dna(rows),

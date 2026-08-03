@@ -119,8 +119,14 @@ def find_cik(name: str) -> list[tuple[str, str]]:
         # alone and crowd it past any cap — which returned "no 13F filer" for a manager that
         # files every quarter. resolve_filer still verifies against actual filings; this only
         # decides what it examines first.
+        # PREFIX BEFORE SUBSTRING. "CAPITAL RESEARCH" is a substring of "POTRERO CAPITAL
+        # RESEARCH LLC", and a plain substring match selected that unrelated firm and published
+        # it as the manager's 13F record. A wrong entity is worse than no entity in a document
+        # naming real firms, so a name that BEGINS with the query outranks one that merely
+        # contains it.
         vehicle = ("FUND", "TRUST", "PORTFOLIO", "ETF", "INDEX", "SERIES")
-        hits.sort(key=lambda t: (any(w in t[1] for w in vehicle), len(t[1]), t[1]))
+        hits.sort(key=lambda t: (not t[1].replace(".", "").replace(",", "").startswith(needle),
+                                 any(w in t[1] for w in vehicle), len(t[1]), t[1]))
         return hits[:25]   # cap raised from 8: it truncated before one manager's actual filer
 
     raw = DEFAULT_CLIENT.get(BROWSE, params={

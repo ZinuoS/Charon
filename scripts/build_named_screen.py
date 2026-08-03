@@ -13,7 +13,13 @@ from datetime import date
 from pathlib import Path
 
 from pipeline.ingest._common import RAW_ROOT
+from pipeline.ingest.d10_adv import ADV_QUERY, firm_lookup
 from pipeline.ingest.d9_thirteenf import MANAGERS, SKHY_FIRST_VISIBLE
+
+GENERATED = date.today().isoformat()
+#: ADV registration identity, pulled live. RAUM and the prime-broker roster are NOT here --
+#: they live in the ADV form, which robots disallows, so those two stay hand-transcribed.
+ADV = {label: firm_lookup(q) for label, q in ADV_QUERY.items()}
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "appendix" / "01_public_filings_screen.md"
@@ -61,7 +67,7 @@ def main() -> int:
         if e.get("error"):
             rows.append(f"| {name} | `{provenance}` | — | no 13F-HR filing found for any "
                         f"candidate CIK (EDGAR CIK index, retrieved {snap_date}) | — | — | "
-                        f"MANUAL-PENDING | — |")
+                        f"— | MANUAL-PENDING | MANUAL-PENDING |")
             continue
 
         issuers, value, kq = korea_summary(e)
@@ -70,6 +76,7 @@ def main() -> int:
         acc = qs[0]["accession"] if qs else "—"
         rdate = qs[0]["report_date"] if qs else "—"
 
+        book = max((q.get("total_value", 0) for q in qs), default=0)
         korea_cell = (f"{issuers} — ${value/1e6:,.0f}M, {kq}/{len(qs)} quarters "
                       f"(13F-HR {acc}, {rdate})" if issuers else
                       f"none (13F-HR {acc}, {rdate})")
@@ -77,10 +84,18 @@ def main() -> int:
                     if fams else f"none; book={breadth:,} positions (13F-HR {acc})")
         dart_cell = (f"YES — {DART_FILERS[name][0]} (DART filing {DART_FILERS[name][1]})"
                      if name in DART_FILERS else "not in the 2026-08-02 DART 5% screen")
-        cited += 3
+        cap_cell = f"${book/1e9:,.1f}bn US-listed longs (13F-HR {acc}, {rdate})"
+
+        adv = ADV.get(name)
+        adv_cell = (f"{adv['firm_name']}, SEC {adv['sec_number']}, CRD {adv['crd']}, "
+                    f"{adv['status'].lower()}, {adv['relying_advisers']} relying advisers "
+                    f"(Form ADV via IAPD, retrieved {GENERATED})" if adv else
+                    "no US adviser registration found (IAPD firm search, "
+                    f"retrieved {GENERATED})")
+        cited += 4
         pending += 2
-        rows.append(f"| {name} | `{provenance}` | MANUAL-PENDING | {korea_cell} | {dna_cell} | "
-                    f"{dart_cell} | MANUAL-PENDING | see note |")
+        rows.append(f"| {name} | `{provenance}` | {cap_cell} | {korea_cell} | {dna_cell} | "
+                    f"{dart_cell} | {adv_cell} | MANUAL-PENDING | MANUAL-PENDING |")
 
     body = TEMPLATE.format(
         snap_date=snap_date, generated=date.today().isoformat(),
@@ -125,9 +140,20 @@ view. Rule-determined membership means a name's presence here says nothing about
   every hit because a manager reporting fifteen thousand positions holds two legs of almost any
   family by breadth alone.
 - **Korean local leg** — the DART 5% screen. This is the only column that sees the local side.
+- **Capacity** — the total value of the manager's own most recent 13F information table. This is
+  the US-listed long book, not regulatory AUM; it is the right denominator for an ADR trade and
+  the wrong one for firm size, and it is stated as what it is.
+- **ADV registration** — filed identity from the IAPD firm search: legal name, SEC file number,
+  CRD, registration status, relying-adviser count. **CORRECTED 2026-08-03:** an earlier version
+  of this note said every automated route to ADV data refuses a correctly-identified client.
+  That was wrong, and the fault was local rather than the host's — the client was sending a
+  repository URL where the SEC requires an email address, and the resulting 403 was read as a
+  refusal. With a compliant header the search API answers normally.
 - **RAUM** and **prime-broker roster** — Form ADV Part 1A Item 5.F and Schedule D 7.B.(1).
-  Marked `MANUAL-PENDING`: every automated route to ADV data refuses a correctly-identified
-  client, so those cells are transcribed by hand from IAPD (see `03_iapd_manual_checklist.md`).
+  Still `MANUAL-PENDING`, but for a narrower and better-understood reason: these two fields live
+  in the ADV FORM rather than the search index, and the form viewer is disallowed by
+  `adviserinfo.sec.gov/robots.txt`. A person opening the page in a browser is a different act
+  and the permitted one (see `03_iapd_manual_checklist.md`).
 
 ## Capacity is scored separately from mandate fit, and never averaged
 
@@ -139,8 +165,8 @@ fit", and a single number would erase exactly that.
 
 ## The screen
 
-| manager | on list via | RAUM (ADV 5.F) | Korea appetite (proxy) | discount-structure DNA (proxy) | Korean local leg | PB roster (ADV 7.B.1) | mandate fit |
-|---|---|---|---|---|---|---|---|
+| manager | on list via | capacity (13F book) | Korea appetite (proxy) | discount-structure DNA (proxy) | Korean local leg | ADV registration | RAUM (ADV 5.F) | PB roster (ADV 7.B.1) |
+|---|---|---|---|---|---|---|---|---|
 {rows}
 
 {n_rows} rows. {cited} cells carry a filing citation; {pending} are `MANUAL-PENDING` awaiting

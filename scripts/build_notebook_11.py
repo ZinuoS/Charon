@@ -286,6 +286,60 @@ document. The booking-chain criterion stays empty for the same reason it was emp
 ADV Schedule D would fill it, and every automated route to that data refuses a compliant client.
 """)
 
+# ---------------------------------------------------------------- §1e the named screen
+md("## 1e. Who trades this family: nineteen managers, from filings only")
+
+md(r"""
+**This section names managers.** Every name comes from a public filing — a 13F information
+table, a Korean 5% substantial-shareholding report, or an SEC adviser registration — and every
+claim is stated in filing shape: what a document says a manager held, over what period. Nothing
+here asserts that any manager is a client, a prospect, or interested in anything.
+
+**The roster is rule-determined and that is what makes it publishable.** A manager appears for
+one of exactly two reasons: named in the research specification, or surfaced by an evidence
+pull. There is no discretionary inclusion. Had membership been a judgement call, the list itself
+would encode a view about who is interesting — and that view is precisely what a document like
+this must not carry, however carefully each sentence is worded.
+""")
+
+code('import json\nfrom pipeline.ingest._common import RAW_ROOT\nfrom scripts.build_named_screen import DART_FILERS\n'
+     '_snap = sorted((RAW_ROOT / "d9_13f").iterdir())[-1]\n'
+     '_screen = json.loads((_snap / "screen.json").read_text())\n'
+     'fig, _m = figures.g37_filing_screen(_screen, set(DART_FILERS))\nfig;')
+
+md(r"""
+**The chart's message is a shape, not a ranking.** The circles — managers filing 5%+ of a Korean
+local line — are long-only institutions and a sovereign fund: BlackRock, Wellington Management,
+Norges Bank, Capital Research, Nomura, Macquarie, T. Rowe Price, Silchester. The triangles at
+comparable book size — Citadel Advisors, Millennium Management, Point72, D. E. Shaw, Balyasny —
+hold Korean ADRs and file nothing on the local side.
+
+**Read plainly, that is a problem for the pitch and it belongs in the pitch.** The managers whose
+structure resembles this trade cannot be shown to touch its hard leg. The managers who
+demonstrably execute the hard leg file simplified, passive-intent disclosures that argue against
+running it. Public paper splits the capability across two populations that do not overlap the
+way this trade requires, and evidences appetite for the trade itself in neither.
+""")
+
+code(r"""Markdown(f'''
+{CLI.CAPACITY_IS_NOT_MANDATE}
+''')""")
+
+md(r"""
+**What the desk should take from this.** Not a target list — the screen does not produce one.
+Three usable things instead: the segmentation is real and each layer wants a different product;
+the largest books show adjacency that breadth alone explains, so capacity must never be read as
+fit; and the one manager whose filings report movement *between* the local line and depositary
+receipts is doing something structurally adjacent to this trade, which makes those filings worth
+watching rather than worth citing as demand.
+
+**The honest boundary, which belongs on the slide.** SK hynix's ADR listed 2026-03-24 and 13F
+reports quarterly with a 45-day lag, so **the first filing that could name a holder of this
+pair's ADR is the Q3 2026 report, due about 2026-11-14.** Every name above is adjacency. The
+register of actual holders does not exist yet, and any claim to know it today would not be
+coming from filings.
+""")
+
 # ---------------------------------------------------------------- §2 durability
 md(r"""
 ## 2. Why the premium exists
@@ -539,6 +593,7 @@ REQUIRED_SECTIONS = (
     "## 1b. Which version of this is yours",
     "## 1c. Who has done this trade, and who survives our own filters",
     "## 1d. Which regime sees which buyer — and why capability is not appetite",
+    "## 1e. Who trades this family: nineteen managers, from filings only",
     "## 2. Why the premium exists",
     "## 6. P&L scenarios",
     "## 7b. Execution reality — four objections, answered",
