@@ -164,10 +164,16 @@ def major_holders(corp_code: str) -> list[dict]:
     return _get("majorstock.json", corp_code=corp_code).get("list", [])
 
 
-#: Issuers outside the pair registry worth pulling anyway. Samsung Electronics is here because
-#: the only positive hit in the session-32R evidence log was a US fund holding its PREFERENCE
-#: line — the discount instrument this desk's thesis generalises to.
-EXTRA_ISSUERS = {"005930": "Samsung Electronics (preference-line comparator)"}
+#: Issuers outside the pair registry worth pulling anyway.
+EXTRA_ISSUERS = {
+    # The only positive hit in the session-32R evidence log was a US fund holding its
+    # PREFERENCE line — the discount instrument this desk's thesis generalises to.
+    "005930": "Samsung Electronics (preference-line comparator)",
+    # SK hynix's holding company. Governance-adjacent: a holding-company discount and an ADR
+    # premium are the same species of Law-of-One-Price gap, and the shareholder register of
+    # the parent is where a manager expressing the SK complex through the holdco would appear.
+    "402340": "SK Square (governance-adjacent holdco)",
+}
 
 
 def korean_stock_codes() -> dict[str, str]:

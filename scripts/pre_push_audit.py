@@ -12,8 +12,21 @@ ROOT = Path(__file__).resolve().parents[1]
 PATTERNS = {
     "key material": [
         re.compile(r"\b[0-9a-f]{32}\b"),                    # FRED-style
+        re.compile(r"\b[0-9a-f]{40}\b"),                    # OpenDART-style
         re.compile(r"\b[0-9a-f]{14}\.[0-9]{8}\b"),          # EODHD-style
-        re.compile(r"(?i)(api[_-]?key|token|secret|password)\s*[=:]\s*['\"]?[A-Za-z0-9._-]{12,}"),
+        # Any `<something>key=<value>` parameter, not only the ones spelled "api_key". DART's
+        # is `crtfc_key`, which the previous alternation could not reach: it required a literal
+        # "api" before "key", so a keyed request URL in a pull log or a notebook output would
+        # have passed the audit clean. Widened 2026-08-03, before the pull that produces such
+        # URLs.
+        #
+        # The VALUE side is deliberately strict: >=16 chars and at least one digit. A looser
+        # version of this pattern flagged `key = os.environ.get(...)` in all three adapters --
+        # the variable name, never a value. Three false blocking hits on a first run is worse
+        # than the gap it closed, because an audit that cries wolf is one the operator learns
+        # to wave through, and this file already carries that lesson about a stale reminder.
+        re.compile(r"(?i)[a-z_-]*(?:key|token|secret|password)\s*[=:]\s*"
+                   r"['\"]?(?=[A-Za-z0-9._-]*\d)[A-Za-z0-9._-]{16,}"),
     ],
     "absolute local path": [re.compile(r"/Users/[a-z0-9]+/", re.I)],
     "withheld-source data": [re.compile(r"(?i)(smbs|investing\.com)[-_/]?(scrape|fx_swap_xml)")],
@@ -23,7 +36,32 @@ PATTERNS = {
 # multi-word token adjacent to desk vocabulary for human review.
 DESK_HINT = re.compile(r"(?i)\b(desk|colleague|internal (?:memo|email|call)|our team)\b")
 
-SKIP_SUFFIX = {".png", ".ipynb", ".lock", ".pyc"}
+SKIP_SUFFIX = {".png", ".lock", ".pyc"}
+
+#: Notebooks are NOT skipped, but their base64 image payloads are stripped before scanning.
+#: They used to be skipped wholesale -- and they are tracked, they carry EXECUTED OUTPUT, and
+#: this project's whole publishing model is that the notebooks show real results. A key printed
+#: into an output cell would have shipped past a clean audit. The skip existed because a base64
+#: PNG trips the bare-hex patterns; stripping the payload keeps that protection without
+#: exempting the text, which is where a leak would actually be legible.
+def notebook_text(path: Path) -> str:
+    import json
+
+    try:
+        nb = json.loads(path.read_text(errors="replace"))
+    except Exception:
+        return path.read_text(errors="replace")      # unparseable: scan it raw rather than skip
+
+    parts: list[str] = []
+    for cell in nb.get("cells", []):
+        parts.extend(cell.get("source", []))
+        for output in cell.get("outputs", []):
+            parts.extend(output.get("text", []))
+            for mime, payload in (output.get("data") or {}).items():
+                if mime.startswith(("image/", "application/pdf")):
+                    continue                          # the base64 blob, not readable text
+                parts.extend(payload if isinstance(payload, list) else [str(payload)])
+    return "\n".join(parts)
 
 
 def tracked_files() -> list[Path]:
@@ -43,7 +81,7 @@ def main() -> int:
     findings: list[tuple[str, str, int, str]] = []
     for f in files:
         try:
-            text = f.read_text(errors="replace")
+            text = notebook_text(f) if f.suffix == ".ipynb" else f.read_text(errors="replace")
         except Exception:
             continue
         rel = f.relative_to(ROOT).as_posix()

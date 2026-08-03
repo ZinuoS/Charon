@@ -358,6 +358,31 @@ DART_CONTRACT_COLUMN_NULL = (
     "obstacle are the same property, observed from opposite sides."
 )
 
+#: THE SEGMENTATION METHOD. This is the presentable part: not who the buyers are, but how a
+#: disclosure regime's blind spots define which product each audience can actually use.
+THREE_LAYER_METHOD = (
+    "Three disclosure regimes see three different populations, and each population wants a "
+    "DIFFERENT product. The segmentation falls out of what each regime can see, which is why "
+    "it is a method rather than a guess.\n\n"
+    "LAYER 1 — US filings (13F, 13D/G). Sees US-listed longs at size. Identifies managers with "
+    "the balance sheet and appetite for a synthetic pair, but CANNOT see either leg of this "
+    "trade. Product: the full package — synthetic local leg, ADR borrow, financing.\n\n"
+    "LAYER 2 — Korean 5% substantial-shareholding filings (DART). Sees the LOCAL leg, including "
+    "by foreign managers, which no US regime reaches. It therefore identifies exactly the "
+    "managers who DO NOT NEED the synthetic local leg, because they demonstrably carry it "
+    "already. Product: thinner but real — ADR borrow sourcing, short-leg financing, and "
+    "margin/monitoring, with the local side left alone.\n\n"
+    "LAYER 3 — N-CSR / N-PORT. Sees the complete audited book of a US-registered fund, "
+    "including foreign lines. Identifies long-local holders of the discount instrument itself. "
+    "Product: not the pair at all — this audience owns the cheap side outright and wants "
+    "hedging or financing against it.\n\n"
+    "The inversion in layer 2 is the part worth stating aloud: evidence of CAPABILITY is "
+    "evidence AGAINST needing the largest component of the product. A screen that finds "
+    "sophisticated local execution has not found the buyer for the full package; it has found "
+    "someone to sell a smaller one to. Read the other way round — as most capability screens "
+    "are read — it would point the desk at precisely the wrong pitch."
+)
+
 #: A second, weaker aggregate finding, recorded because it is testable rather than because it
 #: is conclusive.
 DART_FORMAT_SWITCHING = (

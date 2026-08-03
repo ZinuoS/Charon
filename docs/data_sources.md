@@ -1271,3 +1271,43 @@ the Telecommunications Business Act caps foreign ownership of facilities-based c
 is the right shape of rule and a different regulator from Taiwan. Whether that ceiling binds
 ADR issuance at the margin is a filing question, not a price question, and no classification
 is proposed here.
+
+---
+
+# D8. OpenDART API — 5%+ substantial-shareholding filings
+
+**Purpose.** The only public route to the **local** leg. No US regime reaches a KRX line:
+13F reports US-listed longs, and Korean shares are not SEC-registered, so no
+beneficial-ownership regime touches them. DART's `majorstock.json` sees 5%+ holders of
+Korean listed names, including foreign managers.
+
+**Terms posture [V] — checked 2026-08-03 at `opendart.fss.or.kr/intro/terms.do`, before the
+data was committed.**
+
+- **Automated collection: PERMITTED.** Not prohibited anywhere in the terms. This is an API
+  service, and calling an API as intended is its sanctioned use. Art. 10(6) restricts only
+  *과도한 네트워크 접속* (excessive network access) and hacking attempts.
+- **Rate limit [V]:** Art. 10(4) states usage volume is capped, with the figure posted on the
+  homepage rather than in the terms. Pace conservatively and react to status `020`, which is
+  DART's own over-call code; `_http.py` already treats it as transient.
+- **Redistribution: NOT GRANTED.** Art. 16(1) reserves copyright in service materials to the
+  FSS. The terms do not address redistribution, and silence is not permission.
+- **Commercial use:** not restricted. Art. 11 — the service is *원칙적으로 무료*.
+- **Attribution:** not specified in the terms.
+
+**Consequence for this repository, and it is already satisfied.** Because redistribution is
+not granted, raw DART payloads must not be committed. The standing raw-data doctrine
+(`.gitignore:8`, "data payloads: ignored") already enforces this — verified with
+`git check-ignore` on the actual snapshot files rather than assumed. Derived aggregates,
+counts and filing citations are the repository's own work product and are unaffected.
+
+**Contrast with KRX, deliberately recorded side by side.** KRX Art. 10(2) *prohibits*
+automated collection outright and Art. 12(2) bars copying without prior permission, and its
+sanctioned API is non-commercial-only with no short-selling endpoint (§0 above). DART
+prohibits neither. The two are not interchangeable, and the difference is the reason one pull
+ran and the other is a refusal.
+
+```yaml
+source: opendart_majorstock
+approved: TODO(ash)          # terms checked and recorded above; the mark is yours
+```

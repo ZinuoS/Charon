@@ -2936,6 +2936,15 @@ def g34r_evidence_availability(visibility, criteria):
         "ticket capacity":     {"Form ADV Schedule D": 2, "prospectus / mandate": 1},
         "TRS / booking chain": {"Form ADV Schedule D": 2},
         "local-leg capability": {"DART 5% filings": 2, "N-CSR / N-PORT": 1},
+        # Added after the 2026-08-02 DART pull. Korea's 5% regime states, in the filing's own
+        # reason field, whether a position moved in local shares or in depositary receipts —
+        # so it is the ONLY public source that can evidence movement BETWEEN the two legs'
+        # formats. No US regime distinguishes them, because no US regime sees the local line.
+        "format switching\n(local <-> DR)": {"DART 5% filings": 2},
+        # Likewise added: the same regime carries a contract column for derivative exposure.
+        # It can evidence the criterion, and on this pull it returned zero for every foreign
+        # manager -- which is a determination, not a gap. The cell records the ROUTE existing.
+        "synthetic exposure":  {"DART 5% filings": 1},
         "skew / horizon":      {"prospectus / mandate": 2, "N-CSR / N-PORT": 1},
         "borrow posture":      {},
         "mandate fit":         {"prospectus / mandate": 2},
@@ -2973,15 +2982,19 @@ def g34r_evidence_availability(visibility, criteria):
                  "public repository.",
         stats=[(f"{n_filled}/{n_cells}", "criterion-source cells\nwith any evidence route"),
                (f"{len(blank)}", "criteria with NO\npublic route at all"),
-               ("0", "of the pair's two legs\nvisible in 13F"),
-               ("730", "'Korea' 13D hits,\nall US-listed issuers")],
-        source="Repo-computed. pipeline.package.clientele.VISIBILITY; counts from an EDGAR "
-               "full-text pass run 2026-08-03.",
-        footnote="BORROW POSTURE HAS NO PUBLIC ROUTE AT ALL, and local-leg capability has only "
-                 "one — Korean 5% filings, which no US disclosure reaches. 13F reports "
+               ("3", "criteria reachable ONLY\nvia Korean 5% filings"),
+               ("0", "foreign managers using\nthe contract column")],
+        source="Repo-computed. pipeline.package.clientele.VISIBILITY; EDGAR full-text pass and "
+               "DART majorstock pull (82 filings, five issuers), both 2026-08-02/03.",
+        footnote="BORROW POSTURE HAS NO PUBLIC ROUTE AT ALL. Three criteria are reachable only "
+                 "through Korean 5% filings, which no US disclosure touches: 13F reports "
                  "US-listed LONGS, so a short-ADR/long-local pair is invisible in it by "
-                 "construction; Korean preference lines are not SEC-registered, so no "
-                 "beneficial-ownership regime touches them either. A swap-financed pair leaves "
-                 "no public trace: a competitor cannot copy it from filings, and a buyer cannot "
-                 "be found in them.")
+                 "construction, and Korean lines are not SEC-registered, so no "
+                 "beneficial-ownership regime reaches them either. THE DECISIVE TEST IS THE "
+                 "LAST COLUMN OF THAT ONE SOURCE: Korea's regime carries a contract field for "
+                 "derivative exposure, it is demonstrably live — a strategic affiliate "
+                 "populates it in 40 consecutive filings — and zero foreign managers populate "
+                 "it. The structure is invisible even where a regulator built a field to see "
+                 "it, which is the strong form of the claim: a competitor cannot copy the trade "
+                 "from filings, and its buyer cannot be found in them either.")
     return fig, {"cells_with_route": n_filled, "criteria_with_none": len(blank)}
