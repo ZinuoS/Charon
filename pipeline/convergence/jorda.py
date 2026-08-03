@@ -92,6 +92,13 @@ REGIME_OF_PAIR = {
     # shares and deliver ADSs ... unless (1) we have consented". Withdrawal always
     # works, re-deposit needs consent -- the same clause family as SKHY's F-6
     # Ex. 99(a) undertaking. First constrained pair outside Taiwan.
+    # Added 2026-08-03 under amendment 005, on the filing. SK Telecom's 20-F carries
+    # the same consent gate as KT and SKHY and states the discretion outright: "It is
+    # possible that we may not give the consent." The RULE is established; unlike KT,
+    # no foreign-ownership UTILISATION figure was located, so the ceiling is known to
+    # exist and not known to bind. Sample stays restricted to 2022-01-01 for the ratio
+    # break -- a measurement error, unrelated to the classification.
+    "skm": "one_way_constrained",
     "kt": "one_way_constrained",
     # one_way_constrained -- all ROC `revolving`. ROC 華僑及外國人投資證券管理辦法 Art. 31
     # permits domestic purchase for re-issuance only "within the scope of the originally
@@ -127,6 +134,7 @@ CONSTRAINT_SUBTYPE = {
     # That is the same mechanism as SKHY's, which is why KT is the closest structural
     # analogue in the panel despite being the newest member of it.
     "kt": "consent",
+    "skm": "consent",
 }
 
 # The taxonomy is ratified; the PANEL is not. Both of these are stated wherever the pooled

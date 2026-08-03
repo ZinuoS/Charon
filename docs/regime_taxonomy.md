@@ -157,3 +157,50 @@ five-pair estimate as the better-identified one; they answer slightly different 
 **SK Telecom is NOT classified.** Its filing confirms the same statute, but its own
 deposit-agreement consent clause and utilisation were not located. The statute is necessary and
 the deposit agreement is what makes the channel one-way.
+
+---
+
+## 2026-08-03 — `skm` (SK Telecom) added to `one_way_constrained` (amendment 005)
+
+**Subtype: `consent`.** Amendment 004 withheld this pair because only the statute had been
+located, not SK Telecom's own deposit-agreement clause — the statute is necessary and the
+deposit agreement is what makes the channel one-way. The clause has now been read and it is
+**more explicit than KT's**:
+
+> "under the terms of the deposit agreement, as amended, **the depositary bank is required to
+> obtain our prior consent** to any such deposit if, after giving effect to such deposit, the
+> total number of our common shares represented by ADSs exceeds a specified maximum"
+
+> "**It is possible that we may not give the consent.** Consequently, an investor who has
+> surrendered his or her ADSs and withdrawn the underlying shares may not be allowed to
+> deposit the shares again to obtain ADSs."
+
+Two further blocking conditions are disclosed: a Company determination to block a deposit to
+prevent a violation, and any depositor identified as holding at least **4.0%** of the common
+shares.
+
+**Weaker than KT in one specific respect, and it is recorded rather than smoothed over.** KT's
+filing states 49.0% foreign-held against a 49.0% cap, so its ceiling demonstrably BINDS. No
+equivalent utilisation figure was located for SK Telecom. The regime is classified on the
+rule; the state is unknown.
+
+**The sample restriction stands and is a different object.** `sample_start = 2022-01-01`
+because the implied ADR ratio steps ~13x across 2021–22. Lifting it would not add history, it
+would add wrong history.
+
+**And it behaves like a control on its own sample, which is coherent rather than alarming.**
+SK Telecom's individual half-life comes back `sub_resolution` — rho_1 already below one half at
+the first horizon, so the series does not persist at daily resolution and the estimator returns
+a floor rather than a finding. `baba` carries the same flag in the fungible class.
+
+That is what the rule/state distinction predicts. SKM is constrained by RULE and its ceiling is
+**not known to bind**; a non-binding constraint should produce control-like dynamics. The
+taxonomy classifies the regime and does not promise that every member is currently constrained.
+It also means SKM contributes nothing to the dynamics claim, and the non-circularity test now
+excludes sub-resolution pairs from that comparison symmetrically in both classes — an
+unresolvable half-life is not a fast one.
+
+**Effect on the pooled estimate: negligible.** Six pairs give a half-life point of 302.3d
+(211–392) against five pairs at 302.4d (211–391). SKM contributes 1,073 post-restriction
+sessions against the class's ~25,000, so it changes the classification of the pair without
+changing what the class measures.

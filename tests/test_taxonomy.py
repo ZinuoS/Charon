@@ -103,11 +103,26 @@ class TestMembershipIsNotSelectedOnOutcome:
         separate the classes at least as sharply as dynamics do. It does not, by a wide
         margin."""
         from pipeline.convergence.jorda import estimate_regime
+
+        # SUB-RESOLUTION PAIRS ARE EXCLUDED FROM THE DYNAMICS SIDE, symmetrically in both
+        # classes, and the reason is that their half-life is not a measurement of speed. When
+        # rho_1 already sits below one half at the first horizon the series does not persist at
+        # daily resolution at all, and the estimator returns 1.0 as a floor rather than as a
+        # finding. Comparing that floor against a real estimate is comparing a non-measurement
+        # to a measurement.
+        #
+        # This surfaced 2026-08-03 when SK Telecom was classified from its 20-F: its 1,073
+        # post-restriction sessions come back `sub_resolution`, which dragged
+        # min(constrained) to 1.0 and collapsed the ratio. `baba` carries the same flag on the
+        # fungible side, so excluding the flag is symmetric rather than tailored to rescue a
+        # result. LEVEL is left alone -- resolvability has no bearing on a mean.
         lv, hl = {}, {}
         for pair, regime in REGIME_OF_PAIR.items():
             s = build_all_variants(pair)[0].series
             lv.setdefault(regime, []).append(abs(s.mean()))
-            hl.setdefault(regime, []).append(estimate_regime([s], regime).hl.point)
+            est = estimate_regime([s], regime).hl
+            if est.support != "sub_resolution":
+                hl.setdefault(regime, []).append(est.point)
         level_gap = min(lv["one_way_constrained"]) / max(lv["fungible"])
         dyn_gap = min(hl["one_way_constrained"]) / max(hl["fungible"])
         assert dyn_gap > 2 * level_gap, (
