@@ -21,6 +21,7 @@ the meaning attached.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from ._http import DEFAULT_CLIENT
@@ -56,21 +57,38 @@ class DartError(RuntimeError):
                          f"{message} [{kind}]")
 
 
+#: DART issues 40-character lowercase-hex keys. Anything else never reached DART's registry,
+#: so it cannot be an "unregistered key" — it is a local mistake wearing a remote error's face.
+_KEY_SHAPE = re.compile(r"[0-9a-f]{40}")
+
+
 def _key() -> str:
-    """The API key, by the same convention every other adapter in this repo uses."""
+    """The API key, by the same convention every other adapter in this repo uses.
+
+    Validated for SHAPE before it is spent on a request. Without this, a placeholder or a
+    truncated paste travels to DART and comes back as status `010`, "unregistered key" — which
+    reads as *the key was rejected* and sends you to the registration site to re-register a key
+    that was never the problem. It cost exactly that detour once. A local mistake must not be
+    allowed to impersonate a remote refusal; that is this module's whole thesis, applied to its
+    own input. The `.env` scan takes the LAST assignment, matching dotenv precedence, so a
+    freshly appended key wins over a stale line above it rather than losing to it silently.
+    """
     import os
 
-    key = os.environ.get("OPENDART_API_KEY")
+    key = os.environ.get("OPENDART_API_KEY", "").strip()
     if not key:
         env = _REPO_ROOT / ".env"
         if env.is_file():
             for line in env.read_text().splitlines():
                 if line.strip().startswith("OPENDART_API_KEY="):
-                    key = line.split("=", 1)[1].strip()
-                    break
+                    key = line.split("=", 1)[1].strip().strip("\"'")
     if not key:
         raise DartError("100", "no OPENDART_API_KEY in the environment or .env — register "
                                "free at opendart.fss.or.kr and set it")
+    if not _KEY_SHAPE.fullmatch(key):
+        raise DartError("100", f"OPENDART_API_KEY is not a DART key: got {len(key)} characters "
+                               f"({key[:4]}...{key[-4:]}), expected 40 hex. This never left the "
+                               f"machine — replace the value in .env with the real key.")
     return key
 
 
@@ -126,4 +144,21 @@ if __name__ == "__main__":
     assert e.transient and "retry later" in str(e)
     e = DartError("901", "expired")
     assert not e.transient and "PERMANENT" in str(e)
+
+    # A malformed key must be caught HERE, not by DART. The placeholder below is the exact
+    # value that shipped into .env once and came back as "unregistered key".
+    import os
+
+    for bad in ("your_key_here", "abc123", "A" * 40, "0" * 39):
+        os.environ["OPENDART_API_KEY"] = bad
+        try:
+            _key()
+        except DartError as exc:
+            assert exc.status == "100" and "never left the machine" in exc.message
+        else:
+            raise AssertionError(f"malformed key {bad!r} passed the shape check")
+    os.environ["OPENDART_API_KEY"] = "0123456789abcdef" * 2 + "01234567"
+    assert len(_key()) == 40, "a well-formed key must survive the shape check"
+    del os.environ["OPENDART_API_KEY"]
+
     print("ok:", probe())
