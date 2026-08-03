@@ -275,3 +275,63 @@ def unwind_table(notionals=SIZING_NOTIONALS, participation=(0.05, 0.10, 0.20),
     out = base.merge(stressed, on=["size_usd", "participation"], how="left")
     out["status"] = "ILLUSTRATIVE"
     return out
+
+
+#: Drawdown budgets to invert, as % of the risk capital the position is sized against.
+DRAWDOWN_BUDGETS_PCT = (3.0, 5.0, 10.0)
+
+
+def excursion_quantiles() -> dict:
+    """The adverse-excursion axis D4 inverts: MEASURED, from the comparator and from SKHY.
+
+    The SKHY row is not a quantile of the same distribution and must never be read as one. It is
+    a single realised path, and it lands ABOVE the maximum of all 822 comparator entries — so
+    treating it as, say, a P99 would understate it. It is carried as a named stress override.
+    """
+    from pipeline.lab import tsmc as LAB
+
+    ex = LAB.excursions(LAB.premium())
+    skhy = LAB.skhy_week_one_excursion()
+    return {
+        "P50": {"pp": round(ex.attrs["median_mae_pp"], 2), "status": "MEASURED",
+                "source": f"median MAE, n={len(ex.attrs['mae_pp'])} comparator entries"},
+        "P95": {"pp": round(ex.attrs["p95_mae_pp"], 2), "status": "MEASURED",
+                "source": f"95th percentile MAE, n={len(ex.attrs['mae_pp'])}"},
+        "comparator max": {"pp": round(ex.attrs["max_mae_pp"], 2), "status": "MEASURED",
+                           "source": "worst single comparator entry"},
+        "realised SKHY": {"pp": skhy["excursion_pp"], "status": "MEASURED",
+                          "source": f"SKHY {skhy['from_pp']}% to {skhy['peak_pp']}% in "
+                                    f"{skhy['sessions']} sessions — a realised path, NOT a "
+                                    f"quantile, and larger than the comparator maximum"},
+    }
+
+
+def max_notional(drawdown_budget_pct: float, excursion_pp: float,
+                 risk_capital_usd: float = 1.0) -> float:
+    """D4 — the largest position whose adverse excursion fits inside a drawdown budget.
+
+    Inverting the loss leg of the P&L identity. A short-premium position of notional N loses
+    approximately N x (Delta pi) when the premium widens, so the budget binds at
+
+        N = budget / excursion
+
+    Returned as a MULTIPLE of risk capital when ``risk_capital_usd`` is left at 1.0. Carry is
+    deliberately excluded: over the horizon in which an excursion of this size arrives, carry is
+    a rounding error against it, and including it would flatter the answer.
+    """
+    if excursion_pp <= 0:
+        raise ValueError("excursion must be positive; a zero excursion implies infinite size")
+    return risk_capital_usd * (drawdown_budget_pct / excursion_pp)
+
+
+def drawdown_budget_table(budgets=DRAWDOWN_BUDGETS_PCT) -> pd.DataFrame:
+    """D4 — budget x excursion, as position size in multiples of risk capital."""
+    qs = excursion_quantiles()
+    rows = []
+    for label, q in qs.items():
+        for b in budgets:
+            rows.append({"excursion": label, "excursion_pp": q["pp"],
+                         "drawdown_budget_pct": b,
+                         "max_notional_x_capital": round(max_notional(b, q["pp"]), 3),
+                         "status": q["status"]})
+    return pd.DataFrame(rows)

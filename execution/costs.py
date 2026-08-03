@@ -29,7 +29,6 @@ LOCAL_SHARES_PER_ADR = 0.1       # [P] 10 ADRs = 1 common share
 REALIZED_ENTRY_PREMIUM = 0.1598  # 2026-07-10 close-to-close pi
 REALIZED_PEAK_PREMIUM = 0.5160   # 2026-07-14
 
-
 @dataclass(frozen=True)
 class CostSegment:
     name: str

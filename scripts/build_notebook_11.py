@@ -637,6 +637,76 @@ comparable pair is characterisation of a regime family, not a forecast of this o
 # how §1c shipped as a commit with no section in the notebook. The manifest makes it loud.
 # FULL headings, not prefixes. Under the old substring check these entries were truncated and
 # still passed; line-exact matching caught that immediately, which is the point of it.
+# ---------------------------------------------------------------- §9 pricing pack
+md("## 9. Pricing pack — the four objects a PM interrogates")
+
+md(r"""
+**Parameterisation, not new estimation.** Everything below re-expresses machinery that already
+exists at values a portfolio manager will want to vary. Nothing here is fitted, and nothing is
+fitted to SKHY — the forward test depends on that, and a pricing pack is exactly the artifact
+that quietly breaks it by tuning a parameter until a chart looks better.
+
+**The desk inputs are declared unratified and are required arguments.** Borrow, the
+cross-currency basis and the margin schedule are quotes the desk owns. They default to nothing,
+so no chart in this pack can circulate carrying a number nobody quoted. One config edit reprints
+all four when the quotes land.
+""")
+
+code("from pipeline.package import pricing_pack as PP\nfig, _ = figures.g39_carry_waterfall(PP)\nfig;")
+
+md(r"""
+**D1 — the funding leg pays you.** The USD earned on the short's proceeds and the collateral
+exceeds the KRW funding on the local long, so the rate differential is a tailwind. That leaves
+borrow as the only component that decides the trade, and it is the one component no public
+series prices. The basis is drawn at zero because it is *not measured*, not because it is
+believed to be zero.
+""")
+
+code("fig, _ = figures.g40_breakeven_surface(PP)\nfig;")
+
+md(r"""
+**D2 — and at today's entry, borrow does not decide it either.** The zero contour sits above the
+entire quoted bracket at every half-life in the 95% interval: borrow would have to reach roughly
+1250bp at the slowest half-life, and 1900bp at the fastest, before the trade stops paying. The
+axis is extended past the bracket deliberately — a heatmap with no boundary on it reads as one
+hiding a boundary. **The economics are decided by whether convergence happens at all, not by the
+borrow quote.** That is the honest headline, and it points the conversation at the half-life.
+""")
+
+code("fig, _ = figures.g41_margin_sizing(PP)\nfig;")
+
+md(r"""
+**D3 — what the realised excursion actually asks for.** Replaying the measured 16%→52% move,
+peak margin is 43% of notional cross-margined against 59% as two tickets. Note what netting does
+*not* do: it removes about a quarter of the call, not most of it, because the two legs move
+together in precisely the episode that produces the call. Every margin number here is
+ILLUSTRATIVE — the path is measured, the margin response is a parametric sketch standing in for
+the desk's schedule, and the replay takes that schedule as an argument.
+""")
+
+code("fig, _ = figures.g42_drawdown_budget(PP)\nfig;")
+
+md(r"""
+**D4 — the platform number, and the one that should govern the first conversation.** Sizing to
+the median comparator entry permits roughly three times the position that sizing to SKHY's own
+realised path does. At a 5% drawdown budget that is 0.45× risk capital against 0.14×.
+
+**SKHY's 35.6pp is not a quantile of that distribution and must not be read as one.** It is a
+single realised path and it lands *above* the maximum of all 822 comparator entries, so calling
+it a P99 would understate it. It is carried as a named stress override precisely because the
+sample does not contain it.
+
+This is what converts "sized so the excursion sits inside their limit" from an assertion into a
+number — and the number is a seventh of capital, not a half.
+""")
+
+md(r"""
+**Still owed by the desk**, and every artifact above says so on its face: a live borrow quote, a
+cross-currency basis (which needs a forward curve this repository does not have), and the real
+margin schedule. D5 and D6 are not built — the exit tree needs decision thresholds that are the
+author's to set, not mine.
+""")
+
 REQUIRED_SECTIONS = (
     "## 1. The pitch",
     "## 1b. Which version of this is yours",
@@ -648,6 +718,7 @@ REQUIRED_SECTIONS = (
     "## 6. P&L scenarios",
     "## 7b. Execution reality — four objections, answered",
     "## 8. Monitoring, and the ask",
+    "## 9. Pricing pack — the four objects a PM interrogates",
 )
 
 n = write(OUT, require=REQUIRED_SECTIONS)

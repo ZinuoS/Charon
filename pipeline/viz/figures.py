@@ -3354,3 +3354,62 @@ def g41_margin_sizing(pack) -> tuple:
                  "NOT do: it removes about a quarter of the peak call, not most of it, because "
                  "the two legs move together in exactly the episode that produces the call.")
     return fig, {"peak_pct": pk, "netting_ratio": ratio, "worst_sessions": worst}
+
+
+def g42_drawdown_budget(pack) -> tuple:
+    """D4 — position size that fits a drawdown budget, at each adverse-excursion assumption.
+
+    THE POINT OF THE CHART IS THE GAP BETWEEN THE TOP ROW AND THE BOTTOM. Sizing to the median
+    comparator excursion permits roughly three times the position that sizing to SKHY's realised
+    path does. Both are measured; they differ because one is a typical entry and the other is
+    what this pair actually did in its first three sessions.
+    """
+    tbl = pack.drawdown_budget_table()
+    qs = pack.excursion_quantiles()
+    fig, ax = theme.figure(shape_name="wide")
+    order = ["P50", "P95", "comparator max", "realised SKHY"]
+    budgets = sorted(tbl.drawdown_budget_pct.unique())
+    COLS = [theme.SEMANTIC["fungible"], theme.SEMANTIC["context"],
+            theme.SEMANTIC["constrained"]]
+
+    width = 0.26
+    for j, b in enumerate(budgets):
+        sub = tbl[tbl.drawdown_budget_pct == b].set_index("excursion").loc[order]
+        ax.barh([i + (j - 1) * width for i in range(len(order))],
+                sub.max_notional_x_capital, height=width, color=COLS[j % len(COLS)],
+                alpha=0.9, label=f"{b:.0f}% drawdown budget", zorder=3)
+
+    ax.set_yticks(range(len(order)))
+    ax.set_yticklabels([f"{o}\n({qs[o]['pp']:.1f}pp)" for o in order])
+    ax.invert_yaxis()
+    ax.set_xlabel("maximum position, as a multiple of risk capital")
+    ax.legend(frameon=False, fontsize=theme.NOTE_SIZE - 1)
+    ax.grid(True, axis="x", color=theme.RULE, lw=0.5, alpha=0.6)
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+
+    p50_5 = pack.max_notional(5.0, qs["P50"]["pp"])
+    skhy_5 = pack.max_notional(5.0, qs["realised SKHY"]["pp"])
+    theme.finalize(
+        fig, kicker="D4 · sizing to a budget",
+        headline="Sizing to what this pair actually did permits a third of the position that "
+                 "sizing to a typical entry does",
+        subtitle=pack.freshness_line(),
+        stats=[(f"{p50_5:.2f}x", "capital at a 5% budget,\nMEDIAN excursion"),
+               (f"{skhy_5:.2f}x", "capital at a 5% budget,\nREALISED SKHY excursion"),
+               (f"{qs['realised SKHY']['pp']:.1f}pp", "SKHY's realised\nfirst-week excursion"),
+               (f"{qs['comparator max']['pp']:.1f}pp", "worst of 822\ncomparator entries")],
+        source="Repo-computed. MAE distribution over 822 comparator entries at the 90th "
+               "percentile of the expanding premium; SKHY excursion measured from its own "
+               "published series. Carry excluded from the inversion.",
+        footnote="THE SKHY ROW IS NOT A QUANTILE AND MUST NOT BE READ AS ONE. It is a single "
+                 "realised path, and it lands ABOVE the maximum of all 822 comparator entries — "
+                 "so calling it a P99 would understate it. It is carried as a named stress "
+                 "override precisely because the distribution does not contain it. This "
+                 "converts 'sized so the excursion sits inside their limit' from an assertion "
+                 "into a number: at a 5% budget the position is a seventh of capital, not a "
+                 "half. Carry is excluded because over the horizon in which an excursion of "
+                 "this size arrives it is a rounding error, and including it would flatter the "
+                 "answer.")
+    return fig, {"p50_at_5pct": p50_5, "skhy_at_5pct": skhy_5,
+                 "ratio": p50_5 / skhy_5}
