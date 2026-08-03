@@ -277,3 +277,55 @@ if __name__ == "__main__":   # the boundary is the thing worth checking
     assert len(FUNNEL_GATES) == 6 and len(PLAYBOOK) == 3
     print(f"ok: {len(CLIENTELE)} archetypes, {len(FUNNEL_GATES)} gates, "
           f"{len(PLAYBOOK)} survivors — {funnel_note()}")
+
+
+# --------------------------------------------------------------------------------
+# The visibility method — what each open source can and cannot see
+# --------------------------------------------------------------------------------
+#
+# ADDED 2026-08-03 after an evidence pass that mostly FAILED, which is why it is worth
+# writing down. The failure was structural rather than a matter of effort, and the structure
+# is the same fact that makes the product commercially defensible: a swap-financed pair leaves
+# no public trace. A competitor cannot copy it from filings, and a buyer cannot be found in
+# them either.
+
+#: (source, what it CAN see, what it CANNOT, strength for identifying this trade)
+VISIBILITY: tuple[dict, ...] = (
+    {"source": "13F", "class": "holdings",
+     "sees": "US-listed LONG positions above the reporting threshold, quarterly, 45-day lag",
+     "blind": "every short leg, and every non-US-listed line — so both legs of this pair",
+     "strength": "none for the pair; useful only as strategy DNA where BOTH legs of some "
+                 "other discount trade happen to be US-listed"},
+    {"source": "13D / 13G", "class": "beneficial ownership",
+     "sees": "5%+ stakes in SEC-registered classes, with intent",
+     "blind": "Korean preference shares and KRX lines — not SEC-registered, so the regime "
+              "does not reach them",
+     "strength": "none here. A full-text screen returned 730 hits on 'Korea' and every one "
+                 "was a US-listed issuer"},
+    {"source": "N-CSR / N-PORT", "class": "audited portfolio",
+     "sees": "the complete book of a US-registered fund, audited, including foreign lines",
+     "blind": "anything held outside a registered vehicle — i.e. most of the buyer universe",
+     "strength": "STRONGEST where it applies. An audited holdings table is worth more than "
+                 "any amount of inference. It found one real instance of the instrument"},
+    {"source": "DART 5% filings", "class": "local-leg capacity",
+     "sees": "substantial shareholdings in Korean listed names, including by foreign managers",
+     "blind": "sub-5% positions, and anything held synthetically",
+     "strength": "the highest-yield source not yet pulled — it sees the LOCAL leg, which is "
+                 "the hard one and the one no US filing reaches. Needs a free API key"},
+    {"source": "Form ADV Schedule D", "class": "infrastructure",
+     "sees": "regulatory AUM and prime-broker relationships per adviser",
+     "blind": "positions of any kind",
+     "strength": "the booking-chain criterion from filings rather than assumption. Not pulled"},
+    {"source": "prospectus / mandate", "class": "permission",
+     "sees": "what a vehicle is ALLOWED to hold, and its redemption terms",
+     "blind": "what it actually holds",
+     "strength": "strongest for the horizon and mandate criteria, which are permissions "
+                 "rather than positions"},
+)
+
+
+def visibility_note() -> str:
+    """The one-sentence version, for a caption."""
+    return ("A swap-financed pair leaves no public trace: 13F sees US-listed longs only, and "
+            "Korean preference lines are not SEC-registered so no beneficial-ownership regime "
+            "reaches them. The trade is unobservable to a competitor and to us alike.")

@@ -2917,3 +2917,71 @@ def g36_sales_map(playbook):
                  "are the ones any buyer of this shape asks — borrow stability, margin "
                  "stability, unwind support — not the ones a particular one has asked.")
     return fig, {"n_survivors": len(playbook)}
+
+
+def g34r_evidence_availability(visibility, criteria):
+    """G34R — which capacity criteria are determinable from public paper, and from which source.
+
+    NO FUND NAMES, by construction: this is the METHOD, and the method is the part that
+    belongs in a public repository. It is also the honest chart, because most of its cells are
+    empty and the emptiness is the finding — a swap-financed pair leaves no public trace, so
+    the buyer is as unobservable to us as the trade is to a competitor.
+    """
+    fig, ax = theme.figure(shape_name="wide")
+    EM, CON, FUN, CX, BA, WA = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["constrained"],
+                                theme.SEMANTIC["fungible"], theme.SEMANTIC["context"],
+                                theme.SEMANTIC["barrier"], theme.SEMANTIC["warning"])
+    # criterion -> the source class that can actually evidence it, and how well
+    grid = {
+        "ticket capacity":     {"Form ADV Schedule D": 2, "prospectus / mandate": 1},
+        "TRS / booking chain": {"Form ADV Schedule D": 2},
+        "local-leg capability": {"DART 5% filings": 2, "N-CSR / N-PORT": 1},
+        "skew / horizon":      {"prospectus / mandate": 2, "N-CSR / N-PORT": 1},
+        "borrow posture":      {},
+        "mandate fit":         {"prospectus / mandate": 2},
+    }
+    srcs = [v["source"] for v in visibility]
+    crits = list(grid)
+    ax.set_xlim(-0.5, len(srcs) - 0.5); ax.set_ylim(-0.5, len(crits) - 0.5)
+    for yi, c in enumerate(crits):
+        for xi, s in enumerate(srcs):
+            lvl = grid[c].get(s, 0)
+            if not lvl:
+                continue
+            ax.add_patch(mpatches.Rectangle((xi - 0.42, yi - 0.38), 0.84, 0.76,
+                         facecolor=FUN if lvl == 2 else CX,
+                         alpha=0.75 if lvl == 2 else 0.35, edgecolor=BA, lw=0.9, zorder=3))
+            ax.text(xi, yi, "direct" if lvl == 2 else "partial", ha="center", va="center",
+                    fontsize=theme.NOTE_SIZE, color=theme.PAPER if lvl == 2 else theme.TEXT,
+                    fontfamily=theme.SERIF_STACK)
+    ax.set_xticks(range(len(srcs)))
+    ax.set_xticklabels([s.replace(" / ", "\n") for s in srcs], linespacing=1.5)
+    ax.set_yticks(range(len(crits))); ax.set_yticklabels(crits)
+    ax.invert_yaxis(); ax.grid(False)
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+
+    n_cells = len(crits) * len(srcs)
+    n_filled = sum(len(v) for v in grid.values())
+    blank = [c for c, v in grid.items() if not v]
+    theme.finalize(
+        fig, kicker="the method",
+        headline="Most of this trade's buyer is invisible in public filings — and that is the "
+                 "same fact that protects it",
+        subtitle="Which capacity criterion can be evidenced from which public source. No fund "
+                 "names: this is the method, and the method is the part that belongs in a "
+                 "public repository.",
+        stats=[(f"{n_filled}/{n_cells}", "criterion-source cells\nwith any evidence route"),
+               (f"{len(blank)}", "criteria with NO\npublic route at all"),
+               ("0", "of the pair's two legs\nvisible in 13F"),
+               ("730", "'Korea' 13D hits,\nall US-listed issuers")],
+        source="Repo-computed. pipeline.package.clientele.VISIBILITY; counts from an EDGAR "
+               "full-text pass run 2026-08-03.",
+        footnote="BORROW POSTURE HAS NO PUBLIC ROUTE AT ALL, and local-leg capability has only "
+                 "one — Korean 5% filings, which no US disclosure reaches. 13F reports "
+                 "US-listed LONGS, so a short-ADR/long-local pair is invisible in it by "
+                 "construction; Korean preference lines are not SEC-registered, so no "
+                 "beneficial-ownership regime touches them either. A swap-financed pair leaves "
+                 "no public trace: a competitor cannot copy it from filings, and a buyer cannot "
+                 "be found in them.")
+    return fig, {"cells_with_route": n_filled, "criteria_with_none": len(blank)}

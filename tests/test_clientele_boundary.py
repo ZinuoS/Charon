@@ -70,3 +70,51 @@ def test_every_gate_declares_measured_or_convention():
             f"{g['gate']}: a gate must say whether it rests on a measurement or a convention; "
             "a filter that looks empirical but is not borrows credibility it did not earn"
         )
+
+
+def test_no_researched_fund_name_appears_in_any_committed_file():
+    """Named funds live in the gitignored research layer and nowhere else.
+
+    The names are read FROM that layer rather than hardcoded here, so the guard cannot drift
+    out of sync with what has actually been researched — and this test file is itself
+    committed, so it must not contain them either. Anything matching is checked only against
+    files git actually tracks.
+    """
+    import re
+    import subprocess
+
+    research = ROOT / "docs" / "client_research"
+    if not research.exists():
+        pytest.skip("no client research on this machine")
+
+    # Proper-noun-ish entity names from the research pages: capitalised runs of 2+ words.
+    names = set()
+    for f in research.glob("*.md"):
+        for m in re.finditer(r"\b([A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+){1,4}(?: Inc| Ltd| LP| LLC)?)\b",
+                             f.read_text()):
+            cand = m.group(1)
+            if len(cand.split()) >= 2 and not cand.startswith(("The ", "This ", "Not ", "Every ")):
+                names.add(cand)
+    # Only entity-shaped names carrying a corporate suffix are treated as blocking.
+    blocking = {n for n in names if re.search(r"\b(Inc|Ltd|LP|LLC|Fund|Capital|Partners)\b", n)}
+    assert blocking, "no entity-shaped names found — the guard would be vacuous"
+
+    tracked = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True,
+                             text=True, check=True).stdout.split()
+    hits = []
+    for rel in tracked:
+        f = ROOT / rel
+        if not f.is_file() or f.suffix in (".png", ".ipynb", ".lock", ".json", ".csv"):
+            continue
+        try:
+            text = f.read_text()
+        except (UnicodeDecodeError, OSError):
+            continue
+        for n in blocking:
+            if n in text:
+                hits.append((rel, n))
+    assert not hits, (
+        "researched fund names leaked into committed files:\n"
+        + "\n".join(f"  {rel}: {n}" for rel, n in sorted(set(hits))[:12])
+        + "\nNamed research belongs in docs/client_research/ only."
+    )

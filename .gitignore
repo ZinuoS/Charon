@@ -39,3 +39,9 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# Client-targeting research. Named funds scored for fit against public regulatory evidence.
+# The METHOD and the historical record are public (docs/, notebooks/); the NAMED table is not.
+# docs/client_research/ was NOT covered by any prior rule -- verified with `git check-ignore`
+# before the first named row was written, which is the only order that is safe.
+docs/client_research/
