@@ -340,6 +340,55 @@ register of actual holders does not exist yet, and any claim to know it today wo
 coming from filings.
 """)
 
+# ---------------------------------------------------------------- §1f best fit
+md("## 1f. Which product fits which manager, and who to open with")
+
+code(r"""
+from pipeline.package.clientele import best_fit as _bf, MANDATE_CLASS as _MC
+from pipeline.ingest.d10_adv import ADV_QUERY as _AQ, firm_lookup as _fl, raum as _raum
+from scripts.build_named_screen import korea_summary as _ks
+_rows = []
+for _n in _MC:
+    _e = _screen.get(_n, {}); _, _kv, _ = _ks(_e)
+    _f = _fl(_AQ[_n]); _r = _raum(_f["crd"]) if _f else None
+    _p, _sc, _why = _bf(_n, _r, _kv * 1e6, _n in DART_FILERS)
+    _rows.append((_n, _p, _sc, _r, _kv * 1e6, _n in DART_FILERS))
+fig, _m = figures.g38_best_fit(_rows)
+fig;
+""")
+
+md(r"""
+**Read the colours before the lengths.** The longest bars belong to long-only managers who
+already hold the Korean local line. For them the synthetic local leg — the largest component of
+what the desk builds — is redundant, and the sellable product is financing against a position
+they already own. Ranking them first on capacity alone would put the wrong pitch in front of the
+best-capitalised name on the page.
+
+**The full package has a different audience and a shorter list.** Millennium Management, Citadel
+Advisors, Point72, Balyasny and D. E. Shaw can carry a short leg and file no Korean local
+position, so the local side is precisely the part they would need manufactured. They sit lower
+on the chart because their regulatory AUM is smaller than a global long-only complex's, not
+because they fit worse.
+
+**And this is where the repository's own risk evidence has to be applied against the ranking.**
+The full-package audience is the multi-strategy platform, and §7 measures what this trade does
+to a book run on tight drawdown limits: the premium moved 36 points against an early seller in
+three sessions, worse than the worst 252-day excursion in 21.6 years of the comparator. The
+managers best placed to *execute* this structure are the ones whose risk framework it is most
+likely to breach. That tension is the pitch's central problem and it is better raised by us in
+the first meeting than discovered by them in the third.
+
+**What to open with.** For the long-only holders, financing and borrow against a position they
+already carry — a smaller ticket, a shorter conversation, and no need to argue about excursion
+tolerance. For the platforms, the standby structure rather than the linear pair, sized so the
+measured excursion sits inside their limit rather than outside it.
+
+**The boundary, once more, because it governs everything above.** This ranks *filed
+characteristics* against each product's requirements. It is not evidence that any manager wants
+this trade. SK hynix's ADR cannot show a holder in any filing before the Q3 2026 report due
+about 2026-11-14.
+""")
+
 # ---------------------------------------------------------------- §2 durability
 md(r"""
 ## 2. Why the premium exists
@@ -594,6 +643,7 @@ REQUIRED_SECTIONS = (
     "## 1c. Who has done this trade, and who survives our own filters",
     "## 1d. Which regime sees which buyer — and why capability is not appetite",
     "## 1e. Who trades this family: nineteen managers, from filings only",
+    "## 1f. Which product fits which manager, and who to open with",
     "## 2. Why the premium exists",
     "## 6. P&L scenarios",
     "## 7b. Execution reality — four objections, answered",

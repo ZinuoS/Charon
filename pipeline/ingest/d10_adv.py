@@ -7,16 +7,18 @@ address. With a compliant header `api.adviserinfo.sec.gov/search/firm` answers n
 conclusion had been drawn from a 403 produced by my own non-compliance, which is exactly the
 shape of mistake this repository keeps finding — a local fault wearing a remote refusal's face.
 
-WHAT IS STILL OUT OF REACH, and why it is a rule rather than an obstacle. Regulatory AUM
-(Part 1A Item 5.F) and the prime-broker roster (Schedule D Section 7.B.(1) Q24) live in the ADV
-FORM, not in the search index. The form viewer is disallowed by
-`adviserinfo.sec.gov/robots.txt` (`/IAPD/content/viewform/adv*.aspx`) and the PDF host answers
-403 to everything. Those two columns are therefore transcribed by hand from a browser, which is
-a person reading a public page and a different act from a crawler.
+REGULATORY AUM COMES FROM THE SANCTIONED BULK ROUTE, not from the interface. The SEC publishes
+a monthly FOIA extract of Form ADV Part 1A on its data-research pages — 448 columns, one row
+per registered adviser, keyed by CRD — and Item 5.F(2)(c) in it IS regulatory AUM. That file
+exists precisely so this data does not have to be scraped out of IAPD, so it is the route used.
+See :func:`adv_bulk`.
 
-So this module fills the identity half of the ADV column — registration status, SEC file
-number, CRD, the date the adviser last filed, and the relying-adviser roster — and leaves the
-two form-only fields to the manual checklist.
+WHAT REMAINS OUT OF REACH is one field, and the reason is now specific rather than general. The
+prime-broker roster is Schedule D Section 7.B.(1) Question 24, which is per-private-fund and
+appears in no published bulk file — the extract is firm-level Part 1A only. It exists in the
+per-firm ADV form, whose viewer `adviserinfo.sec.gov/robots.txt` disallows
+(`/IAPD/content/viewform/adv*.aspx`). So that one column is transcribed by hand from a browser,
+which is a person reading a public page and a different act from a crawler.
 """
 
 from __future__ import annotations
@@ -111,3 +113,46 @@ if __name__ == "__main__":
     assert "CITADEL ADVISORS" in got["firm_name"].upper(), got
     assert iapd_url(148826).endswith("/148826")
     print("ok:", got)
+
+
+#: SEC's own FOIA bulk extract of Form ADV Part 1A, one row per registered adviser, keyed by
+#: CRD. This is the SANCTIONED machine route — published by the SEC on its data-research pages
+#: precisely so that this data does not have to be scraped out of the IAPD interface.
+ADV_BULK = ("https://www.sec.gov/files/investment/data/other/"
+            "information-about-registered-investment-advisers-exempt-reporting-advisers/"
+            "ia050126.zip")
+
+#: Item 5.F(2)(c) IS regulatory assets under management. The other 5.F columns are the account
+#: counts and the discretionary/non-discretionary split; (2)(c) is the total.
+RAUM_COLUMN = "5F(2)(c)"
+
+
+@lru_cache(maxsize=1)
+def adv_bulk() -> dict[str, dict]:
+    """CRD -> the adviser's Part 1A row from the SEC bulk extract.
+
+    Note what is NOT here: Schedule D Section 7.B.(1), the per-private-fund page carrying the
+    prime-broker roster. The bulk extract is firm-level Part 1A only, and no Schedule D file is
+    published alongside it. So RAUM fills from this and the prime-broker column does not.
+    """
+    import csv
+    import io
+    import zipfile
+
+    raw = DEFAULT_CLIENT.get(ADV_BULK)
+    archive = zipfile.ZipFile(io.BytesIO(raw))
+    with archive.open(archive.namelist()[0]) as handle:
+        reader = csv.DictReader(io.TextIOWrapper(handle, encoding="latin-1"))
+        return {(row.get("Organization CRD#") or "").strip(): row for row in reader}
+
+
+def raum(crd: str | int) -> float | None:
+    """Regulatory AUM in USD for one CRD, or None if the adviser is not in the extract."""
+    row = adv_bulk().get(str(crd).strip())
+    if not row:
+        return None
+    value = (row.get(RAUM_COLUMN) or "").replace(",", "").replace("$", "").strip()
+    try:
+        return float(value)
+    except ValueError:
+        return None

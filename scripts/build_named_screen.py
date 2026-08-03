@@ -13,7 +13,7 @@ from datetime import date
 from pathlib import Path
 
 from pipeline.ingest._common import RAW_ROOT
-from pipeline.ingest.d10_adv import ADV_QUERY, firm_lookup
+from pipeline.ingest.d10_adv import ADV_QUERY, firm_lookup, raum
 from pipeline.ingest.d9_thirteenf import MANAGERS, SKHY_FIRST_VISIBLE
 
 GENERATED = date.today().isoformat()
@@ -92,10 +92,14 @@ def main() -> int:
                     f"(Form ADV via IAPD, retrieved {GENERATED})" if adv else
                     "no US adviser registration found (IAPD firm search, "
                     f"retrieved {GENERATED})")
-        cited += 4
-        pending += 2
+        _r = raum(adv["crd"]) if adv else None
+        raum_cell = (f"${_r/1e9:,.1f}bn (Form ADV Item 5.F(2)(c), SEC bulk extract dated "
+                     f"2026-05-01)" if _r else
+                     "no US adviser registration, so no Item 5.F filing exists")
+        cited += 5
+        pending += 1
         rows.append(f"| {name} | `{provenance}` | {cap_cell} | {korea_cell} | {dna_cell} | "
-                    f"{dart_cell} | {adv_cell} | MANUAL-PENDING | MANUAL-PENDING |")
+                    f"{dart_cell} | {adv_cell} | {raum_cell} | MANUAL-PENDING |")
 
     body = TEMPLATE.format(
         snap_date=snap_date, generated=date.today().isoformat(),
@@ -149,11 +153,14 @@ view. Rule-determined membership means a name's presence here says nothing about
   That was wrong, and the fault was local rather than the host's — the client was sending a
   repository URL where the SEC requires an email address, and the resulting 403 was read as a
   refusal. With a compliant header the search API answers normally.
-- **RAUM** and **prime-broker roster** — Form ADV Part 1A Item 5.F and Schedule D 7.B.(1).
-  Still `MANUAL-PENDING`, but for a narrower and better-understood reason: these two fields live
-  in the ADV FORM rather than the search index, and the form viewer is disallowed by
-  `adviserinfo.sec.gov/robots.txt`. A person opening the page in a browser is a different act
-  and the permitted one (see `03_iapd_manual_checklist.md`).
+- **RAUM** — Form ADV Part 1A Item 5.F(2)(c), from the SEC's own monthly FOIA extract of Part
+  1A. That file is published on the SEC data-research pages so this data need not be scraped out
+  of IAPD, and it is the route used.
+- **Prime-broker roster** — Schedule D Section 7.B.(1) Question 24. The last `MANUAL-PENDING`
+  column, and the reason is now specific: it is per-private-fund and appears in no published
+  bulk file, existing only in the per-firm ADV form whose viewer `robots.txt` disallows. A
+  person opening that page in a browser is the permitted act (see
+  `03_iapd_manual_checklist.md`).
 
 ## Capacity is scored separately from mandate fit, and never averaged
 

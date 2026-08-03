@@ -1,17 +1,24 @@
 # IAPD manual checklist — the ADV column, filled by hand
 
-**Why this is a checklist and not a puller.** Every automated route to Form ADV data refuses a
-correctly-identified client: `reports.adviserinfo.sec.gov` and `api.adviserinfo.sec.gov` return
-403 on every path including their own `robots.txt`, and the one adviserinfo host that answers
-disallows `/IAPD/content/viewform/adv*` in robots. That refusal is the host's and it stands. A
-person reading a public page in a browser is a different act, and the permitted one.
+**CORRECTED 2026-08-03.** An earlier version of this page said every automated route to Form
+ADV data refuses a correctly-identified client. That was wrong, and the fault was local: the
+client was sending a repository URL where the SEC requires an email address, and the resulting
+403 was read as a refusal. With a compliant header the IAPD search API answers normally, and the
+SEC publishes a monthly bulk extract of Part 1A besides. Both are now used.
 
-**Three fields per adviser**, 15–20 minutes for the whole list:
+**What is left for a person, and why.** Schedule D 7.B.(1) is per-private-fund and appears in no
+published bulk file. It exists in the per-firm ADV form, whose viewer is disallowed by
+`adviserinfo.sec.gov/robots.txt` (`/IAPD/content/viewform/adv*.aspx`). A person opening that
+page in a browser is a different act from a crawler, and the permitted one.
 
-1. **RAUM** — Form ADV Part 1A, **Item 5.F(2)(c)**, regulatory assets under management.
-2. **Prime broker roster** — **Schedule D, Section 7.B.(1), Question 24**, per private fund.
-   Question 25 is the custodian and 26 the administrator; 24 is the booking chain.
-3. **Fund structure / redemption terms** — Schedule D 7.B.(1) Questions 11–15 where visible.
+**One field per adviser now, not three.** RAUM (Item 5.F(2)(c)) is filled automatically from
+the SEC's monthly FOIA extract of Form ADV Part 1A, and registration identity from the IAPD
+firm search. What remains is the field that appears in no bulk file:
+
+1. **Prime broker roster** — **Schedule D, Section 7.B.(1), Question 24**, per private fund.
+   Question 25 is the custodian and 26 the administrator; 24 is the booking chain. This is
+   per-private-fund data and the published extract is firm-level Part 1A only.
+2. *(optional)* **Fund structure / redemption terms** — Schedule D 7.B.(1) Questions 11–15.
 
 Cite transcribed cells as `Form ADV via IAPD, retrieved by hand YYYY-MM-DD`.
 

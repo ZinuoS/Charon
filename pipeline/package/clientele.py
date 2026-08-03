@@ -446,3 +446,63 @@ def visibility_note() -> str:
             "Korea's own 5% regime — which HAS a contract column for derivative exposure — was "
             "pulled and returned zero foreign managers using it. The trade is unobservable to a "
             "competitor and to us alike, and that is one property, not two.")
+
+
+#: Structural mandate class, from the adviser's own registration and filed behaviour rather
+#: than from reputation. `multi_strat` and `event` run leveraged relative value and can carry a
+#: short leg; `long_only` and `sovereign` file simplified passive-intent disclosures and mostly
+#: cannot. This is the axis the repository's own risk evidence acts on: a bounded gain against
+#: an unbounded excursion is tolerable to a long-horizon book and punishing to a monthly one.
+MANDATE_CLASS: dict[str, str] = {
+    "Citadel Advisors": "multi_strat", "Millennium Management": "multi_strat",
+    "Point72 Asset Management": "multi_strat", "Balyasny Asset Management": "multi_strat",
+    "D. E. Shaw": "multi_strat", "Davidson Kempner": "event", "Mason Capital": "event",
+    "Pentwater Capital": "event", "Elliott Investment Management": "event",
+    "Weiss Asset Management": "event", "Dalton Investments": "long_only",
+    "Wellington Management": "long_only", "Capital Research": "long_only",
+    "BlackRock": "long_only", "T. Rowe Price": "long_only", "Silchester": "long_only",
+    "Macquarie": "long_only", "Nomura": "long_only", "Norges Bank": "sovereign",
+}
+
+#: Can the mandate class carry the short leg this trade requires? Long-only and sovereign
+#: mandates file passive-intent disclosures and do not short; that is a permission fact, not a
+#: judgement about skill.
+CAN_SHORT = {"multi_strat": True, "event": True, "long_only": False, "sovereign": False}
+
+
+def best_fit(name: str, raum_usd: float | None, korea_usd: float,
+             has_local_leg: bool) -> tuple[str, float, str]:
+    """(product, fit score 0-1, one-line reason) for one manager, from filed evidence only.
+
+    THE SCORE IS NOT A DEMAND SIGNAL. It ranks how well a manager's FILED characteristics match
+    each product's requirements. Nothing here knows or implies whether anyone wants the trade.
+
+    Capacity and mandate stay separate to the end and are never averaged into one number: the
+    product each manager fits is decided by mandate and local-leg status, and only THEN are
+    candidates for that product ordered by capacity. Averaging would rank the largest balance
+    sheet first regardless of whether it can hold the position at all.
+    """
+    mandate = MANDATE_CLASS.get(name, "long_only")
+    shorts = CAN_SHORT[mandate]
+    # Log-scaled, not clipped. A linear ratio against a fixed reference saturated at 1.0 for
+    # six managers at once — the score stopped discriminating exactly where the ranking matters,
+    # because RAUM spans $2bn to $3.8tn and Korean holdings span zero to $800m. Logs keep the
+    # top of the table separable, which is the only part anyone reads.
+    from math import log10
+    scale = min(log10(max(raum_usd or 0, 1e8) / 1e8) / log10(4e4), 1.0)     # $100mm -> $4tn
+    appetite = min(log10(1 + korea_usd / 1e6) / log10(1 + 1e3), 1.0)        # $0 -> $1bn
+
+    if shorts and not has_local_leg:
+        return ("full package", 0.5 * scale + 0.5 * appetite,
+                "can carry the short leg and files no Korean local position, so the local side "
+                "is the part they would need manufactured")
+    if shorts and has_local_leg:
+        return ("borrow + financing", 0.4 * scale + 0.6 * appetite,
+                "carries the short leg and already files a Korean local position, so the "
+                "synthetic local side is redundant")
+    if has_local_leg:
+        return ("long-local financing", 0.3 * scale + 0.7 * appetite,
+                "demonstrated local execution but a mandate that files passive intent, so the "
+                "pair is out of reach and financing against the held side is not")
+    return ("pass", 0.15 * scale,
+            "no filed Korean local position and a mandate that does not short")

@@ -3074,3 +3074,75 @@ def g37_filing_screen(screen: dict, dart_filers: set) -> tuple:
                  "possible 13F appearance is the Q3 report due about 2026-11-14 — no chart drawn "
                  "today can show a holder of the actual pair.")
     return fig, {"screened": len(pts), "with_local_leg": n_local, "both": both}
+
+
+def g38_best_fit(rows, top: int = 12) -> tuple:
+    """G38 — which product each manager's FILED characteristics fit, ranked within product.
+
+    ``rows`` is (name, product, score, raum_usd, korea_usd, has_local_leg).
+
+    WHAT THIS IS NOT. Not a demand signal, not a target list, and not a claim that anyone wants
+    the trade. It ranks how well a manager's filed characteristics match each product's
+    REQUIREMENTS — mandate permission to short, whether the Korean local leg is already held,
+    and capacity — which is a question about them and not about us.
+
+    Product is decided FIRST, by mandate class and local-leg status, and capacity only orders
+    candidates within a product. That ordering is deliberate and is the repository's standing
+    rule: a single blended score would put the largest balance sheet on top regardless of
+    whether its mandate can hold the position at all.
+    """
+    fig, ax = theme.figure(shape_name="wide")
+    COLOUR = {"full package": theme.SEMANTIC["emphasis"],
+              "borrow + financing": theme.SEMANTIC["constrained"],
+              "long-local financing": theme.SEMANTIC["context"],
+              "pass": theme.RULE}
+
+    rows = sorted(rows, key=lambda r: -r[2])[:top][::-1]
+    ys = range(len(rows))
+    for y, (name, product, score, raum_usd, korea_usd, _local) in zip(ys, rows):
+        ax.barh(y, score, height=0.62, color=COLOUR.get(product, theme.RULE),
+                alpha=0.88, zorder=3)
+        cap = f"${raum_usd/1e9:,.0f}bn RAUM" if raum_usd else "no US registration"
+        ax.text(score + 0.012, y, f"{product} · {cap}", va="center",
+                fontsize=theme.NOTE_SIZE - 1, color=theme.MUTED,
+                fontfamily=theme.SERIF_STACK)
+
+    ax.set_yticks(list(ys))
+    ax.set_yticklabels([r[0] for r in rows])
+    ax.set_xlim(0, 1.42)
+    ax.set_xlabel("fit against the product's filed requirements (0–1, log-scaled inputs)")
+    ax.grid(True, axis="x", color=theme.RULE, lw=0.6, alpha=0.6)
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+
+    full = [r for r in rows if r[1] == "full package"]
+    lead = max(rows, key=lambda r: r[2])
+    lead_full = max(full, key=lambda r: r[2]) if full else None
+
+    def _short(label: str) -> str:
+        """First two words for long names. `split()[0]` alone rendered one manager as the
+        bare word "Capital", which names nobody and could name several firms."""
+        return label if len(label) <= 17 else " ".join(label.split()[:2])
+
+    theme.finalize(
+        fig, kicker="the fit",
+        headline="The best-fitting counterparty depends on which product you are selling, "
+                 "not on who is largest",
+        subtitle="Product is set by mandate and by whether the Korean local leg is already "
+                 "held; capacity only orders candidates within a product.",
+        stats=[(_short(lead[0]), f"best fit overall\n({lead[1]})"),
+               (_short(lead_full[0]) if lead_full else "—",
+                "best fit for the\nFULL package"),
+               (f"{len(full)}", "of the shown rows can\ncarry the short leg"),
+               ("0", "shown to hold\nthis pair today")],
+        source="Repo-computed. Form ADV Item 5.F(2)(c) via the SEC bulk extract (2026-05-01); "
+               "13F-HR Q1 2026; DART majorstock 2026-08-02.",
+        footnote="READ THE COLOURS BEFORE THE LENGTHS. The largest scores belong to long-only "
+                 "managers who already hold the Korean local line — for them the synthetic "
+                 "local leg is redundant and the sellable product is financing against a "
+                 "position they hold, not the pair. The managers who can carry the short leg "
+                 "sit lower and are the FULL-package audience. This ranks filed characteristics "
+                 "against product requirements; it is not evidence that any manager wants the "
+                 "trade, and SK hynix's ADR cannot show a holder in filings before the Q3 "
+                 "report due about 2026-11-14.")
+    return fig, {"rows": len(rows), "full_package": len(full), "lead": lead[0]}
