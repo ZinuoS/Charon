@@ -638,7 +638,7 @@ comparable pair is characterisation of a regime family, not a forecast of this o
 # FULL headings, not prefixes. Under the old substring check these entries were truncated and
 # still passed; line-exact matching caught that immediately, which is the point of it.
 # ---------------------------------------------------------------- §9 pricing pack
-md("## 9. Pricing pack — the four objects a PM interrogates")
+md("## 9. Pricing pack — the six objects a PM interrogates")
 
 md(r"""
 **Parameterisation, not new estimation.** Everything below re-expresses machinery that already
@@ -700,11 +700,46 @@ This is what converts "sized so the excursion sits inside their limit" from an a
 number — and the number is a seventh of capital, not a half.
 """)
 
+code("fig, _ = figures.g43_scenario_rom(PP)\nfig;")
+
+md(r"""
+**D5 — the asymmetry, in the unit a book is run on.** Full compression to the comparator's mean
+pays under one turn of margin. The move this pair actually made in its first three sessions
+costs more than two. That ratio is the pitch's central claim restated as return on margin, and
+it is why §7 leads on sizing rather than on stops.
+
+**No row carries a probability, deliberately.** This repository has no distribution over
+terminal premium moves and does not manufacture one. The grid shows magnitudes; weighting them
+is the reader's job, and any version of this chart that did it for them would be inventing the
+one thing the research does not have.
+""")
+
+code("fig, _ = figures.g44_exit_tree(PP)\nfig;")
+
+md(r"""
+**D6 — the exit tree, with its thresholds openly unratified.** The structure follows from the
+research: margin overrides borrow, borrow overrides premium, and a recall **converts** rather
+than unwinds because the long-local TRS survives an event that removes the short leg. Collapsing
+those two leaves would force a full exit on a *financing* event rather than an investment one.
+
+**Only two of twenty-seven cells hold.** That is a deliberate bias and it has a cost: a tree
+this conservative will exit trades that would have worked. It is listed among the decisions
+below rather than defended.
+
+**Five threshold decisions are owed before this page can be shown to a client**, and every one
+of them is desk policy rather than a measurement:
+""")
+
+code(r"""Markdown(
+    "\n".join(f"{i}. {q}" for i, q in enumerate(PP.ratification_owed(), 1))
+)""")
+
 md(r"""
 **Still owed by the desk**, and every artifact above says so on its face: a live borrow quote, a
 cross-currency basis (which needs a forward curve this repository does not have), and the real
-margin schedule. D5 and D6 are not built — the exit tree needs decision thresholds that are the
-author's to set, not mine.
+margin schedule. Until those land, D3, D5 and the whole of D6 are tagged ILLUSTRATIVE or
+UNRATIFIED — not as a disclaimer, but because one config edit reprints all six the moment they
+arrive.
 """)
 
 REQUIRED_SECTIONS = (
@@ -718,7 +753,7 @@ REQUIRED_SECTIONS = (
     "## 6. P&L scenarios",
     "## 7b. Execution reality — four objections, answered",
     "## 8. Monitoring, and the ask",
-    "## 9. Pricing pack — the four objects a PM interrogates",
+    "## 9. Pricing pack — the six objects a PM interrogates",
 )
 
 n = write(OUT, require=REQUIRED_SECTIONS)

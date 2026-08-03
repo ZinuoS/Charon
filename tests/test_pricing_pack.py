@@ -20,7 +20,7 @@ from pipeline.viz import figures  # noqa: E402
 
 #: Every figure in the pack, and the pack object each is called with.
 PACK_FIGURES = ("g39_carry_waterfall", "g40_breakeven_surface", "g41_margin_sizing",
-                "g42_drawdown_budget")
+                "g42_drawdown_budget", "g43_scenario_rom", "g44_exit_tree")
 
 
 class TestDeskInputsAreNeverDefaulted:
@@ -92,3 +92,50 @@ class TestDrawdownInversion:
         assert qs["realised SKHY"]["pp"] > qs["comparator max"]["pp"], (
             "SKHY's realised excursion no longer exceeds the comparator maximum — D4's "
             "'not a quantile' caption must be revisited")
+
+
+class TestScenarioGridAndExitTree:
+
+    def test_rom_uses_two_terms_and_a_narrowing_premium_pays(self):
+        """Short the premium: a negative terminal move must be a gain, positive a loss."""
+        g = PP.scenario_rom(delta_pi_pp=(-10.0, 10.0), borrow_grid=(400,), horizons=(252,))
+        gain = g[g.delta_pi_pp == -10.0].rom_x.iloc[0]
+        loss = g[g.delta_pi_pp == 10.0].rom_x.iloc[0]
+        assert gain > 0 > loss
+
+    def test_longer_horizon_costs_more_carry_at_the_same_move(self):
+        g = PP.scenario_rom(delta_pi_pp=(0.0,), borrow_grid=(400,), horizons=(126, 252))
+        short_h = g[g.horizon_sessions == 126].rom_x.iloc[0]
+        long_h = g[g.horizon_sessions == 252].rom_x.iloc[0]
+        assert long_h < short_h, "carry must accumulate with horizon"
+
+    def test_the_payoff_is_asymmetric_and_the_grid_shows_it(self):
+        """The repository's central finding, asserted in the unit a book is run on."""
+        g = PP.scenario_rom()
+        assert abs(g.rom_x.min()) > g.rom_x.max(), (
+            "the worst cell must cost more than the best cell pays; if this flips, the "
+            "bounded-gain/unbounded-loss claim in the pitch no longer holds in ROM terms")
+
+    def test_exit_tree_is_complete_and_uses_only_agreed_actions(self):
+        tree = PP.exit_tree()
+        assert len(tree) == 27, "3 premium bands x 3 borrow states x 3 headroom bands"
+        assert set(tree.action) <= set(PP.EXIT_ACTIONS)
+        assert not tree.duplicated(
+            ["premium_band", "borrow_state", "margin_headroom"]).any()
+
+    def test_margin_overrides_everything_else(self):
+        """The override order is the one thing in D6 that cannot be inferred from research."""
+        crit = PP.exit_tree().query("margin_headroom == 'critical'")
+        assert (crit.action == "unwind at ADV band").all(), (
+            "a critical margin cell must unwind regardless of premium or borrow")
+
+    def test_a_recall_converts_rather_than_unwinding_while_margin_allows(self):
+        """Losing the short leg is a financing event, not an investment one."""
+        recalled = PP.exit_tree().query(
+            "borrow_state == 'recalled' and margin_headroom != 'critical'")
+        assert (recalled.action == "convert to long-local TRS only").all()
+
+    def test_every_exit_threshold_is_flagged_unratified(self):
+        for group in PP.EXIT_THRESHOLDS.values():
+            assert "TODO(ash: ratify)" in group["basis"]
+        assert PP.ratification_owed(), "the owed-decisions list must not be empty while unratified"

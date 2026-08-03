@@ -3413,3 +3413,133 @@ def g42_drawdown_budget(pack) -> tuple:
                  "answer.")
     return fig, {"p50_at_5pct": p50_5, "skhy_at_5pct": skhy_5,
                  "ratio": p50_5 / skhy_5}
+
+
+def g43_scenario_rom(pack) -> tuple:
+    """D5 — return on margin across terminal move x borrow x horizon.
+
+    THE GRID EXISTS TO SHOW A SHAPE, NOT A FORECAST. Read down a column: the best case pays
+    under 1x margin and the realised-widening case costs over 2x. That asymmetry is the
+    repository's central finding expressed in the unit a book is run on, and it is visible here
+    without any probability being attached to any row — which is the point, because the
+    repository has no distribution over terminal moves and does not pretend to.
+    """
+    import numpy as np
+
+    grid = pack.scenario_rom()
+    horizons = sorted(grid.horizon_sessions.unique())
+    fig, axes = theme.figure(ncols=len(horizons), shape_name="wide", sharey=True)
+    axes = list(axes) if hasattr(axes, "__len__") else [axes]
+
+    piv_all = grid.pivot_table(index="delta_pi_pp", columns=["horizon_sessions",
+                                                            "borrow_bps_yr"], values="rom_x")
+    vmax = float(np.nanmax(np.abs(piv_all.values)))
+    for ax, h in zip(axes, horizons):
+        piv = grid[grid.horizon_sessions == h].pivot(
+            index="delta_pi_pp", columns="borrow_bps_yr", values="rom_x").sort_index()
+        mesh = ax.pcolormesh(range(len(piv.columns) + 1), range(len(piv.index) + 1),
+                             piv.values, cmap="RdGy_r", vmin=-vmax, vmax=vmax,
+                             shading="flat", zorder=2)
+        for i in range(len(piv.index)):
+            for j in range(len(piv.columns)):
+                ax.text(j + 0.5, i + 0.5, f"{piv.values[i, j]:+.2f}", ha="center", va="center",
+                        fontsize=theme.NOTE_SIZE - 1, color=theme.PAPER,
+                        fontfamily=theme.SERIF_STACK, zorder=4)
+        ax.set_xticks([j + 0.5 for j in range(len(piv.columns))])
+        ax.set_xticklabels([f"{c:.0f}bp" for c in piv.columns])
+        ax.set_yticks([i + 0.5 for i in range(len(piv.index))])
+        ax.set_yticklabels([f"{v:+.1f}pp" for v in piv.index])
+        ax.set_title(f"{h} sessions", fontsize=theme.NOTE_SIZE,
+                     fontfamily=theme.SERIF_STACK)
+        ax.set_xlabel("ADR borrow")
+    axes[0].set_ylabel("terminal move in the premium")
+    fig.colorbar(mesh, ax=axes, label="return on margin (x), 20% IM — ILLUSTRATIVE")
+
+    best = float(grid.rom_x.max())
+    worst = float(grid.rom_x.min())
+    theme.finalize(
+        fig, kicker="D5 · scenarios — ILLUSTRATIVE margin",
+        headline="The best case pays under one turn of margin; the realised widening costs "
+                 "more than two",
+        subtitle=pack.freshness_line(),
+        stats=[(f"{best:+.2f}x", "best cell:\nfull compression, cheap borrow"),
+               (f"{worst:+.2f}x", "worst cell: realised\nwidening, dear borrow"),
+               (f"{abs(worst/best):.1f}x", "loss-to-gain ratio\nacross the grid"),
+               ("0", "probabilities attached\nto any row")],
+        source="Repo-computed. Two P&L terms only — premium move and carry — per the identity "
+               "in pipeline.package.scenarios. Initial margin 20%, ILLUSTRATIVE.",
+        footnote="NO ROW CARRIES A PROBABILITY, deliberately. This repository has no "
+                 "distribution over terminal premium moves and does not manufacture one, so the "
+                 "grid shows magnitudes and leaves weighting to the reader. The -19pp row is "
+                 "compression to the comparator's five-year mean; the +35.6pp row is the move "
+                 "this pair actually made in its first three sessions. Return on margin scales "
+                 "inversely with the margin rate, so an unratified 20% moves every cell "
+                 "proportionally — which is why it is labelled rather than quietly assumed.")
+    return fig, {"best_rom": best, "worst_rom": worst}
+
+
+def g44_exit_tree(pack) -> tuple:
+    """D6 — the exit tree as a decision grid. Thresholds unratified, and shown as such."""
+    tree = pack.exit_tree()
+    actions = list(pack.EXIT_ACTIONS)
+    COLS = {"hold": theme.SEMANTIC["fungible"],
+            "reduce to D4 size": theme.SEMANTIC["context"],
+            "convert to long-local TRS only": theme.SEMANTIC["constrained"],
+            "unwind at ADV band": theme.SEMANTIC["emphasis"]}
+
+    bands = ["at/below anchor", "mid", "above entry"]
+    heads = ["comfortable", "watch", "critical"]
+    borrows = ["stable", "tightening", "recalled"]
+    fig, axes = theme.figure(ncols=len(heads), shape_name="wide", sharey=True)
+    axes = list(axes) if hasattr(axes, "__len__") else [axes]
+
+    for ax, head in zip(axes, heads):
+        sub = tree[tree.margin_headroom == head]
+        for i, band in enumerate(bands):
+            for j, borrow in enumerate(borrows):
+                act = sub[(sub.premium_band == band)
+                          & (sub.borrow_state == borrow)].action.iloc[0]
+                ax.add_patch(mpatches.Rectangle((j, i), 1, 1, facecolor=COLS[act],
+                                                alpha=0.85, edgecolor=theme.PAPER, lw=2,
+                                                zorder=3))
+                ax.text(j + 0.5, i + 0.5, str(actions.index(act) + 1), ha="center",
+                        va="center", fontsize=theme.NOTE_SIZE + 1, color=theme.PAPER,
+                        fontfamily=theme.SERIF_STACK, zorder=4)
+        ax.set_xlim(0, len(borrows)); ax.set_ylim(0, len(bands))
+        ax.set_xticks([j + 0.5 for j in range(len(borrows))]); ax.set_xticklabels(borrows)
+        ax.set_yticks([i + 0.5 for i in range(len(bands))]); ax.set_yticklabels(bands)
+        ax.set_title(f"margin headroom: {head}", fontsize=theme.NOTE_SIZE,
+                     fontfamily=theme.SERIF_STACK)
+        ax.set_xlabel("borrow state")
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+    axes[0].set_ylabel("premium band")
+
+    handles = [mpatches.Patch(facecolor=COLS[a], alpha=0.85,
+                              label=f"{i+1}. {a}") for i, a in enumerate(actions)]
+    axes[-1].legend(handles=handles, frameon=False, fontsize=theme.NOTE_SIZE - 1,
+                    loc="upper left", bbox_to_anchor=(1.02, 1.0))
+
+    counts = tree.action.value_counts()
+    theme.finalize(
+        fig, kicker="D6 · exit tree — THRESHOLDS UNRATIFIED",
+        headline="A recall removes the ability to express the thesis, not the thesis — so "
+                 "'convert' is a leaf and not a synonym for 'unwind'",
+        subtitle=pack.freshness_line(),
+        stats=[(f"{int(counts.get('hold', 0))}/27", "cells where the\nagreed action is HOLD"),
+               (f"{int(counts.get('convert to long-local TRS only', 0))}", "cells that convert\n"
+                "rather than unwind"),
+               (f"{len(pack.ratification_owed())}", "threshold decisions\nowed by the author"),
+               ("0", "thresholds here that\nare measured")],
+        source="Structure follows the repository's findings; every THRESHOLD is an unratified "
+               "desk-policy choice. See pricing_pack.EXIT_THRESHOLDS and ratification_owed().",
+        footnote="READ THE OVERRIDE ORDER FIRST: margin beats borrow, borrow beats premium. "
+                 "Below the critical headroom band every cell unwinds, because that is the one "
+                 "branch where the decision is taken for you if you do not take it first. A "
+                 "recall converts rather than unwinds because the long-local TRS survives it — "
+                 "collapsing those two would force a full exit on a FINANCING event rather than "
+                 "an investment one. Only two of twenty-seven cells hold, which is a deliberate "
+                 "bias and one of the five decisions listed for ratification: a tree this "
+                 "conservative will exit trades that would have worked.")
+    return fig, {"cells": len(tree), "hold_cells": int(counts.get("hold", 0)),
+                 "owed": len(pack.ratification_owed())}

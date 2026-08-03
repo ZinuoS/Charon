@@ -335,3 +335,148 @@ def drawdown_budget_table(budgets=DRAWDOWN_BUDGETS_PCT) -> pd.DataFrame:
                          "max_notional_x_capital": round(max_notional(b, q["pp"]), 3),
                          "status": q["status"]})
     return pd.DataFrame(rows)
+
+
+#: Terminal premium moves for D5, in percentage POINTS. Each is sourced, not invented.
+#: TODO(ash: ratify) — the ladder itself is a presentation choice; the anchors are measured.
+SCENARIO_DELTA_PI_PP = (-19.0, -9.5, 0.0, 10.0, 35.6)
+
+#: Horizons for D5, in sessions.
+SCENARIO_HORIZONS = (126, 252)
+
+
+def scenario_rom(delta_pi_pp=SCENARIO_DELTA_PI_PP, borrow_grid=(150, 400, 900),
+                 horizons=SCENARIO_HORIZONS, im_pct: float | None = None,
+                 xccy_basis_bps_yr: float = 0.0) -> pd.DataFrame:
+    """D5 — return on margin at each (terminal move, borrow, horizon).
+
+    TWO P&L TERMS ONLY, per the identity already used by `scenarios.pnl`: the premium term and
+    the carry term. Zero drift, no path dependence, no rebalancing. A short-premium position
+    earns when the premium narrows, so a negative delta is a gain.
+
+        pnl_pct_notional = -delta_pi - carry_bp_yr/1e4 * horizon/252
+        rom              = pnl_pct_notional / initial_margin
+
+    Initial margin defaults to the ILLUSTRATIVE 20% rather than to a desk schedule, and every
+    row is tagged accordingly. It is a divisor, so an unratified value moves every number in the
+    grid proportionally — which is exactly why it must not be mistaken for a quote.
+    """
+    im = (im_pct if im_pct is not None
+          else DESK_INPUTS["initial_margin_pct"] or ILLUSTRATIVE_IM_PCT) / 100.0
+    rows = []
+    for d in delta_pi_pp:
+        for b in borrow_grid:
+            carry_yr = carry_waterfall(b, xccy_basis_bps_yr).bp_per_year.sum() / 1e4
+            for h in horizons:
+                pnl = (-d / 100.0) - carry_yr * (h / 252.0)
+                rows.append({
+                    "delta_pi_pp": d, "borrow_bps_yr": b, "horizon_sessions": h,
+                    "pnl_pct_notional": round(pnl * 100, 2),
+                    "rom_x": round(pnl / im, 2),
+                    "initial_margin_pct": im * 100,
+                    "status": ("ILLUSTRATIVE" if DESK_INPUTS["initial_margin_pct"] is None
+                               else "MEASURED"),
+                })
+    return pd.DataFrame(rows)
+
+
+# ----------------------------------------------------------------------------------
+# D6 — the exit tree.
+#
+# EVERY THRESHOLD BELOW IS MINE, NOT MEASURED, AND NONE IS RATIFIED. They are the choices the
+# brief asked me to make and then hand back. The tree's STRUCTURE follows from the repository's
+# own findings — borrow is the only component that can force an exit, and the local leg survives
+# a recall the pair does not — but the numbers that cut each branch are desk policy.
+# TODO(ash: ratify) every value in EXIT_THRESHOLDS.
+# ----------------------------------------------------------------------------------
+
+EXIT_THRESHOLDS: dict[str, dict] = {
+    "premium_band": {
+        # Anchored on the comparator's 5-year mean rather than on entry: entry is where we
+        # happened to start, and the anchor is what the thesis argues the level should approach.
+        "at_or_below_anchor_pp": 15.0,
+        "mid_pp": 25.0,
+        "above_entry_pp": 40.0,
+        "basis": "TODO(ash: ratify) — anchored on the comparator mean, not on entry",
+    },
+    "borrow_state": {
+        "stable_max_bp": 400,
+        "tightening_max_bp": 900,
+        "recalled": "any involuntary buy-in notice, at any rate",
+        "basis": "TODO(ash: ratify) — brackets mirror the quoted low/mid/high",
+    },
+    "margin_headroom": {
+        "comfortable_pct": 50.0,
+        "watch_pct": 25.0,
+        "critical_pct": 10.0,
+        "basis": "TODO(ash: ratify) — % of posted collateral still unencumbered",
+    },
+}
+
+#: The four agreed actions. Deliberately few: a tree whose leaves are all different is a tree
+#: nobody follows under pressure.
+EXIT_ACTIONS = ("hold", "reduce to D4 size", "convert to long-local TRS only",
+                "unwind at ADV band")
+
+
+def exit_tree() -> pd.DataFrame:
+    """D6 — premium band x borrow state x margin headroom -> agreed action.
+
+    THE ASYMMETRY IS THE WHOLE DESIGN. A borrow recall does not damage the thesis; it removes
+    the ability to express it as a pair. The long-local TRS survives a recall, so 'convert'
+    exists as a distinct leaf from 'unwind' — losing the short leg is not the same event as
+    losing the trade, and a tree that collapsed them would force a full exit on a financing
+    event rather than an investment one.
+
+    Margin headroom overrides everything, because a margin event is the one branch where the
+    decision is taken for you if you do not take it first.
+    """
+    bands = ["at/below anchor", "mid", "above entry"]
+    borrows = ["stable", "tightening", "recalled"]
+    headrooms = ["comfortable", "watch", "critical"]
+
+    rows = []
+    for band in bands:
+        for borrow in borrows:
+            for head in headrooms:
+                if head == "critical":
+                    action = "unwind at ADV band"
+                    why = "margin overrides; below the critical band the decision is forced"
+                elif borrow == "recalled":
+                    action = "convert to long-local TRS only"
+                    why = "the short leg is gone, the thesis is not; the local leg survives"
+                elif head == "watch":
+                    action = "reduce to D4 size"
+                    why = "size back to the drawdown-budget number before the next excursion"
+                elif borrow == "tightening" and band == "at/below anchor":
+                    action = "unwind at ADV band"
+                    why = "little left to earn and the financing is deteriorating"
+                elif band == "at/below anchor":
+                    action = "unwind at ADV band"
+                    why = "the level the thesis argued for has arrived"
+                elif borrow == "tightening":
+                    action = "reduce to D4 size"
+                    why = "carry rising into an unconverged position"
+                else:
+                    action = "hold"
+                    why = "thesis intact, financing stable, margin comfortable"
+                rows.append({"premium_band": band, "borrow_state": borrow,
+                             "margin_headroom": head, "action": action, "rationale": why,
+                             "status": "TODO(ash: ratify)"})
+    return pd.DataFrame(rows)
+
+
+def ratification_owed() -> list[str]:
+    """The decisions D6 is waiting on. Listed rather than buried in a dict."""
+    return [
+        "Premium bands: is 15pp the right 'arrived' level, given the comparator 5-year mean, "
+        "and is 40pp the right 'above entry' cut?",
+        "Borrow states: do 400bp and 900bp separate stable from tightening from unquotable, or "
+        "should the cuts follow the desk's own recall-risk read rather than the price?",
+        "Margin headroom: are 50/25/10% of unencumbered collateral the right three bands, and "
+        "is headroom measured against posted or against the schedule's peak requirement?",
+        "Override order: margin currently overrides borrow, which overrides premium. Confirm — "
+        "it is the one ordering that cannot be inferred from the research.",
+        "Leaf set: four actions. Is 'convert to long-local TRS only' a real product the desk "
+        "will quote on a recall, or should that branch also read 'unwind'?",
+    ]
