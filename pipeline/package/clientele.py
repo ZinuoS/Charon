@@ -358,6 +358,45 @@ DART_CONTRACT_COLUMN_NULL = (
     "obstacle are the same property, observed from opposite sides."
 )
 
+#: Form 13F reports quarterly with a 45-day lag. SKHY's ADR listed 2026-03-24, so the first
+#: filing that COULD name a holder of it is the Q3 2026 report, due on or about this date.
+SKHY_HOLDERS_FIRST_VISIBLE = "2026-11-14"
+
+#: WHY A NAMED SCREEN IS PUBLISHABLE AT ALL, and what keeps it honest.
+NAMED_SCREEN_RATIONALE = (
+    "The named screen rests entirely on public filings, so it publishes as research rather "
+    "than as targeting. Three properties keep that true, and each is enforced by a test rather "
+    "than by intention.\n\n"
+    "CITATION OR SILENCE. Every named claim cites a specific document — a 13F accession, a "
+    "DART filing number, an ADV item, a dated filing. Claims are filing-shaped: 'filings show "
+    "X held Y over period Z', never an assertion about what a firm thinks or wants.\n\n"
+    "THE ROW SET IS RULE-DETERMINED. A manager enters the list one of two ways: named in the "
+    "session specification, or surfaced by an evidence pull. There is no discretionary "
+    "inclusion. This is the load-bearing property and the least obvious one — if membership "
+    "were a judgement call, the list would encode the author's view of who is interesting, and "
+    "that view is exactly what a public document must not carry. A rule-determined roster "
+    "means a name's presence on it says nothing about anyone's interest in anything.\n\n"
+    "PROXIES ARE LABELLED WHERE THEY ARE USED. Appetite for the Korean ADR complex is not this "
+    "trade. Holding two legs of a US-listed discount structure is not a hedged pair. Both are "
+    "the nearest public analogue of a shape that leaves no public trace, and the substitution "
+    "is stated at the point of claim rather than in a footnote."
+)
+
+#: A scoring rule, recorded as method because collapsing it is the standard error.
+CAPACITY_IS_NOT_MANDATE = (
+    "Capacity and mandate fit are scored separately and never averaged. The single-number "
+    "version of this table would rank the largest balance sheets first, and the evidence does "
+    "not support that ordering: this trade's measured behaviour — a bounded gain against an "
+    "unbounded adverse excursion, with the excursion arriving before the convergence — is "
+    "tolerated by a long-horizon mandate and punished by a monthly-liquidity one. The honest "
+    "cell is therefore often 'largest capacity, weakest mandate fit', and a composite score "
+    "would erase precisely that finding.\n\n"
+    "The breadth confound belongs in the same paragraph. A manager reporting fifteen thousand "
+    "positions holds two legs of almost any structure by breadth alone. A discount-structure "
+    "hit from such a book carries far less information than the same hit from a sixty-position "
+    "book, so position count is reported beside every hit and no hit is read without it."
+)
+
 #: THE SEGMENTATION METHOD. This is the presentable part: not who the buyers are, but how a
 #: disclosure regime's blind spots define which product each audience can actually use.
 THREE_LAYER_METHOD = (

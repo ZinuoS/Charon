@@ -121,11 +121,35 @@ def cache_write(url: str, params: dict | None, payload: bytes) -> None:
 
 
 def _sec_user_agent() -> str:
-    """The declarative User-Agent the SEC asks automated clients to send."""
+    """The declarative User-Agent the SEC asks automated clients to send.
+
+    MUST CONTAIN AN EMAIL ADDRESS. Measured 2026-08-03 against three endpoints: a UA naming
+    the project with a repository URL is refused 403 by `company_tickers.json`, the Archives
+    index and `efts.sec.gov` alike, while the same string with an address is accepted by all
+    three. The SEC wants a way to contact whoever is making the requests, and a URL is not one.
+
+    There is deliberately no default. A placeholder address would satisfy the server and defeat
+    the purpose — the point of the header is that a human can be reached — and it would be the
+    same class of error as the browser-string spoof this replaced: telling the provider
+    something untrue in order to be let through. Absent configuration, this raises with the fix
+    rather than silently 403-ing every SEC call.
+    """
     import os
 
-    return os.environ.get("SEC_USER_AGENT",
-                          "charon-research (+https://github.com/ZinuoS/Charon)")
+    ua = os.environ.get("SEC_USER_AGENT", "").strip()
+    if not ua:
+        env = REPO_ROOT / ".env"
+        if env.is_file():
+            for line in env.read_text().splitlines():
+                if line.strip().startswith("SEC_USER_AGENT="):
+                    ua = line.split("=", 1)[1].strip().strip("\"'")
+    if "@" not in ua or "." not in ua.split("@")[-1]:
+        raise RuntimeError(
+            "SEC_USER_AGENT must be set to a declarative User-Agent CONTAINING A REAL EMAIL "
+            "ADDRESS, e.g. 'Charon Research you@example.com'. The SEC refuses 403 without one. "
+            f"Currently: {ua!r}. Set it in .env (gitignored) — it is a contact string, not a "
+            "secret, but it is personal data and must not be committed.")
+    return ua
 
 
 @dataclass
@@ -158,9 +182,9 @@ class FragileHttpClient:
     #:
     #: A public repository URL is used as the contact rather than a personal email, which
     #: would be PII in a public repo. Override with SEC_USER_AGENT to supply an address.
-    host_user_agents: dict = field(default_factory=lambda: {
-        "sec.gov": _sec_user_agent(),
-    })
+    #: Resolved lazily, per request. Eager resolution would raise at import time for anyone
+    #: who never touches SEC — breaking every unrelated pull to enforce a rule about one host.
+    host_user_agents: dict = field(default_factory=lambda: {"sec.gov": _sec_user_agent})
     min_interval: float = DEFAULT_MIN_INTERVAL
     max_attempts: int = DEFAULT_MAX_ATTEMPTS
     base_backoff: float = DEFAULT_BASE_BACKOFF
@@ -176,7 +200,7 @@ class FragileHttpClient:
         """
         for domain, agent in self.host_user_agents.items():
             if host == domain or host.endswith("." + domain):
-                return agent
+                return agent() if callable(agent) else agent
         return self.user_agent
 
     def get(self, url: str, params: dict | None = None, timeout: int = 30,

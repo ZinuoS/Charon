@@ -40,8 +40,14 @@ __pycache__/
 .env.*
 !.env.example
 
-# Client-targeting research. Named funds scored for fit against public regulatory evidence.
-# The METHOD and the historical record are public (docs/, notebooks/); the NAMED table is not.
-# docs/client_research/ was NOT covered by any prior rule -- verified with `git check-ignore`
-# before the first named row was written, which is the only order that is safe.
-docs/client_research/
+# docs/client_research/ WAS excluded here from 2026-08-03 until the author lifted the
+# placement rule the same day (session 32R Amendment D). The named analysis is public-filings
+# research and now publishes as such, in docs/appendix/.
+#
+# What replaced the exclusion is not nothing — it is three tests of the text, in
+# tests/test_named_screen_discipline.py: citation-or-silence, a no-inside-knowledge grep, and
+# a proxy-labelling check. The exclusion was a blunt instrument that made the question
+# unaskable; the tests make it answerable and enforce the answer on every run.
+#
+# Key material and internal firm names remain blocking in scripts/pre_push_audit.py. Those
+# rules were never about fund names and are untouched.
