@@ -51,13 +51,25 @@ ILLUSTRATIVE_IM_PCT = 20.0
 #: negotiate either.
 HOUSE_CARD_BPS_YR = {"fin_spread_bps": 50, "rebate_haircut_bps": 75}
 
-#: Card stress states. The card is what widens in a squeeze; the name special is a separate
-#: axis that widens for its own reasons.
-CARD_STRESS_MULTS = {"base": 1.0, "squeeze": 1.5, "crisis": 2.0}
+#: JOINT stress states. Card widening and basis widening are BUNDLED, ratified 2026-08-03:
+#: they are the same event seen from two desks. A funding squeeze that widens the house card is
+#: the same squeeze that pushes the cross-currency basis more negative, so pricing them as
+#: independent knobs would let a reader construct a state the market does not produce — a
+#: crisis card with a flat basis — and read reassurance off it.
+#:
+#: The name special stays SEPARATE and unbundled. It widens for reasons specific to one issuer
+#: (who holds the float, how tight recall is) rather than for market-wide funding reasons, so
+#: tying it to the same multiplier would assert a correlation nothing here measures.
+STRESS_STATES: dict[str, dict] = {
+    "base":    {"card_mult": 1.0, "basis_bps": 0},
+    "squeeze": {"card_mult": 1.5, "basis_bps": -25},
+    "crisis":  {"card_mult": 2.0, "basis_bps": -50},
+}
 
-#: Cross-currency basis stress axis, bp/yr. BRACKETED — the repository cannot measure it, and a
-#: negative KRW basis (the usual sign for an Asian funding currency) eats the rate tailwind.
-XCCY_BASIS_STRESS_BPS = (0, -25, -50)
+#: Kept as a derived view so a caller wanting only the card axis cannot silently get the
+#: unbundled version by reaching for the old name.
+CARD_STRESS_MULTS = {k: v["card_mult"] for k, v in STRESS_STATES.items()}
+XCCY_BASIS_STRESS_BPS = tuple(v["basis_bps"] for v in STRESS_STATES.values())
 
 
 def house_card_bps_yr(card_stress_mult: float = 1.0, card_locked: bool = False) -> float:
@@ -590,8 +602,13 @@ def threshold_special_bp(half_life_days: float, card_stress_mult: float = 1.0,
     return crit - non_borrow
 
 
-def threshold_special_table(half_lives=None, xccy_basis_bps_yr: float = 0.0) -> pd.DataFrame:
-    """D2.1 annex — threshold special per half-life x card state, plus the locked column."""
+def threshold_special_table(half_lives=None) -> pd.DataFrame:
+    """D2.1 annex — threshold special per half-life x JOINT stress state, plus locked.
+
+    The basis argument was removed rather than defaulted: each state now carries its own basis,
+    and leaving a separate override would have allowed a table whose column labels disagreed
+    with the numbers under them.
+    """
     from pipeline.convergence.jorda import run_panel
 
     hl = run_panel()["one_way_constrained"].hl
@@ -601,11 +618,12 @@ def threshold_special_table(half_lives=None, xccy_basis_bps_yr: float = 0.0) -> 
     rows = []
     for h in half_lives:
         row = {"half_life_days": h}
-        for label, mult in CARD_STRESS_MULTS.items():
-            row[f"card {label} (x{mult:g})"] = round(
-                threshold_special_bp(h, mult, False, xccy_basis_bps_yr), 0)
-        row["card LOCKED (term)"] = round(
-            threshold_special_bp(h, 2.0, True, xccy_basis_bps_yr), 0)
+        for label, st in STRESS_STATES.items():
+            row[f"{label} (x{st['card_mult']:g}, basis {st['basis_bps']:+d})"] = round(
+                threshold_special_bp(h, st["card_mult"], False, st["basis_bps"]), 0)
+        crisis = STRESS_STATES["crisis"]
+        row["crisis, card LOCKED"] = round(
+            threshold_special_bp(h, crisis["card_mult"], True, crisis["basis_bps"]), 0)
         rows.append(row)
     return pd.DataFrame(rows).set_index("half_life_days")
 
@@ -618,10 +636,15 @@ def term_financing_value_bp_yr(xccy_basis_bps_yr: float = 0.0) -> dict:
     which is worth stating: term financing does not buy more room when convergence is slow, it
     buys the same room regardless, and that is precisely why it can be priced as a flat feature.
     """
-    stressed = house_card_bps_yr(max(CARD_STRESS_MULTS.values()), card_locked=False)
-    locked = house_card_bps_yr(max(CARD_STRESS_MULTS.values()), card_locked=True)
+    crisis = STRESS_STATES["crisis"]
+    stressed = house_card_bps_yr(crisis["card_mult"], card_locked=False)
+    locked = house_card_bps_yr(crisis["card_mult"], card_locked=True)
     return {"value_bp_yr_of_special": stressed - locked,
             "stressed_card_bp_yr": stressed, "locked_card_bp_yr": locked,
-            "note": "distance between the LOCKED and crisis-card zero contours, in bp/yr of "
-                    "name special; identical at every half-life because the two surfaces "
-                    "differ only in the card term"}
+            "basis_not_bought_back_bps": -crisis["basis_bps"],
+            "note": "distance between the crisis contour and the crisis-with-locked-card "
+                    "contour, in bp/yr of name special; identical at every half-life because "
+                    "the two differ only in the card term. TERM FINANCING DOES NOT BUY BACK "
+                    "THE BASIS: under the bundled crisis state the locked contour sits below "
+                    "the base contour by the basis cost, because locking the card does nothing "
+                    "about the cross-currency leg."}

@@ -234,17 +234,39 @@ class TestThresholdSpecial:
         assert col.iloc[0] > 0 > col.iloc[-1], "the surface does not cross at the solved point"
         assert abs(col.iloc[1]) < 3.0, "solved threshold is not on the surface's zero"
 
-    def test_card_stress_lowers_the_threshold_by_exactly_the_card(self):
-        """The contours must be parallel — that is what makes the feature flat-priceable."""
-        card = sum(PP.HOUSE_CARD_BPS_YR.values())
-        for h in (205.0, 295.0, 385.0):
-            gap = PP.threshold_special_bp(h, 1.0) - PP.threshold_special_bp(h, 2.0)
-            assert gap == pytest.approx(card), f"contours not parallel at H={h}"
+    def test_stress_states_shift_the_threshold_by_a_constant(self):
+        """Contours must be parallel — that is what makes the feature flat-priceable."""
+        base, crisis = PP.STRESS_STATES["base"], PP.STRESS_STATES["crisis"]
+        gaps = [PP.threshold_special_bp(h, base["card_mult"], False, base["basis_bps"])
+                - PP.threshold_special_bp(h, crisis["card_mult"], False, crisis["basis_bps"])
+                for h in (205.0, 295.0, 385.0)]
+        assert gaps[0] == pytest.approx(gaps[1]) == pytest.approx(gaps[2]), (
+            "stress contours are not parallel; the feature cannot be flat-priced")
 
-    def test_locking_the_card_restores_the_base_contour(self):
+    def test_locking_the_card_does_not_buy_back_the_basis(self):
+        """The consequence of bundling, and the one a client could be misled about.
+
+        Before the crisis state bundled a basis widening, the locked contour coincided with
+        base and the chart said so. It no longer does: term financing removes the card
+        multiplier and nothing else, so the locked contour sits below base by the basis cost.
+        Asserting the INEQUALITY rather than the old equality is the point of this test.
+        """
+        crisis = PP.STRESS_STATES["crisis"]
         for h in (205.0, 295.0, 385.0):
-            assert PP.threshold_special_bp(h, 2.0, card_locked=True) == pytest.approx(
-                PP.threshold_special_bp(h, 1.0))
+            base = PP.threshold_special_bp(h, 1.0, False, 0)
+            locked = PP.threshold_special_bp(h, crisis["card_mult"], True,
+                                             crisis["basis_bps"])
+            stressed = PP.threshold_special_bp(h, crisis["card_mult"], False,
+                                               crisis["basis_bps"])
+            assert stressed < locked < base, "locked must sit between crisis and base"
+            assert base - locked == pytest.approx(-crisis["basis_bps"]), (
+                "the gap between base and locked must be exactly the un-bought-back basis")
+
+    def test_stress_states_are_monotone_in_severity(self):
+        """base -> squeeze -> crisis must get strictly worse, or the ladder is mislabelled."""
+        thr = [PP.threshold_special_bp(295.0, st["card_mult"], False, st["basis_bps"])
+               for st in PP.STRESS_STATES.values()]
+        assert thr[0] > thr[1] > thr[2]
 
     def test_term_financing_value_equals_the_card_stress_removed(self):
         v = PP.term_financing_value_bp_yr()
@@ -260,7 +282,9 @@ class TestThresholdSpecial:
         rather than asserted in a commit message: today's entry of ~31% puts the same thresholds
         several hundred bp higher, and the charts render at today's entry.
         """
-        base = PP.threshold_special_bp(391, 1.0, False, 0.0, pi_0=0.226)
-        crisis = PP.threshold_special_bp(391, 2.0, False, -50.0, pi_0=0.226)
+        b, c = PP.STRESS_STATES["base"], PP.STRESS_STATES["crisis"]
+        base = PP.threshold_special_bp(391, b["card_mult"], False, b["basis_bps"], pi_0=0.226)
+        crisis = PP.threshold_special_bp(391, c["card_mult"], False, c["basis_bps"],
+                                         pi_0=0.226)
         assert base == pytest.approx(744, abs=2)
         assert crisis == pytest.approx(569, abs=2)

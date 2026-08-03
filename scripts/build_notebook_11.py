@@ -683,9 +683,15 @@ them is negotiable, and they stress independently — the card widens in a squee
 name, the special widens for reasons specific to this one.
 
 **This reverses D1's headline.** The rate differential is still a tailwind, but once the card is
-counted the non-borrow subtotal is **positive at +5.0bp/mo**. At the crisis card and the dearest
-special the trade runs 90bp/mo against an 83bp breakeven — negative headroom, which the un-split
+counted the non-borrow subtotal is **positive at +5.0bp/mo**. At the crisis state and the dearest
+special the trade runs 95bp/mo against an 83bp breakeven — negative headroom, which the un-split
 version could not show.
+
+**Card and basis move together in these panels**, ratified 2026-08-03. They are the same funding
+squeeze seen from two desks: the stress that widens the house card is the stress that pushes the
+cross-currency basis more negative. Pricing them as independent knobs would permit a state the
+market does not produce — a crisis card against a flat basis — and let a reader take comfort
+from it. The name special stays unbundled, because it widens for reasons specific to one issuer.
 """)
 
 code("fig, _ = figures.g46_breakeven_surface_card(PP)\nfig;")
@@ -697,8 +703,10 @@ because the surface is linear in both terms. **Term financing therefore buys a f
 name special** — not more room when convergence is slow, the same room regardless. That is
 precisely why it can be quoted as a flat feature rather than as a function of horizon.
 
-The LOCKED contour sits exactly on the base-card contour by construction: locking does not make
-the card cheaper today, it removes the multiplier's ability to move.
+**Read the LOCKED contour against base, not against crisis.** It sits *below* base by 50bp/yr,
+because the crisis state bundles a basis widening and locking the card does nothing about the
+cross-currency leg. Term financing buys back the card and only the card — which is exactly the
+sentence to have ready when a client asks what the feature covers.
 """)
 
 code("fig, _ = figures.g41_margin_sizing(PP)\nfig;")

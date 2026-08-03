@@ -37,6 +37,7 @@
     "data/raw/d3_lending/2026-08-03.20/skhynix_lending_daily.csv": "c755c1c9543071369b579443e2cb436b40ae958fb296f66b96eabc3c7f3b713d",
     "data/raw/d3_lending/2026-08-03.21/skhynix_lending_daily.csv": "c755c1c9543071369b579443e2cb436b40ae958fb296f66b96eabc3c7f3b713d",
     "data/raw/d3_lending/2026-08-03.22/skhynix_lending_daily.csv": "c755c1c9543071369b579443e2cb436b40ae958fb296f66b96eabc3c7f3b713d",
+    "data/raw/d3_lending/2026-08-03.23/skhynix_lending_daily.csv": "c755c1c9543071369b579443e2cb436b40ae958fb296f66b96eabc3c7f3b713d",
     "data/raw/d3_lending/2026-08-03.3/skhynix_lending_daily.csv": "c755c1c9543071369b579443e2cb436b40ae958fb296f66b96eabc3c7f3b713d",
     "data/raw/d3_lending/2026-08-03.4/skhynix_lending_daily.csv": "c755c1c9543071369b579443e2cb436b40ae958fb296f66b96eabc3c7f3b713d",
     "data/raw/d3_lending/2026-08-03.5/skhynix_lending_daily.csv": "c755c1c9543071369b579443e2cb436b40ae958fb296f66b96eabc3c7f3b713d",
@@ -48,5 +49,5 @@
   },
   "history": {},
   "source": "d3_lending",
-  "updated_at_utc": "2026-08-03T19:07:49+00:00"
+  "updated_at_utc": "2026-08-03T19:26:45+00:00"
 }
