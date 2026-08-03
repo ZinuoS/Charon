@@ -101,6 +101,7 @@ STR_SK = FIN.stress_liquidity("skhy"); STR_TS = FIN.stress_liquidity("tsmc")
 VARSH  = float(_cp().set_index("pair").loc["tsmc", "share_pi"])
 TIERS  = FIN.segmentation()
 from pipeline.package import clientele as CLI
+from pipeline.package import clientele as CLI
 IND    = FIN.indicated_tier()
 WINS   = {b: float(EO.loc[b, "frac_beats_carry"]) for b in ("low", "mid", "high")}
 _k = VOLS[VOLS.leg.str.startswith("KOSPI")]; _v = VOLS[VOLS.leg.str.contains("VIX")]
@@ -159,6 +160,82 @@ comparable regime show elevated entries beating the carry
 \\${ADV.iloc[1].adv_usd/1e9:.1f}bn for a line with 2,838 sessions of history, and the funding
 leg gets cheaper if the Fed hikes.
 ''')""")
+
+# ---------------------------------------------------------------- §1b which version
+md("## 1b. Which version of this is yours")
+
+code(r"""Markdown(f'''
+**The borrow quote decides the expression.** One view, four answers, and the switch is what the
+borrow costs. {FIN.segmentation_note()}
+
+| | Borrow band | Who it fits | What we earn |
+|---|---|---|---|
+| **Linear pair** | <= {FIN.BORROW_CUTOFF_BP["linear_max"]}bp/yr | Level conviction, 6-12 months, budget for the skew | Financing both legs, borrow, execution, FX |
+| **Standby** | {FIN.BORROW_CUTOFF_BP["linear_max"]}-{FIN.BORROW_CUTOFF_BP["standby_max"]}bp/yr, or catalyst-contingent | Wants it if a catalyst fires, will not pay to wait | Monitoring; the full ticket if it initiates |
+| **Long-local via TRS** | > {FIN.BORROW_CUTOFF_BP["standby_max"]}bp/yr, or no borrow at any price | Compression view, no appetite for the short leg | Swap financing on the local leg |
+| **Pass** | any | Needs a dated exit, or has no level view | Nothing — and saying so is why the rows above are believed |
+
+**Where the cutoffs come from.** At low borrow the 21.6-year win rate is
+{WINS["low"]:.0%} — at or above a coin flip, so the wait is cheap and the view required is
+about the level rather than the timing. At mid it is {WINS["mid"]:.0%} and at high
+{WINS["high"]:.0%}. The bands sit where that crossing happens.
+
+**Where the borrow sits today.** Lending balance is at the {IND["balance_pctile"]:.0%}
+percentile of its own history — a **{IND["utilization_state"]}** utilization state as of
+{IND["as_of"]}, which indicates the **{IND["indicated_tier"]}**. That is an indication and not
+a quote: D3 measures shares on loan, not the spread to borrow one more, and a lightly-utilised
+name can still quote wide if the lendable pool sits with holders who will not lend.
+
+**The desk sentence.** The borrow quote is this product's viability switch, and sourcing it is
+our edge. Deciding which version fits which client is structuring, not selling.
+''')""")
+code('fig, _ = figures.g33_segmentation(TIERS, WINS, lambda b: FIN.carry_summary(b)["total_bp_per_month"])\nfig;')
+
+# ---------------------------------------------------------------- §1c who has done this
+md("## 1c. Who has done this trade, and who survives our own filters")
+
+code(r"""Markdown(f'''
+**The trade family is old; this pair is new.** Convergence against a structural gap that no
+mechanism closes has a documented history, and its canonical laboratory is the dual-listed
+company — Royal Dutch and Shell Transport ran as one economic entity split 60/40 across two
+listings from 1907 until the 2005 unification, so two claims on the same assets in a fixed
+ratio could still diverge. The literature on that divergence is Froot & Dabora (1999, JFE) and
+Rosenthal & Young (1990, JFE); the best-known position in it ended in 1998 with the level view
+correct and the interim path fatal, per the standard public accounts.
+
+**That is our own finding, arrived at independently.** Gain capped by a cost floor, loss capped
+by nothing on file, and an excursion larger than any stop would tolerate. The history and the
+measurement agree, which is why the risk section leads on sizing rather than stops.
+
+**The closest living analogue is structural-discount capture.** Korean preference shares
+against common: same country, same regulator, two claims on one issuer, a persistent discount
+and no arbitrage that closes it. London-listed closed-end vehicles run exactly that strategy
+and publish their horizon and sizing. We do not name them — naming a live vehicle in a document
+about who buys this product invites precisely the inference this section avoids.
+
+**Six gates, and most enquirers fail one.** {CLI.ratification_note()}
+''')""")
+code('fig, _ = figures.g35_capacity_funnel(CLI.FUNNEL_GATES, CLI.CLIENTELE, len(CLI.PLAYBOOK), CLI.funnel_note())\nfig;')
+
+md(r"""
+**Three archetypes clear all six**, and each opens on a different expression. The questions
+below are the ones any buyer of this shape asks in the first ninety seconds — borrow
+stability, margin stability, unwind support — not the ones any particular buyer has asked.
+""")
+code('fig, _ = figures.g36_sales_map(CLI.PLAYBOOK)\nfig;')
+
+md(r"""
+**Preparation for the next desk conversation.** Have loaded, generically: the borrow term and
+what recall protection is available; whether the margin schedule is fixed or reprices with
+volatility; what unwind support and monitoring are included; and the all-in financing on the
+local leg alone, for the client who wants the view without the short. Three of those four are
+desk answers rather than research answers — the research says which client asks which
+question, and the desk says what the answer is.
+
+**The boundary this section respects.** Archetypes only. Historical episodes and public
+listed-vehicle strategies are cited as history; nothing is named as a counterparty, and no
+inference about any specific current relationship appears anywhere in this repository.
+""")
 
 # ---------------------------------------------------------------- §2 durability
 md(r"""
@@ -404,5 +481,11 @@ margining is illustrative and real schedules are the desk's to quote. Past behav
 comparable pair is characterisation of a regime family, not a forecast of this one.*
 """)
 
-n = write(OUT)
-print(f"wrote {OUT.relative_to(ROOT)} ({n} cells)")
+# Every str.replace in this file is a silent no-op if its anchor drifts, and that is exactly
+# how §1c shipped as a commit with no section in the notebook. The manifest makes it loud.
+REQUIRED_SECTIONS = ("## 1. The pitch", "## 1b. Which version of this is yours",
+                     "## 1c. Who has done this trade", "## 2. Why the premium exists",
+                     "## 6. P&L scenarios", "## 7b. Execution reality", "## 8. Monitoring")
+
+n = write(OUT, require=REQUIRED_SECTIONS)
+print(f"wrote {OUT.relative_to(ROOT)} ({n} cells, {len(REQUIRED_SECTIONS)} sections verified)")

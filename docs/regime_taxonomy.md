@@ -184,12 +184,32 @@ filing states 49.0% foreign-held against a 49.0% cap, so its ceiling demonstrabl
 equivalent utilisation figure was located for SK Telecom. The regime is classified on the
 rule; the state is unknown.
 
-**The sample restriction stands and is a different object.** `sample_start = 2022-01-01`
-because the implied ADR ratio steps ~13x across 2021–22. Lifting it would not add history, it
-would add wrong history.
+**The sample restriction was LIFTED 2026-08-03 on instruction — and replaced by a dated ratio
+rather than by a 13x error.** Lifting `sample_start` while keeping a constant 0.55 would have
+put the ASE artefact into 21 years of observations. `PairSpec` now accepts a `ratio_schedule`,
+which `compute_premium` already supported (it takes a Series), so the ratio is dated instead:
 
-**And it behaves like a control on its own sample, which is coherent rather than alarming.**
-SK Telecom's individual half-life comes back `sub_resolution` — rho_1 already below one half at
+| period | ratio | basis |
+|---|---|---|
+| 2000-04-25 → 2021-10-25 | 0.043 | implied ratio, stable across 21 years; a x9.6 step on 2000-04-25 sets the left edge |
+| **2021-10-26 → 2021-12-26** | **dropped** | the line halted and the implied ratio ran 0.61 → 1.00 → 0.92 — genuinely unstable, no single value correct |
+| 2021-12-27 → today | 0.55 | implied ratio, stable since |
+
+**Stated error.** The segment values are derived from PRICES, not from a filing. The effective
+dates of the 2021 split and the depositary change remain unsourced, so a boundary could be off
+by a session or two; the dropped window is drawn wide enough to absorb that. The check that it
+worked is that the annual means show no step at the 2021 boundary (2021: −1%, 2022: +1%),
+where a wrong ratio would have shown roughly −92% before the break.
+
+Sample goes from 1,073 sessions to **6,188 from 2000-04-25**.
+
+**Its dynamics became measurable once the sample was corrected.** On the 1,073-session
+post-2022 window SK Telecom's individual half-life came back `sub_resolution` — a floor rather
+than a finding. On the 6,188-session dated-ratio series it resolves at **64 days**: real, and
+much faster than the other constrained pairs (114–398d), which is consistent with a ceiling
+that is not known to bind. The earlier note read:
+
+> SK Telecom's individual half-life comes back `sub_resolution` — rho_1 already below one half at
 the first horizon, so the series does not persist at daily resolution and the estimator returns
 a floor rather than a finding. `baba` carries the same flag in the fungible class.
 

@@ -40,7 +40,19 @@ def notebook():
     def code(src: str) -> None:
         nb.cells.append(nbf.v4.new_code_cell(src.strip()))
 
-    def write(path: str | Path) -> int:
+    def write(path: str | Path, require: tuple[str, ...] = ()) -> int:
+        """Write the notebook, optionally asserting that named sections are present.
+
+        WHY `require` EXISTS. Every builder in this repository assembles itself with
+        `str.replace` calls against anchors in its own source, and `str.replace` on a
+        substring that is not there is a SILENT NO-OP. On 2026-08-03 a whole section shipped
+        as a commit -- module, figures and tests all present -- with no section in the
+        notebook, because one anchor had drifted and nothing checked. A manifest turns that
+        into a loud failure at build time instead of a reader noticing months later.
+        """
+        src = "".join("".join(c["source"]) for c in nb.cells)
+        missing = [h for h in require if h not in src]
+        assert not missing, f"sections missing from the built notebook: {missing}"
         nbf.validate(nb)                 # loud here, not later inside nbconvert
         nbf.write(nb, str(path))
         return len(nb.cells)

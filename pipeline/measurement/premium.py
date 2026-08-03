@@ -305,6 +305,27 @@ def build_all_variants(pair_id: str, start: str | None = None) -> list[PremiumVa
     return out
 
 
+def _ratio_for(pair: PairSpec, index) -> "float | pd.Series":
+    """The ratio, as a constant or as a dated schedule.
+
+    A depositary ratio change makes a constant WRONG by the size of the change, not merely
+    imprecise. Where a schedule is declared, this expands it onto the index and NaNs both the
+    pre-schedule period and any declared gap window — a corporate action can leave the implied
+    ratio unstable for weeks, and inside such a window no single value is right, so those
+    sessions are dropped rather than assigned one.
+    """
+    sched = getattr(pair, "ratio_schedule", None)
+    if not sched:
+        return pair.local_shares_per_adr
+    idx = pd.DatetimeIndex(sorted(index))
+    out = pd.Series(float("nan"), index=idx)
+    for frm, value in sched:
+        out[idx >= pd.Timestamp(frm)] = float(value)
+    for lo, hi in getattr(pair, "ratio_gaps", ()) or ():
+        out[(idx >= pd.Timestamp(lo)) & (idx <= pd.Timestamp(hi))] = float("nan")
+    return out
+
+
 def _build_native(pair: PairSpec, close_def: str, start: str | None) -> PremiumVariant:
     """Comparator pairs have a single FX source; label it `native` rather than faking an axis."""
     source = PAIR_SOURCE.get(pair.pair_id, DEFAULT_SOURCE)
@@ -319,7 +340,12 @@ def _build_native(pair: PairSpec, close_def: str, start: str | None) -> PremiumV
         adr, local, fx = (s[s.index <= pair.sample_end] for s in (adr, local, fx))
     if start:
         adr, local, fx = (s[s.index >= start] for s in (adr, local, fx))
-    pi = compute_premium(adr, local, fx, pair.local_shares_per_adr)
+
+    ratio = _ratio_for(pair, adr.index.union(local.index).union(fx.index))
+    if isinstance(ratio, pd.Series):
+        keep = ratio.dropna().index
+        adr, local, fx = (s[s.index.isin(keep)] for s in (adr, local, fx))
+    pi = compute_premium(adr, local, fx, ratio)
     return PremiumVariant(
         pair_id=pair.pair_id, fx_leg="native", close_def=close_def, series=pi,
         n_obs=len(pi),

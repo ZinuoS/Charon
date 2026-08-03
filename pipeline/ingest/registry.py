@@ -83,6 +83,14 @@ class PairSpec:
     fx: str  # series_id of the FX leg, quoted LOCAL per USD
     local_shares_per_adr: float
     ratio_source: str
+    #: Optional ((from_date, ratio), ...) for pairs whose depositary ratio CHANGED. A single
+    #: constant across a ratio change is not imprecise, it is wrong by the size of the change
+    #: -- the ASE artefact was exactly that. Segments are half-open [from_date, next_from).
+    #: Sessions before the first segment are dropped, as are any inside `ratio_gaps`.
+    ratio_schedule: tuple[tuple[str, float], ...] | None = None
+    #: Windows to drop outright: a corporate action can leave the implied ratio genuinely
+    #: UNSTABLE for weeks, and no single value is right inside one.
+    ratio_gaps: tuple[tuple[str, str], ...] = ()
     confirmed: bool = False
     notes: str = ""
     # Sample restrictions. These exist so an exclusion is DECLARED IN THE REGISTRY with its
@@ -686,6 +694,8 @@ PAIRS: tuple[PairSpec, ...] = (
     PairSpec(
         pair_id="skm", adr="skm_adr_daily", local="skm_local_daily", fx="usdkrw_spot_daily",
         local_shares_per_adr=0.55,
+        ratio_schedule=(("2000-04-25", 0.043), ("2021-12-27", 0.55)),
+        ratio_gaps=(("2021-10-26", "2021-12-26"),),
         ratio_source=(
             "Empirically derived, and the ratio REGIME BREAKS. Implied local-shares-per-ADR "
             "sits at 0.04 from 1999 to 2021 and at 0.55 from 2022 onward — a ~13x step "
@@ -694,13 +704,20 @@ PAIRS: tuple[PairSpec, ...] = (
             "and the ratio change against the 20-F."
         ),
         confirmed=False,
-        sample_start="2022-01-01",
         sample_reason=(
-            "RATIO REGIME BREAK, the ASE failure mode. A constant ratio across the 2021-22 "
-            "step would put a ~13x error into every pre-break observation, and a spline "
-            "would need the exact effective date of both the split and the depositary change "
-            "— neither of which is sourced. Restricted to the post-break regime rather than "
-            "spliced."
+            "RATIO REGIME BREAK, HANDLED BY SCHEDULE RATHER THAN BY RESTRICTION (2026-08-03). "
+            "The blanket sample_start='2022-01-01' was lifted on instruction. Lifting it with "
+            "a constant 0.55 would have put a ~13x error into every pre-break observation — "
+            "the ASE artefact — so the ratio is now DATED instead. Measured from the implied "
+            "ratio: ~0.043 from 2000-04-25 (a x9.6 step that day, pre-2000 data is dropped as "
+            "the first segment's left edge), and ~0.55 from 2021-12-27. Between 2021-10-26 "
+            "and 2021-12-26 the line halted and the implied ratio ran 0.61 -> 1.00 -> 0.92: "
+            "genuinely unstable, no single value correct, so that window is DROPPED rather "
+            "than assigned one. "
+            "STATED ERROR: the segment values are derived from prices, not from a filing. The "
+            "effective dates of the 2021 split and the depositary change are still unsourced, "
+            "so a boundary could be off by a session or two; the gap window is drawn wide "
+            "enough to absorb that. TODO(ash): confirm both against the 20-F."
         ),
         notes=(
             "CONSTRAINED CANDIDATE, CLASSIFICATION WITHHELD, same standing as kt. The "
