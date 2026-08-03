@@ -3550,3 +3550,157 @@ def g44_exit_tree(pack) -> tuple:
                  "itself, and whether the desk will really quote a long-local TRS on a recall.")
     return fig, {"cells": len(tree), "hold_cells": int(counts.get("hold", 0)),
                  "owed": len(pack.ratification_owed())}
+
+
+def g45_carry_waterfall_card(pack, specials=(150, 400, 900), basis_bps=0.0) -> tuple:
+    """D1.1 — carry with the borrow line split into house card and name special.
+
+    THE TWO BORROW COMPONENTS ARE NEVER DRAWN AS ONE BAR. The card is DOCUMENTED and the
+    special is BRACKETED; they stress independently and only one of them is negotiable. A
+    merged bar would hide which half a client can argue about, and could not be stressed
+    correctly even if they knew.
+    """
+    states = list(pack.CARD_STRESS_MULTS.items())
+    fig, axes = theme.figure(ncols=len(states), shape_name="wide", sharey=True)
+    axes = list(axes) if hasattr(axes, "__len__") else [axes]
+    REST, CARD, SPEC = (theme.SEMANTIC["context"], theme.SEMANTIC["fungible"],
+                        theme.SEMANTIC["constrained"])
+    crit = pack.critical_carry_bp(horizon_days=252.0) / 12.0
+
+    for ax, (label, mult) in zip(axes, states):
+        xs = list(range(len(specials) + 1))
+        for i, sp in enumerate(specials):
+            w = pack.carry_waterfall(sp, basis_bps, mult).set_index("component").bp_per_month
+            card = float(w["house card"])
+            rest = float(w.drop(["house card", "name special"]).sum())
+            spec = float(w["name special"])
+            ax.bar(i, rest, width=0.66, color=REST, alpha=0.85, zorder=3)
+            ax.bar(i, card, bottom=max(rest, 0), width=0.66, color=CARD, alpha=0.9, zorder=3)
+            ax.bar(i, spec, bottom=max(rest, 0) + card, width=0.66, color=SPEC,
+                   alpha=0.9, zorder=3)
+            total = rest + card + spec
+            ax.text(i, total + 1.5, f"{total:.0f}", ha="center", fontsize=theme.NOTE_SIZE - 1,
+                    color=theme.TEXT, fontfamily=theme.SERIF_STACK, zorder=5)
+        # The unratified live slot, drawn hollow rather than omitted.
+        ax.bar(xs[-1], 0, width=0.66, color="none", edgecolor=theme.MUTED, ls=":", zorder=3)
+        ax.text(xs[-1], 2, "LIVE\npending", ha="center", va="bottom", style="italic",
+                fontsize=theme.NOTE_SIZE - 2, color=theme.MUTED,
+                fontfamily=theme.SERIF_STACK)
+
+        nb = pack.non_borrow_subtotal_bp_month(basis_bps, mult)
+        ax.axhline(nb, color=theme.TEXT, lw=1.0, ls="-.", zorder=4)
+        ax.axhline(crit, color=theme.SEMANTIC["warning"], lw=1.2, ls="--", zorder=4)
+        ax.axhline(0, color=theme.TEXT, lw=0.8, zorder=2)
+        ax.set_xticks(xs)
+        ax.set_xticklabels([f"{s}bp" for s in specials] + ["LIVE"])
+        ax.set_xlabel("name special")
+        ax.set_title(f"card {label} (x{mult:g}) — non-borrow {nb:+.1f}bp/mo",
+                     fontsize=theme.NOTE_SIZE, fontfamily=theme.SERIF_STACK)
+        ax.grid(True, axis="y", color=theme.RULE, lw=0.5, alpha=0.6)
+
+    axes[0].set_ylabel("bp per month (positive = cost to client)")
+    handles = [mpatches.Patch(facecolor=REST, alpha=0.85, label="rates + obol + basis"),
+               mpatches.Patch(facecolor=CARD, alpha=0.9, label="house card (DOCUMENTED)"),
+               mpatches.Patch(facecolor=SPEC, alpha=0.9, label="name special (BRACKETED)")]
+    axes[-1].legend(handles=handles, frameon=False, fontsize=theme.NOTE_SIZE - 1,
+                    loc="upper left", bbox_to_anchor=(1.02, 1.0))
+
+    nb_base = pack.non_borrow_subtotal_bp_month(basis_bps, 1.0)
+    nb_crisis = pack.non_borrow_subtotal_bp_month(basis_bps, 2.0)
+    worst = pack.carry_waterfall(max(specials), basis_bps, 2.0).bp_per_month.sum()
+    theme.finalize(
+        fig, kicker="D1.1 · carry, card split",
+        headline="Half the borrow line is card and half is scarcity — and only one of them is "
+                 "negotiable",
+        subtitle=pack.freshness_line(),
+        stats=[(f"{nb_base:+.1f}", "bp/mo non-borrow\nat the base card"),
+               (f"{nb_crisis:+.1f}", "bp/mo non-borrow\nat the crisis card"),
+               (f"{worst:.0f}", "bp/mo all-in, crisis card\nand dearest special"),
+               (f"{crit:.0f}", "bp/mo breakeven\n(dashed)")],
+        source="Repo-computed. House card DOCUMENTED (fin spread + rebate haircut); name "
+               "special and cross-currency basis BRACKETED; rates MEASURED.",
+        footnote="THE DOT-DASH LINE IS THE NON-BORROW SUBTOTAL — everything the client pays "
+                 "before the name is priced. It is POSITIVE once the card is included, which "
+                 "reverses the headline of the un-split version: the rate differential is a "
+                 "tailwind, but the card more than consumes it. Card and special are drawn "
+                 "apart because they are different kinds of number and stress independently — "
+                 "the card widens in a squeeze across every name, the special widens for "
+                 "reasons specific to this one. The hollow bar is the live quote nobody has "
+                 "given yet.")
+    return fig, {"non_borrow_base": nb_base, "non_borrow_crisis": nb_crisis,
+                 "worst_all_in": float(worst), "breakeven": crit}
+
+
+def g46_breakeven_surface_card(pack, specials=range(150, 2100, 50)) -> tuple:
+    """D2.1 — one surface, one zero contour per card state, plus the term-financing overlay.
+
+    SAME FORMAT AS D2 DELIBERATELY: heatmap of the base-card surface, contours over it, the
+    quoted desk bracket drawn as an overlay box, freshness strip in the subtitle. Only the
+    contour count changes. A reader who has seen D2 should not have to re-learn the chart to
+    read the stressed version of it.
+
+    The LOCKED contour sits exactly on the base-card contour, because that is what term
+    financing does — it does not make the card cheaper, it makes the stress multiplier unable
+    to move. The distance between LOCKED and crisis is therefore the feature's value, and it is
+    the same at every half-life.
+    """
+    import numpy as np
+
+    surf = pack.breakeven_surface(borrow_bps=specials)            # base card
+    fig, ax = theme.figure(shape_name="wide")
+    X, Y = np.meshgrid(surf.columns.astype(float), surf.index.astype(float))
+    mesh = ax.pcolormesh(X, Y, surf.values, cmap="RdGy", shading="auto", zorder=2)
+    fig.colorbar(mesh, ax=ax, label="bp/month the trade bears, net of carry (base card)")
+
+    styles = {"base": ("-", theme.TEXT), "squeeze": ("--", theme.SEMANTIC["context"]),
+              "crisis": (":", theme.SEMANTIC["warning"])}
+    for label, mult in pack.CARD_STRESS_MULTS.items():
+        thr = [pack.threshold_special_bp(h, mult) for h in surf.columns.astype(float)]
+        ls, col = styles[label]
+        ax.plot(surf.columns.astype(float), thr, ls, color=col, lw=2.0, zorder=5,
+                label=f"breaks even — card {label} (x{mult:g})")
+
+    locked = [pack.threshold_special_bp(h, max(pack.CARD_STRESS_MULTS.values()),
+                                        card_locked=True) for h in surf.columns.astype(float)]
+    ax.plot(surf.columns.astype(float), locked, "-", color=theme.SEMANTIC["fungible"],
+            lw=3.4, alpha=0.55, zorder=4,
+            label="card LOCKED by term financing (coincides with base)")
+
+    lo, hi = pack.ADR_BORROW_BRACKET_BP["low"], pack.ADR_BORROW_BRACKET_BP["high"]
+    ax.axhspan(lo, hi, facecolor="none", edgecolor=theme.SEMANTIC["emphasis"], lw=1.6,
+               ls="--", zorder=6)
+    ax.text(surf.columns.min(), hi, "  quoted special bracket (BRACKETED)", va="bottom",
+            fontsize=theme.NOTE_SIZE - 1, color=theme.SEMANTIC["emphasis"],
+            fontfamily=theme.SERIF_STACK, zorder=7)
+
+    ax.set_xlabel("half-life of convergence (sessions) — 95% interval, read live from the panel")
+    ax.set_ylabel("name special (bp/yr)")
+    ax.legend(frameon=False, fontsize=theme.NOTE_SIZE - 1, loc="upper right")
+
+    val = pack.term_financing_value_bp_yr()
+    hl_slow = float(surf.columns.astype(float).max())
+    base_slow = pack.threshold_special_bp(hl_slow, 1.0)
+    crisis_slow = pack.threshold_special_bp(hl_slow, 2.0)
+    theme.finalize(
+        fig, kicker="D2.1 · breakeven, card-stressed",
+        headline="Card stress moves the whole boundary down by the card — term financing is "
+                 "what pins it back up",
+        subtitle=pack.freshness_line(),
+        stats=[(f"{base_slow:.0f}", "bp/yr special threshold,\nbase card, slow half-life"),
+               (f"{crisis_slow:.0f}", "bp/yr, crisis card,\nsame half-life"),
+               (f"{val['value_bp_yr_of_special']:.0f}", "bp/yr of special bought\nby locking "
+                "the card"),
+               (f"{hi}", "top of the quoted\nspecial bracket")],
+        source="Repo-computed. Threshold solved as critical_carry(H) minus non-borrow carry, "
+               "not scanned. House card DOCUMENTED; special and basis BRACKETED.",
+        footnote="THE CONTOURS ARE PARALLEL, AND THAT IS THE RESULT. Card stress shifts the "
+                 "boundary by exactly the card — the same distance at every half-life — because "
+                 "the surface is linear in both terms. So term financing buys a FLAT amount of "
+                 "room rather than more room when convergence is slow, which is precisely why "
+                 "it can be priced as a flat feature. The LOCKED line sits on the base-card "
+                 "contour by construction: locking does not make the card cheaper today, it "
+                 "removes the multiplier's ability to move. Every contour lies above the quoted "
+                 "bracket at this entry premium, so within the range the desk expects to quote, "
+                 "card stress does not by itself break the trade.")
+    return fig, {"base_slow": base_slow, "crisis_slow": crisis_slow,
+                 "term_value_bp": val["value_bp_yr_of_special"]}

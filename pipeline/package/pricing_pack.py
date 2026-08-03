@@ -44,6 +44,33 @@ LIVE_LABEL = "LIVE"
 #: number only so the arithmetic runs; every artifact using it is tagged ILLUSTRATIVE.
 ILLUSTRATIVE_IM_PCT = 20.0
 
+#: THE HOUSE CARD — what the desk charges regardless of the name. DOCUMENTED, not bracketed:
+#: these are published card levels, so they carry a different epistemic weight from the
+#: name-specific special, and the waterfall never merges the two bars for exactly that reason.
+#: A client who cannot see which part of their borrow line is card and which is scarcity cannot
+#: negotiate either.
+HOUSE_CARD_BPS_YR = {"fin_spread_bps": 50, "rebate_haircut_bps": 75}
+
+#: Card stress states. The card is what widens in a squeeze; the name special is a separate
+#: axis that widens for its own reasons.
+CARD_STRESS_MULTS = {"base": 1.0, "squeeze": 1.5, "crisis": 2.0}
+
+#: Cross-currency basis stress axis, bp/yr. BRACKETED — the repository cannot measure it, and a
+#: negative KRW basis (the usual sign for an Asian funding currency) eats the rate tailwind.
+XCCY_BASIS_STRESS_BPS = (0, -25, -50)
+
+
+def house_card_bps_yr(card_stress_mult: float = 1.0, card_locked: bool = False) -> float:
+    """The card leg, stressed unless term financing has locked it.
+
+    ``card_locked`` IS THE PRODUCT. Term financing does not make the card cheaper at inception;
+    it makes the card's stress multiplier unable to move. Pricing that feature means rendering
+    both states and reading the distance between them, which is why this returns the locked
+    value rather than raising when the two arguments disagree.
+    """
+    base = sum(HOUSE_CARD_BPS_YR.values())
+    return base * (1.0 if card_locked else card_stress_mult)
+
 
 def borrow_status(borrow_bps_yr: float | None) -> str:
     """LIVE if the desk has ratified a borrow quote, BRACKETED otherwise."""
@@ -82,34 +109,57 @@ def freshness_line(pair: str = "skhy") -> str:
             f"config ({f['close_def']}, {f['fx_leg']}) · borrow {borrow} [{f['borrow_status']}]")
 
 
-def carry_waterfall(borrow_bps_yr: float, xccy_basis_bps_yr: float,
+def carry_waterfall(name_special_bps_yr: float, xccy_basis_bps_yr: float,
+                    card_stress_mult: float = 1.0, card_locked: bool = False,
                     horizon_days: float = 252.0) -> pd.DataFrame:
-    """D1 — the all-in carry decomposition in bp/month, at an explicit borrow and basis.
+    """D1.1 — the all-in carry in bp/month, with the borrow line SPLIT.
 
-    Both desk inputs are REQUIRED arguments with no defaults. `financing.carry_components`
-    takes a bracket NAME and hardcodes the basis at zero; this takes the numbers, so a live
-    quote and a hypothetical differ only in what is passed in.
+    THE SPLIT IS THE POINT. `house card` is the desk's published financing spread plus rebate
+    haircut and is DOCUMENTED; `name special` is what SK hynix specifically costs to borrow and
+    is BRACKETED, because no public series prices it. Rendering them as one bar would hide which
+    half of the borrow line is negotiable and which is scarcity — and they stress independently,
+    so a merged bar cannot even be stressed correctly.
 
-    Sign convention, kept from the existing decomposition: POSITIVE is a cost to the client.
-    The USD leg is negative because the short's proceeds and the collateral earn it.
+    ``name_special_bps_yr`` and ``xccy_basis_bps_yr`` remain REQUIRED with no defaults: both are
+    desk inputs. The card arguments DO default, because a documented card level is not a quote
+    pending — it is published, and defaulting to it is not the same act as defaulting to an
+    unratified number.
+
+    Sign convention: POSITIVE is a cost to the client. The USD leg is negative because the
+    short's proceeds and the collateral earn it.
     """
     legs = rate_legs()
     obol = CONVERSION_FEE_BP * 252.0 / horizon_days
+    card = house_card_bps_yr(card_stress_mult, card_locked)
+    card_note = ("LOCKED by term financing" if card_locked
+                 else f"stress x{card_stress_mult:g}")
 
     rows = [
         {"component": "USD rate earned", "bp_per_year": -legs["usd_rate_pct"] * 100,
-         "status": "MEASURED", "source": f"{legs['usd_series']}, {legs['usd_as_of']}"},
+         "status": "MEASURED", "leg": "non-borrow",
+         "source": f"{legs['usd_series']}, {legs['usd_as_of']}"},
         {"component": "KRW funding paid", "bp_per_year": +legs["krw_rate_pct"] * 100,
-         "status": "MEASURED", "source": f"{legs['krw_series']}, {legs['krw_as_of']}"},
-        {"component": "ADR borrow", "bp_per_year": float(borrow_bps_yr),
-         "status": "BRACKETED" if DESK_INPUTS["borrow_live_bps_yr"] is None else "MEASURED",
-         "source": borrow_status(DESK_INPUTS["borrow_live_bps_yr"])},
-        {"component": "cross-currency basis", "bp_per_year": float(xccy_basis_bps_yr),
+         "status": "MEASURED", "leg": "non-borrow",
+         "source": f"{legs['krw_series']}, {legs['krw_as_of']}"},
+        {"component": "house card", "bp_per_year": float(card),
+         "status": "DOCUMENTED", "leg": "non-borrow",
+         "source": f"fin spread {HOUSE_CARD_BPS_YR['fin_spread_bps']}bp + rebate haircut "
+                   f"{HOUSE_CARD_BPS_YR['rebate_haircut_bps']}bp, {card_note}"},
+        # SIGN: the argument is the quoted BASIS, which is negative for KRW; its COST
+        # contribution is its negation. A first version added the basis directly, so the
+        # stress axis {0, -25, -50} made the trade progressively CHEAPER — a stress that
+        # flatters. financing.py already documents the economics ("a negative KRW basis makes
+        # swapping into KRW MORE expensive than parity"); the code simply disagreed with it.
+        {"component": "cross-currency basis", "bp_per_year": -float(xccy_basis_bps_yr),
          "status": "BRACKETED" if DESK_INPUTS["xccy_basis_bps_yr"] is None else "MEASURED",
-         "source": BASIS_STATUS},
+         "leg": "non-borrow",
+         "source": f"quoted basis {xccy_basis_bps_yr:+.0f}bp/yr; {BASIS_STATUS}"},
         {"component": "cancellation floor (the obol)", "bp_per_year": float(obol),
-         "status": "DOCUMENTED",
+         "status": "DOCUMENTED", "leg": "non-borrow",
          "source": f"{CONVERSION_FEE_BP}bp round trip over {horizon_days:.0f} sessions"},
+        {"component": "name special", "bp_per_year": float(name_special_bps_yr),
+         "status": "BRACKETED" if DESK_INPUTS["borrow_live_bps_yr"] is None else "MEASURED",
+         "leg": "borrow", "source": borrow_status(DESK_INPUTS["borrow_live_bps_yr"])},
     ]
     out = pd.DataFrame(rows)
     out["bp_per_month"] = out["bp_per_year"] / 12.0
@@ -117,25 +167,37 @@ def carry_waterfall(borrow_bps_yr: float, xccy_basis_bps_yr: float,
     return out
 
 
+def non_borrow_subtotal_bp_month(xccy_basis_bps_yr: float = 0.0,
+                                 card_stress_mult: float = 1.0,
+                                 card_locked: bool = False,
+                                 horizon_days: float = 252.0) -> float:
+    """Everything except the name special, bp/month. Computed, never quoted from a brief."""
+    w = carry_waterfall(0.0, xccy_basis_bps_yr, card_stress_mult, card_locked, horizon_days)
+    return float(w[w.leg == "non-borrow"].bp_per_month.sum())
+
+
 def carry_waterfall_table(borrow_grid=(150, 400, 900),
                           xccy_basis_bps_yr: float = 0.0,
+                          card_stress_mult: float = 1.0, card_locked: bool = False,
                           horizon_days: float = 252.0) -> pd.DataFrame:
-    """D1 annex — one column per borrow level, plus the live column when it exists."""
+    """D1.1 annex — one column per name special, at one card state."""
     frames = {}
     for b in borrow_grid:
-        w = carry_waterfall(b, xccy_basis_bps_yr, horizon_days)
+        w = carry_waterfall(b, xccy_basis_bps_yr, card_stress_mult, card_locked, horizon_days)
         frames[f"{b:.0f}bp"] = w.set_index("component").bp_per_month
     live = DESK_INPUTS["borrow_live_bps_yr"]
     label = f"LIVE {live:.0f}bp" if live is not None else "BORROW_LIVE (unratified)"
     if live is not None:
-        w = carry_waterfall(live, xccy_basis_bps_yr, horizon_days)
+        w = carry_waterfall(live, xccy_basis_bps_yr, card_stress_mult, card_locked,
+                            horizon_days)
         frames[label] = w.set_index("component").bp_per_month
     else:
         frames[label] = pd.Series(
             {c: float("nan") for c in frames[next(iter(frames))].index})
 
     table = pd.DataFrame(frames)
-    table.loc["ALL-IN"] = table.sum(min_count=1)
+    table.loc["NON-BORROW SUBTOTAL"] = table.drop(index=["name special"]).sum(min_count=1)
+    table.loc["ALL-IN"] = table.drop(index=["NON-BORROW SUBTOTAL"]).sum(min_count=1)
     table.loc["breakeven (critical carry)"] = critical_carry_bp(
         horizon_days=horizon_days) / 12.0
     table.loc["headroom"] = (table.loc["breakeven (critical carry)"]
@@ -165,7 +227,8 @@ if __name__ == "__main__":
 
 def breakeven_surface(borrow_bps=range(150, 926, 25), half_lives=None,
                       xccy_basis_bps_yr: float = 0.0, pi_0: float | None = None,
-                      horizon_days: float = 252.0) -> pd.DataFrame:
+                      horizon_days: float = 252.0, card_stress_mult: float = 1.0,
+                      card_locked: bool = False) -> pd.DataFrame:
     """D2 — carry the trade BEARS minus carry it COSTS, bp/month, over borrow x half-life.
 
     Positive means the trade pays at that combination; the zero contour is the boundary the PM
@@ -188,7 +251,8 @@ def breakeven_surface(borrow_bps=range(150, 926, 25), half_lives=None,
 
     grid = {}
     for b in borrow_bps:
-        cost = carry_waterfall(b, xccy_basis_bps_yr, horizon_days).bp_per_month.sum()
+        cost = carry_waterfall(b, xccy_basis_bps_yr, card_stress_mult, card_locked,
+                               horizon_days).bp_per_month.sum()
         grid[b] = {h: critical_carry_bp(pi_0=pi_0, horizon_days=horizon_days,
                                         half_life_days=h) / 12.0 - cost
                    for h in half_lives}
@@ -500,3 +564,64 @@ def ratification_owed() -> list[str]:
         "than one fewer leaf.",
     ]
     return owed
+
+
+def threshold_special_bp(half_life_days: float, card_stress_mult: float = 1.0,
+                         card_locked: bool = False, xccy_basis_bps_yr: float = 0.0,
+                         pi_0: float | None = None,
+                         horizon_days: float = 252.0) -> float:
+    """D2.1 — the name special at which the trade exactly breaks even, bp/yr.
+
+    SOLVED, NOT SCANNED. The surface is linear in the special — every other component is
+    independent of it — so the zero crossing is
+
+        special* = critical_carry(H) - non_borrow_carry
+
+    A grid scan would report the crossing only to the resolution of its own steps and would
+    quietly move if the step size changed, which is a poor property for a number a client is
+    quoted against.
+    """
+    if pi_0 is None:
+        pi_0 = freshness()["entry_premium_pct"] / 100.0
+    crit = critical_carry_bp(pi_0=pi_0, horizon_days=horizon_days,
+                             half_life_days=half_life_days)
+    non_borrow = non_borrow_subtotal_bp_month(xccy_basis_bps_yr, card_stress_mult,
+                                              card_locked, horizon_days) * 12.0
+    return crit - non_borrow
+
+
+def threshold_special_table(half_lives=None, xccy_basis_bps_yr: float = 0.0) -> pd.DataFrame:
+    """D2.1 annex — threshold special per half-life x card state, plus the locked column."""
+    from pipeline.convergence.jorda import run_panel
+
+    hl = run_panel()["one_way_constrained"].hl
+    if half_lives is None:
+        half_lives = [round(hl.lower), round(hl.point), round(hl.upper)]
+
+    rows = []
+    for h in half_lives:
+        row = {"half_life_days": h}
+        for label, mult in CARD_STRESS_MULTS.items():
+            row[f"card {label} (x{mult:g})"] = round(
+                threshold_special_bp(h, mult, False, xccy_basis_bps_yr), 0)
+        row["card LOCKED (term)"] = round(
+            threshold_special_bp(h, 2.0, True, xccy_basis_bps_yr), 0)
+        rows.append(row)
+    return pd.DataFrame(rows).set_index("half_life_days")
+
+
+def term_financing_value_bp_yr(xccy_basis_bps_yr: float = 0.0) -> dict:
+    """What locking the card buys, in bp/yr of name special. Exact and horizon-invariant.
+
+    The locked and crisis surfaces differ only in the card term, so the distance between their
+    zero contours is the card stress that locking removes — the SAME number at every half-life,
+    which is worth stating: term financing does not buy more room when convergence is slow, it
+    buys the same room regardless, and that is precisely why it can be priced as a flat feature.
+    """
+    stressed = house_card_bps_yr(max(CARD_STRESS_MULTS.values()), card_locked=False)
+    locked = house_card_bps_yr(max(CARD_STRESS_MULTS.values()), card_locked=True)
+    return {"value_bp_yr_of_special": stressed - locked,
+            "stressed_card_bp_yr": stressed, "locked_card_bp_yr": locked,
+            "note": "distance between the LOCKED and crisis-card zero contours, in bp/yr of "
+                    "name special; identical at every half-life because the two surfaces "
+                    "differ only in the card term"}

@@ -20,7 +20,8 @@ from pipeline.viz import figures  # noqa: E402
 
 #: Every figure in the pack, and the pack object each is called with.
 PACK_FIGURES = ("g39_carry_waterfall", "g40_breakeven_surface", "g41_margin_sizing",
-                "g42_drawdown_budget", "g43_scenario_rom", "g44_exit_tree")
+                "g42_drawdown_budget", "g43_scenario_rom", "g44_exit_tree",
+                "g45_carry_waterfall_card", "g46_breakeven_surface_card")
 
 
 class TestDeskInputsAreNeverDefaulted:
@@ -31,9 +32,16 @@ class TestDeskInputsAreNeverDefaulted:
                                        "initial_margin_pct"}
 
     def test_carry_waterfall_requires_both_desk_inputs_explicitly(self):
-        """A default here would let a chart circulate carrying a number nobody quoted."""
+        """A default here would let a chart circulate carrying a number nobody quoted.
+
+        `borrow_bps_yr` became `name_special_bps_yr` when D1.1 split the borrow line. The guard
+        moved with the rename rather than being dropped: what it protects is that a DESK INPUT
+        cannot be supplied by accident, and the split made that more important, not less.
+        The card arguments are deliberately exempt — a DOCUMENTED card level is published, and
+        defaulting to it is not the same act as defaulting to an unratified quote.
+        """
         sig = inspect.signature(PP.carry_waterfall)
-        for name in ("borrow_bps_yr", "xccy_basis_bps_yr"):
+        for name in ("name_special_bps_yr", "xccy_basis_bps_yr"):
             assert sig.parameters[name].default is inspect.Parameter.empty, (
                 f"{name} acquired a default; the whole point of the pack is that a desk input "
                 f"cannot be supplied by accident")
@@ -50,6 +58,54 @@ class TestDeskInputsAreNeverDefaulted:
         cheap = PP.carry_waterfall(150, 0.0).bp_per_year.sum()
         dear = PP.carry_waterfall(900, 0.0).bp_per_year.sum()
         assert cheap < dear
+
+
+class TestCardSplit:
+    """D1.1 — the card and the special must stay separable and separately stressable."""
+
+    def test_card_and_special_are_never_one_row(self):
+        w = PP.carry_waterfall(400, 0.0)
+        assert {"house card", "name special"} <= set(w.component), (
+            "the borrow line was merged; a client cannot see which half is negotiable")
+        assert w[w.component == "house card"].status.iloc[0] == "DOCUMENTED"
+        assert w[w.component == "name special"].status.iloc[0] == "BRACKETED"
+
+    def test_non_borrow_subtotal_excludes_only_the_special(self):
+        w = PP.carry_waterfall(400, 0.0)
+        expected = float(w[w.component != "name special"].bp_per_month.sum())
+        assert PP.non_borrow_subtotal_bp_month() == pytest.approx(expected)
+
+    def test_non_borrow_subtotal_is_positive_once_the_card_is_counted(self):
+        """The card more than consumes the rate tailwind — the D1.1 headline, asserted."""
+        without_card = PP.non_borrow_subtotal_bp_month(0.0, 0.0)   # mult 0 -> no card
+        with_card = PP.non_borrow_subtotal_bp_month(0.0, 1.0)
+        assert without_card < 0 < with_card
+
+    def test_card_stress_moves_the_card_and_not_the_special(self):
+        base = PP.carry_waterfall(400, 0.0, 1.0).set_index("component").bp_per_year
+        crisis = PP.carry_waterfall(400, 0.0, 2.0).set_index("component").bp_per_year
+        assert crisis["house card"] == pytest.approx(2 * base["house card"])
+        assert crisis["name special"] == base["name special"]
+
+    def test_term_financing_locks_the_card_against_stress(self):
+        """card_locked IS the product: it makes the multiplier unable to move."""
+        stressed = PP.house_card_bps_yr(2.0, card_locked=False)
+        locked = PP.house_card_bps_yr(2.0, card_locked=True)
+        assert locked == PP.house_card_bps_yr(1.0)
+        assert locked < stressed
+
+    def test_a_negative_basis_eats_the_tailwind(self):
+        """The stress axis must RAISE cost. This test caught a live sign error.
+
+        Written first as `stressed < flat`, which passed — and was wrong. A negative KRW basis
+        makes swapping into KRW more expensive, as financing.py already documented, so the
+        {0, -25, -50} stress axis was making the trade progressively cheaper. A stress that
+        flatters is worse than no stress at all, because it is read as reassurance.
+        """
+        flat = PP.carry_waterfall(400, 0.0).bp_per_year.sum()
+        mild = PP.carry_waterfall(400, -25.0).bp_per_year.sum()
+        stressed = PP.carry_waterfall(400, -50.0).bp_per_year.sum()
+        assert flat < mild < stressed, "a more negative basis must cost MORE, not less"
 
 
 class TestFreshnessTravelsWithEveryArtifact:
@@ -163,3 +219,48 @@ class TestScenarioGridAndExitTree:
     def test_ratified_thresholds_propagate_to_every_tree_row(self):
         if PP.EXIT_THRESHOLDS_RATIFIED:
             assert set(PP.exit_tree().status) == {"RATIFIED"}
+
+
+class TestThresholdSpecial:
+    """D2.1 — the boundary is solved, so it must agree with the surface it is drawn on."""
+
+    def test_threshold_is_where_the_surface_actually_crosses_zero(self):
+        """Solved-vs-scanned agreement. If these drift apart, one of them is lying."""
+        h = 300.0
+        thr = PP.threshold_special_bp(h)
+        surf = PP.breakeven_surface(borrow_bps=(round(thr) - 25, round(thr), round(thr) + 25),
+                                    half_lives=[h])
+        col = surf[h]
+        assert col.iloc[0] > 0 > col.iloc[-1], "the surface does not cross at the solved point"
+        assert abs(col.iloc[1]) < 3.0, "solved threshold is not on the surface's zero"
+
+    def test_card_stress_lowers_the_threshold_by_exactly_the_card(self):
+        """The contours must be parallel — that is what makes the feature flat-priceable."""
+        card = sum(PP.HOUSE_CARD_BPS_YR.values())
+        for h in (205.0, 295.0, 385.0):
+            gap = PP.threshold_special_bp(h, 1.0) - PP.threshold_special_bp(h, 2.0)
+            assert gap == pytest.approx(card), f"contours not parallel at H={h}"
+
+    def test_locking_the_card_restores_the_base_contour(self):
+        for h in (205.0, 295.0, 385.0):
+            assert PP.threshold_special_bp(h, 2.0, card_locked=True) == pytest.approx(
+                PP.threshold_special_bp(h, 1.0))
+
+    def test_term_financing_value_equals_the_card_stress_removed(self):
+        v = PP.term_financing_value_bp_yr()
+        assert v["value_bp_yr_of_special"] == pytest.approx(
+            sum(PP.HOUSE_CARD_BPS_YR.values()))
+
+    def test_the_briefs_slow_end_numbers_reproduce_from_the_pipeline(self):
+        """Amendment D2.1 quoted ~744 / ~569. They reproduce, but NOT at today's entry.
+
+        Both land within 1bp at the repository's LEGACY reference premium of 22.6% and a 391-day
+        half-life — and the crisis figure needs the basis stress bundled with the card stress,
+        which the brief did not state. Recorded as a test so the reconciliation is checkable
+        rather than asserted in a commit message: today's entry of ~31% puts the same thresholds
+        several hundred bp higher, and the charts render at today's entry.
+        """
+        base = PP.threshold_special_bp(391, 1.0, False, 0.0, pi_0=0.226)
+        crisis = PP.threshold_special_bp(391, 2.0, False, -50.0, pi_0=0.226)
+        assert base == pytest.approx(744, abs=2)
+        assert crisis == pytest.approx(569, abs=2)

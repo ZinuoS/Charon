@@ -638,7 +638,7 @@ comparable pair is characterisation of a regime family, not a forecast of this o
 # FULL headings, not prefixes. Under the old substring check these entries were truncated and
 # still passed; line-exact matching caught that immediately, which is the point of it.
 # ---------------------------------------------------------------- §9 pricing pack
-md("## 9. Pricing pack — the six objects a PM interrogates")
+md("## 9. Pricing pack — the objects a PM interrogates")
 
 md(r"""
 **Parameterisation, not new estimation.** Everything below re-expresses machinery that already
@@ -671,6 +671,34 @@ entire quoted bracket at every half-life in the 95% interval: borrow would have 
 axis is extended past the bracket deliberately — a heatmap with no boundary on it reads as one
 hiding a boundary. **The economics are decided by whether convergence happens at all, not by the
 borrow quote.** That is the honest headline, and it points the conversation at the half-life.
+""")
+
+code("fig, _ = figures.g45_carry_waterfall_card(PP)\nfig;")
+
+md(r"""
+**D1.1 — the borrow line, split.** Half of what a client pays to borrow is the house card
+(financing spread plus rebate haircut, **documented**) and half is the name special (**bracketed**,
+because no public series prices SK hynix scarcity). They are never drawn as one bar: only one of
+them is negotiable, and they stress independently — the card widens in a squeeze across every
+name, the special widens for reasons specific to this one.
+
+**This reverses D1's headline.** The rate differential is still a tailwind, but once the card is
+counted the non-borrow subtotal is **positive at +5.0bp/mo**. At the crisis card and the dearest
+special the trade runs 90bp/mo against an 83bp breakeven — negative headroom, which the un-split
+version could not show.
+""")
+
+code("fig, _ = figures.g46_breakeven_surface_card(PP)\nfig;")
+
+md(r"""
+**D2.1 — and the contours are parallel, which is the commercially useful part.** Card stress
+shifts the whole boundary down by exactly the card, the same distance at every half-life,
+because the surface is linear in both terms. **Term financing therefore buys a flat 125bp/yr of
+name special** — not more room when convergence is slow, the same room regardless. That is
+precisely why it can be quoted as a flat feature rather than as a function of horizon.
+
+The LOCKED contour sits exactly on the base-card contour by construction: locking does not make
+the card cheaper today, it removes the multiplier's ability to move.
 """)
 
 code("fig, _ = figures.g41_margin_sizing(PP)\nfig;")
@@ -755,7 +783,7 @@ REQUIRED_SECTIONS = (
     "## 6. P&L scenarios",
     "## 7b. Execution reality — four objections, answered",
     "## 8. Monitoring, and the ask",
-    "## 9. Pricing pack — the six objects a PM interrogates",
+    "## 9. Pricing pack — the objects a PM interrogates",
 )
 
 n = write(OUT, require=REQUIRED_SECTIONS)
