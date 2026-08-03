@@ -3146,3 +3146,211 @@ def g38_best_fit(rows, top: int = 12) -> tuple:
                  "trade, and SK hynix's ADR cannot show a holder in filings before the Q3 "
                  "report due about 2026-11-14.")
     return fig, {"rows": len(rows), "full_package": len(full), "lead": lead[0]}
+
+
+def g39_carry_waterfall(pack, borrow_grid=(150, 400, 900), basis_bps=0.0) -> tuple:
+    """D1 — the all-in carry, decomposed, at each borrow level plus the unratified live slot.
+
+    A WATERFALL RATHER THAN A STACKED BAR, because two of the five components are negative and
+    a stack cannot show that the funding leg is a tailwind. The reader's first question about
+    this trade's economics is "what am I actually paying", and the answer is dominated by a
+    component that pays them.
+
+    The BORROW_LIVE panel is drawn EMPTY on purpose. Omitting it would let the chart read as
+    complete; drawing it hollow says a number is owed and by whom.
+    """
+    panels = list(borrow_grid) + [None]
+    fig, axes = theme.figure(ncols=len(panels), shape_name="wide", sharey=True)
+    axes = list(axes) if hasattr(axes, "__len__") else [axes]
+    COST, GAIN, BAR = (theme.SEMANTIC["constrained"], theme.SEMANTIC["fungible"],
+                       theme.SEMANTIC["emphasis"])
+    crit = pack.critical_carry_bp(horizon_days=252.0) / 12.0 if hasattr(
+        pack, "critical_carry_bp") else None
+
+    for ax, borrow in zip(axes, panels):
+        if borrow is None:
+            ax.set_title("BORROW_LIVE\n(unratified)", fontsize=theme.NOTE_SIZE,
+                         color=theme.MUTED, fontfamily=theme.SERIF_STACK)
+            ax.text(0.5, 0.5, "desk quote\npending", ha="center", va="center",
+                    transform=ax.transAxes, fontsize=theme.NOTE_SIZE, color=theme.MUTED,
+                    style="italic", fontfamily=theme.SERIF_STACK)
+            ax.set_xticks([])
+            for sp in ax.spines.values():
+                sp.set_visible(False)
+            continue
+
+        w = pack.carry_waterfall(borrow, basis_bps)
+        run = 0.0
+        for i, r in enumerate(w.itertuples()):
+            v = r.bp_per_month
+            ax.bar(i, v, bottom=run, width=0.66,
+                   color=GAIN if v < 0 else COST, alpha=0.85, zorder=3)
+            run += v
+        ax.bar(len(w), run, width=0.66, color=BAR, alpha=0.95, zorder=3)
+        ax.axhline(0, color=theme.TEXT, lw=0.8, zorder=2)
+        ax.set_xticks(range(len(w) + 1))
+        ax.set_xticklabels([c.replace(" ", "\n", 1) for c in w.component] + ["ALL-IN"],
+                           rotation=90, fontsize=theme.NOTE_SIZE - 2)
+        ax.set_title(f"borrow {borrow:.0f}bp/yr", fontsize=theme.NOTE_SIZE,
+                     fontfamily=theme.SERIF_STACK)
+        ax.text(len(w), run, f" {run:.0f}", va="center", fontsize=theme.NOTE_SIZE - 1,
+                color=theme.TEXT, fontfamily=theme.SERIF_STACK)
+        if crit:
+            ax.axhline(crit, color=theme.SEMANTIC["warning"], lw=1.1, ls="--", zorder=2)
+        ax.grid(True, axis="y", color=theme.RULE, lw=0.5, alpha=0.6)
+
+    axes[0].set_ylabel("bp per month (positive = cost to client)")
+    lo = pack.carry_waterfall(min(borrow_grid), basis_bps).bp_per_month.sum()
+    hi = pack.carry_waterfall(max(borrow_grid), basis_bps).bp_per_month.sum()
+    theme.finalize(
+        fig, kicker="D1 · carry",
+        headline="The funding leg pays you; borrow is the only line that decides the trade",
+        subtitle=pack.freshness_line(),
+        stats=[(f"{lo:.0f}", "bp/mo all-in\nat 150bp borrow"),
+               (f"{hi:.0f}", "bp/mo all-in\nat 900bp borrow"),
+               (f"{crit:.0f}" if crit else "—", "bp/mo breakeven\n(dashed line)"),
+               ("1 of 5", "components is a\nratified desk quote")],
+        source="Repo-computed. EFFR and Korea 3-month from D2; conversion fee documented; "
+               "borrow and cross-currency basis are DESK INPUTS, unratified.",
+        footnote="POSITIVE IS A COST TO THE CLIENT. The USD leg is negative because the short's "
+                 "proceeds and the collateral earn it, and it is large enough that the "
+                 "rate differential is a TAILWIND rather than a cost — which is why borrow, "
+                 "the one component no public series prices, decides the trade on its own. The "
+                 "cross-currency basis is drawn at zero because it is NOT MEASURED, not because "
+                 "it is believed to be zero; a negative KRW basis would eat into the tailwind. "
+                 "The fourth panel is empty because the desk has not quoted a live borrow.")
+    return fig, {"all_in_low": float(lo), "all_in_high": float(hi), "breakeven": crit}
+
+
+def g40_breakeven_surface(pack, borrow_bps=range(150, 2100, 50)) -> tuple:
+    """D2 — carry borne minus carry cost, over borrow x half-life. Zero contour drawn.
+
+    THE BORROW AXIS RUNS PAST THE DESK BRACKET ON PURPOSE. Over the requested 150-900bp range
+    the surface is positive everywhere at today's entry premium, so a heatmap clipped to that
+    range would have no zero contour on it at all — and a PM would reasonably read a chart with
+    no boundary as a chart that is hiding one. Extending the axis until the contour appears
+    shows where the trade actually stops paying, which is the question the surface exists to
+    answer. The desk bracket is drawn on top so the two are never confused.
+    """
+    import numpy as np
+
+    surf = pack.breakeven_surface(borrow_bps=borrow_bps)
+    fig, ax = theme.figure(shape_name="wide")
+    X, Y = np.meshgrid(surf.columns.astype(float), surf.index.astype(float))
+    Z = surf.values
+
+    mesh = ax.pcolormesh(X, Y, Z, cmap=theme.diverging_cmap()
+                         if hasattr(theme, "diverging_cmap") else "RdGy",
+                         shading="auto", zorder=2)
+    cs = ax.contour(X, Y, Z, levels=[0], colors=[theme.TEXT], linewidths=1.8, zorder=4)
+    ax.clabel(cs, fmt={0: "  breaks even  "}, fontsize=theme.NOTE_SIZE - 1)
+    fig.colorbar(mesh, ax=ax, label="bp/month the trade bears, net of carry")
+
+    lo, hi = pack.ADR_BORROW_BRACKET_BP["low"], pack.ADR_BORROW_BRACKET_BP["high"]
+    ax.axhspan(lo, hi, facecolor="none", edgecolor=theme.SEMANTIC["emphasis"],
+               lw=1.6, ls="--", zorder=5)
+    ax.text(surf.columns.min(), hi, "  desk borrow bracket (BRACKETED)", va="bottom",
+            fontsize=theme.NOTE_SIZE - 1, color=theme.SEMANTIC["emphasis"],
+            fontfamily=theme.SERIF_STACK, zorder=6)
+
+    marker = pack.surface_marker()
+    if marker["markable"]:
+        ax.plot(marker["half_life_days"], marker["borrow_bps_yr"], "o",
+                ms=11, mfc="none", mec=theme.TEXT, mew=2, zorder=7)
+
+    ax.set_xlabel("half-life of convergence (sessions) — 95% interval, read live from the panel")
+    ax.set_ylabel("ADR borrow (bp/yr)")
+
+    first_cross = {}
+    for c in surf.columns:
+        neg = surf.index[surf[c] < 0]
+        first_cross[c] = int(neg[0]) if len(neg) else None
+    crosses = [v for v in first_cross.values() if v]
+    theme.finalize(
+        fig, kicker="D2 · breakeven",
+        headline="At today's entry the trade pays across the whole desk borrow bracket — the "
+                 "boundary sits well above it",
+        subtitle=pack.freshness_line(),
+        stats=[(f"{min(crosses)}" if crosses else "—",
+                "bp/yr borrow where it stops\npaying at the SLOWEST half-life"),
+               (f"{max(crosses)}" if crosses else "—",
+                "bp/yr at the\nFASTEST half-life"),
+               (f"{hi}", "top of the quoted\ndesk bracket"),
+               ("—" if not marker["markable"] else "1", "live-borrow cell\nmarked")],
+        source="Repo-computed. Breakeven identity from pipeline.package.breakeven; half-life "
+               "interval read live from the Jordà panel; borrow is a DESK INPUT, unratified.",
+        footnote="READ THE DISTANCE, NOT THE COLOUR. The zero contour lies above the quoted "
+                 "borrow bracket at every half-life in the 95% interval, so at this entry "
+                 "premium the trade's economics are not decided by borrow within the range the "
+                 "desk expects to quote — they are decided by whether convergence happens at "
+                 "all. The half-life axis is therefore the one to interrogate. No live-borrow "
+                 "cell is marked because no borrow has been ratified; the axis is shown in full "
+                 "so the reader picks their own column rather than inheriting a placeholder.")
+    return fig, {"zero_contour_min_bp": min(crosses) if crosses else None,
+                 "zero_contour_max_bp": max(crosses) if crosses else None,
+                 "bracket_top_bp": hi}
+
+
+def g41_margin_sizing(pack) -> tuple:
+    """D3 — the realised excursion replayed as a margin call, netted vs two-ticket.
+
+    ILLUSTRATIVE THROUGHOUT, and the chart says so rather than relying on a reader to remember.
+    The excursion is measured; the margin RESPONSE to it is a parametric sketch standing in for
+    a schedule the desk owns. Those two facts have different epistemic status and the artifact
+    would be misleading if it presented them at the same weight.
+    """
+    tbl = pack.margin_sizing_table()
+    unw = pack.unwind_table()
+    fig, axes = theme.figure(ncols=2, shape_name="wide")
+    NET, TWO = theme.SEMANTIC["fungible"], theme.SEMANTIC["constrained"]
+
+    ax = axes[0]
+    x = range(len(tbl))
+    ax.bar([i - 0.2 for i in x], tbl.peak_call_two_ticket_usd / 1e6, width=0.38,
+           color=TWO, alpha=0.85, label="two tickets", zorder=3)
+    ax.bar([i + 0.2 for i in x], tbl.peak_call_netted_usd / 1e6, width=0.38,
+           color=NET, alpha=0.9, label="cross-margined", zorder=3)
+    ax.set_xticks(list(x))
+    ax.set_xticklabels([f"${n/1e6:.0f}mm" for n in tbl.notional_usd])
+    ax.set_ylabel("peak margin call ($mm)")
+    ax.set_title("peak call through the realised excursion", fontsize=theme.NOTE_SIZE,
+                 fontfamily=theme.SERIF_STACK)
+    ax.legend(frameon=False, fontsize=theme.NOTE_SIZE - 1)
+    ax.grid(True, axis="y", color=theme.RULE, lw=0.5, alpha=0.6)
+
+    ax = axes[1]
+    for p, mark in zip(sorted(unw.participation.unique()), ("o", "s", "^")):
+        sub = unw[unw.participation == p].sort_values("size_usd")
+        ax.plot(sub.size_usd / 1e6, sub.sessions_stressed, mark + "-",
+                color=TWO, alpha=0.9, label=f"{p:.0%} ADV, stressed", zorder=3)
+        ax.plot(sub.size_usd / 1e6, sub.sessions_normal, mark + "--",
+                color=NET, alpha=0.75, label=f"{p:.0%} ADV, normal", zorder=3)
+    ax.set_xlabel("notional ($mm)"); ax.set_ylabel("sessions to unwind")
+    ax.set_title("exit, normal vs 10x range widening", fontsize=theme.NOTE_SIZE,
+                 fontfamily=theme.SERIF_STACK)
+    ax.legend(frameon=False, fontsize=theme.NOTE_SIZE - 2, ncol=2)
+    ax.grid(True, color=theme.RULE, lw=0.5, alpha=0.6)
+
+    pk = float(tbl.peak_call_netted_pct_of_notional.iloc[0])
+    ratio = float(tbl.netting_ratio.iloc[0])
+    worst = float(unw.sessions_stressed.max())
+    theme.finalize(
+        fig, kicker="D3 · sizing — ILLUSTRATIVE",
+        headline="The realised excursion asks for 43% of notional in margin, and netting only "
+                 "takes a quarter off that",
+        subtitle=pack.freshness_line(),
+        stats=[(f"{pk:.0f}%", "of notional, peak call\nCROSS-MARGINED"),
+               (f"{ratio:.2f}x", "netted vs two tickets\n(lower is better)"),
+               (f"{tbl.premium_start_pct.iloc[0]:.0f}→{tbl.premium_peak_pct.iloc[0]:.0f}%",
+                "the replayed\npremium path"),
+               (f"{worst:.1f}", "sessions to exit $250mm\nat 5% ADV, stressed")],
+        source="Repo-computed. Premium path MEASURED from the pair; margin response is the "
+               "repository's parametric IM sketch, NOT a desk schedule.",
+        footnote="EVERY MARGIN NUMBER HERE IS ILLUSTRATIVE. The premium path is measured — the "
+                 "premium really did travel from 16% to 52% in this window — but the margin "
+                 "RESPONSE is a parametric sketch standing in for the risk schedule the desk "
+                 "owns. The replay takes a margin function as an argument, so dropping in the "
+                 "real schedule reprints this without touching the path. Note what netting does "
+                 "NOT do: it removes about a quarter of the peak call, not most of it, because "
+                 "the two legs move together in exactly the episode that produces the call.")
+    return fig, {"peak_pct": pk, "netting_ratio": ratio, "worst_sessions": worst}

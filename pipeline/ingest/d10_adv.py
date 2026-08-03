@@ -24,6 +24,7 @@ which is a person reading a public page and a different act from a crawler.
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 
 from ._http import DEFAULT_CLIENT
@@ -156,3 +157,43 @@ def raum(crd: str | int) -> float | None:
         return float(value)
     except ValueError:
         return None
+
+
+ADV_PDF = "https://reports.adviserinfo.sec.gov/reports/ADV/{crd}/PDF/{crd}.pdf"
+
+#: Schedule D Section 7.B.(1) Question 24(b). One occurrence per prime broker per private fund,
+#: so a large adviser's form repeats it hundreds of times across its funds.
+_PB_NAME = re.compile(r"Name of the prime broker:\s*\n?\s*([^\n]+)")
+
+#: Lines that follow the question label but are form furniture rather than a broker name.
+_PB_NOISE = re.compile(r"(?i)^\s*(\(c\)|\(d\)|\(e\)|yes\b|no\b|if the answer|additional prime"
+                       r"|SEC file|CRD|is the prime broker|registered|located|$)")
+
+
+def prime_brokers(crd: str | int) -> dict:
+    """Prime brokers named in one adviser's Form ADV Schedule D 7.B.(1) Q24(b).
+
+    Counted by how many private-fund sections name each broker, because a roster without
+    weights reads as though every relationship were the same size. It is not a size measure —
+    it counts FUNDS, not assets — and it is labelled that way wherever it is rendered.
+
+    The whole form is fetched, which is a real cost (a large adviser's ADV runs to several
+    hundred pages) but the only route: Q24 is per-private-fund and appears in no bulk file.
+    """
+    from collections import Counter
+    import io
+
+    from pypdf import PdfReader
+
+    raw = DEFAULT_CLIENT.get(ADV_PDF.format(crd=str(crd).strip()))
+    reader = PdfReader(io.BytesIO(raw))
+    counts: Counter = Counter()
+    for page in reader.pages:
+        text = page.extract_text() or ""
+        if "prime broker" not in text.lower():
+            continue
+        for name in _PB_NAME.findall(text):
+            name = name.strip()
+            if name and not _PB_NOISE.match(name) and len(name) > 2:
+                counts[name.upper()] += 1
+    return {"pages": len(reader.pages), "brokers": dict(counts.most_common())}

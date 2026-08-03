@@ -21,6 +21,10 @@ GENERATED = date.today().isoformat()
 #: they live in the ADV form, which robots disallows, so those two stay hand-transcribed.
 ADV = {label: firm_lookup(q) for label, q in ADV_QUERY.items()}
 
+#: Prime-broker rosters, Schedule D 7.B.(1) Q24(b), parsed from each adviser's own Form ADV.
+_PB_SNAP = sorted((Path(RAW_ROOT) / "d10_adv").iterdir())[-1] / "prime_brokers.json"
+PB = json.loads(_PB_SNAP.read_text()) if _PB_SNAP.is_file() else {}
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "appendix" / "01_public_filings_screen.md"
 
@@ -96,10 +100,21 @@ def main() -> int:
         raum_cell = (f"${_r/1e9:,.1f}bn (Form ADV Item 5.F(2)(c), SEC bulk extract dated "
                      f"2026-05-01)" if _r else
                      "no US adviser registration, so no Item 5.F filing exists")
-        cited += 5
-        pending += 1
+        _pb = PB.get(name) or {}
+        _brokers = _pb.get("brokers") or {}
+        if _brokers:
+            _top = ", ".join(list(_brokers)[:3])
+            pb_cell = (f"{len(_brokers)} named: {_top}… (Form ADV Schedule D 7.B.(1) Q24(b), "
+                       f"{_pb['pages']}pp form, retrieved {GENERATED})")
+        elif _pb.get("error"):
+            pb_cell = f"no US adviser registration, so no Schedule D exists ({GENERATED})"
+        else:
+            pb_cell = (f"none named (Form ADV Schedule D 7.B.(1) Q24, {_pb.get('pages', 0)}pp "
+                       f"form, retrieved {GENERATED}) — no private fund reports a prime broker")
+        cited += 6
+        pending += 0
         rows.append(f"| {name} | `{provenance}` | {cap_cell} | {korea_cell} | {dna_cell} | "
-                    f"{dart_cell} | {adv_cell} | {raum_cell} | MANUAL-PENDING |")
+                    f"{dart_cell} | {adv_cell} | {raum_cell} | {pb_cell} |")
 
     body = TEMPLATE.format(
         snap_date=snap_date, generated=date.today().isoformat(),
