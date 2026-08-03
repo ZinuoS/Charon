@@ -180,6 +180,28 @@ class TestAvailabilityTimestamps:
         (README §11). Any True here means a session over-stepped."""
         assert [s.series_id for s in all_series() if s.confirmed] == []
 
+    def test_every_series_a_pair_references_actually_resolves(self):
+        """`all_series()` must span every D*_SERIES collection, not most of them.
+
+        Korea and the Philippines were missing from the sum until 2026-08-03, so KT, SKM and
+        PLDT were referenced by PAIRS, absent from `series_by_id`, and quietly exempt from
+        every invariant in this class. The omission was invisible precisely because these
+        tests iterate the same incomplete sum they were meant to police. Asserting reachability
+        FROM PAIRS breaks that circularity: the pair registry is the independent witness.
+        """
+        from pipeline.ingest.registry import PAIRS, series_by_id
+
+        missing = []
+        for pair in PAIRS:
+            for leg in (pair.adr, pair.local, pair.fx):
+                try:
+                    series_by_id(leg)
+                except KeyError:
+                    missing.append(f"{pair.pair_id}:{leg}")
+        assert not missing, (
+            f"PAIRS references series that all_series() cannot see: {missing}. A new "
+            f"D*_SERIES collection must be added to all_series() in the same edit.")
+
 
 class TestSequencedPartitions:
     """Same-day re-pulls under a DIFFERENT request must not destroy the earlier result.

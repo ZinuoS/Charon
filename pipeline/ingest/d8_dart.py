@@ -20,8 +20,12 @@ the meaning attached.
 
 from __future__ import annotations
 
+import io
 import json
 import re
+import xml.etree.ElementTree as ET
+import zipfile
+from functools import lru_cache
 from pathlib import Path
 
 from ._http import DEFAULT_CLIENT
@@ -109,6 +113,48 @@ def _get(endpoint: str, **params) -> dict:
     return payload
 
 
+@lru_cache(maxsize=1)
+def _corp_index() -> dict[str, tuple[str, str]]:
+    """KRX stock code -> (DART corp_code, corp_name), from DART's own registry.
+
+    The corp_code is NOT the ticker, and a wrong one does not error — it returns some other
+    issuer's filings, which is the failure this repository has already paid for twice on
+    symbology (Yahoo's `.KS` vs EODHD's `.KO`, and the KOSPI index code). So the mapping is
+    fetched from the registry rather than typed from memory, and every pull re-checks the
+    returned `corp_name` against it.
+
+    This endpoint answers with a ZIP on success and JSON on failure, so the body is sniffed
+    before it is parsed as either.
+    """
+    raw = DEFAULT_CLIENT.get(f"{BASE}/corpCode.xml", params={"crtfc_key": _key()})
+    if raw[:1] in (b"{", b"<"):          # an error body, not the archive
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            raise DartError("900", f"corpCode returned neither ZIP nor JSON: {raw[:120]!r}")
+        raise DartError(str(payload.get("status", "900")), payload.get("message", ""))
+
+    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+        xml = archive.read(archive.namelist()[0])
+
+    index: dict[str, tuple[str, str]] = {}
+    for el in ET.fromstring(xml).iter("list"):
+        stock = (el.findtext("stock_code") or "").strip()
+        if stock:                        # blank for the many unlisted registered issuers
+            index[stock] = ((el.findtext("corp_code") or "").strip(),
+                            (el.findtext("corp_name") or "").strip())
+    return index
+
+
+def corp_code(stock_code: str) -> tuple[str, str]:
+    """Resolve a six-digit KRX code to (corp_code, corp_name). Raises if absent."""
+    hit = _corp_index().get(stock_code)
+    if hit is None:
+        raise DartError("013", f"KRX code {stock_code} is not in DART's registry of listed "
+                               f"issuers ({len(_corp_index())} entries)")
+    return hit
+
+
 def major_holders(corp_code: str) -> list[dict]:
     """5%+ substantial-shareholding reports for one issuer.
 
@@ -116,6 +162,76 @@ def major_holders(corp_code: str) -> list[dict]:
     the `corpCode.xml` bundle, which is a zipped index of every registered issuer.
     """
     return _get("majorstock.json", corp_code=corp_code).get("list", [])
+
+
+#: Issuers outside the pair registry worth pulling anyway. Samsung Electronics is here because
+#: the only positive hit in the session-32R evidence log was a US fund holding its PREFERENCE
+#: line — the discount instrument this desk's thesis generalises to.
+EXTRA_ISSUERS = {"005930": "Samsung Electronics (preference-line comparator)"}
+
+
+def korean_stock_codes() -> dict[str, str]:
+    """KRX codes for every Korean local leg in the pair registry, plus the comparators.
+
+    Driven off the registry rather than a hand-kept list, so landing another Korean pair
+    extends this pull instead of silently leaving it out of the evidence base.
+    """
+    from .registry import PAIRS, series_by_id
+
+    # `series_by_id` spans every D*_SERIES collection. Reading one of them directly — as the
+    # first draft of this function did with D1_SERIES — silently returned SK hynix alone and
+    # dropped KT and SKM, the two pairs this pull most needed. A partial view of the registry
+    # produces a pull that looks complete and is not.
+    out = dict(EXTRA_ISSUERS)
+    for pair in PAIRS:
+        symbol = getattr(series_by_id(pair.local), "symbol", "")
+        if symbol.endswith((".KS", ".KO", ".KQ")):
+            out[symbol.split(".")[0]] = pair.pair_id
+    return out
+
+
+def pull(codes: dict[str, str] | None = None, out_root: Path | None = None) -> dict:
+    """The 5%+ substantial-shareholding pull, snapshotted to ``data/raw/d8_dart/<date>/``.
+
+    Every issuer's returned `corp_name` is checked against the registry's name for the code we
+    asked about. A wrong corp_code does not error at DART — it answers with a DIFFERENT
+    issuer's filings, and an unchecked pull would file those under our label. That is the same
+    silent-substitution failure as a symbology miss, which has cost this repository data twice.
+    """
+    from ._common import RAW_ROOT
+
+    codes = codes or korean_stock_codes()
+    root = (out_root or RAW_ROOT / "d8_dart") / _today()
+    root.mkdir(parents=True, exist_ok=True)
+
+    manifest: dict[str, dict] = {}
+    for stock_code, label in sorted(codes.items()):
+        code, name = corp_code(stock_code)
+        try:
+            rows = major_holders(code)
+        except DartError as exc:
+            if exc.status != "013":          # 013 is "no filings", a real answer
+                raise
+            rows = []
+        mismatched = {r.get("corp_name") for r in rows} - {name}
+        if mismatched:
+            raise DartError("900", f"corp_code {code} was asked for {name!r} but returned "
+                                   f"filings for {mismatched!r} — refusing to file these")
+        (root / f"{stock_code}.json").write_text(
+            json.dumps(rows, ensure_ascii=False, indent=1), encoding="utf-8")
+        manifest[stock_code] = {"label": label, "corp_code": code, "corp_name": name,
+                                "rows": len(rows),
+                                "first": min((r["rcept_dt"] for r in rows), default=None),
+                                "last": max((r["rcept_dt"] for r in rows), default=None)}
+    (root / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
+    return manifest
+
+
+def _today() -> str:
+    from datetime import date
+
+    return date.today().isoformat()
 
 
 def probe() -> dict:

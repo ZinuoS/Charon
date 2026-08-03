@@ -494,7 +494,7 @@ D6_PHILIPPINES_SERIES: tuple[SeriesSpec, ...] = (
         series_id="usdphp_spot_daily", symbol="USDPHP", asset_class="fx", currency="PHP",
         market="OTC FX", timezone="UTC", close_local=time(21, 0),
         availability_lag=_STD_LAG, availability_note="OTC spot close.",
-        units="PHP per USD", start=None, confirmed=False,
+        units="PHP per 1 USD", start=None, confirmed=False,
         providers=("eodhd",), provider_symbols={"eodhd": "USDPHP.FOREX"},
     ),
 )
@@ -908,8 +908,17 @@ PAIRS: tuple[PairSpec, ...] = (
 
 
 def all_series() -> tuple[SeriesSpec, ...]:
+    """Every series spec in the registry.
+
+    D6_KOREA_SERIES and D6_PHILIPPINES_SERIES were absent from this sum until 2026-08-03. The
+    omission was silent and load-bearing: `coverage_report` under-counted, the ingest-contract
+    and FX-convention invariants never ran against KT, SKM or PLDT, and `series_by_id` raised
+    KeyError for local legs that the PAIRS tuple referenced perfectly happily. A collection
+    added to this module must be added here in the same edit — the tests below now assert that
+    every series_id reachable from PAIRS resolves, so the next omission fails loudly.
+    """
     return (D1_SERIES + D6_TSMC_SERIES + D6_EXTRA_SERIES + D6_TAIWAN_SERIES
-            + D6_BRAZIL_SERIES + D2_MACRO_SERIES)
+            + D6_PHILIPPINES_SERIES + D6_KOREA_SERIES + D6_BRAZIL_SERIES + D2_MACRO_SERIES)
 
 
 def series_by_id(series_id: str) -> SeriesSpec:

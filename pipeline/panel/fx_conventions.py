@@ -89,6 +89,16 @@ CONVENTIONS: dict[str, FxConvention] = {
         "accommodated: no pair in the panel uses it (the earliest control sample starts "
         "2000-01-01), so the guard is set where it can actually discriminate.",
     ),
+    "USDPHP": FxConvention(
+        "USDPHP", "PHP", "local_per_usd", 20.0, 80.0,
+        "Philippine peso, for the PLDT pair. Declared 2026-08-03: the series was referenced by "
+        "the registry and reachable from PAIRS, but absent from this table, so `for_series` "
+        "raised on it and no direction guard ever ran against PLDT's FX leg. The gap stayed "
+        "hidden because `all_series()` also omitted the Philippines collection — the registry "
+        "and the convention table were missing the same pair, so neither contradicted the "
+        "other. The band spans the managed float's realised range (roughly 40-59/USD since "
+        "2000) with room either side; a reciprocal misread would land near 0.02 and trip it.",
+    ),
     "USDHKD": FxConvention(
         "USDHKD", "HKD", "local_per_usd", 7.5, 8.0,
         "Hong Kong dollar. The narrow band is not a guess — see `peg`.",
@@ -124,6 +134,7 @@ def for_series(series_id: str) -> FxConvention:
         "usdinr_spot_daily": "USDINR",
         "usdhkd_spot_daily": "USDHKD",
         "usdbrl_spot_daily": "USDBRL",
+        "usdphp_spot_daily": "USDPHP",
     }
     if series_id not in mapping:
         raise KeyError(f"{series_id!r} is not a declared FX series")

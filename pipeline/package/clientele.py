@@ -308,10 +308,13 @@ VISIBILITY: tuple[dict, ...] = (
      "strength": "STRONGEST where it applies. An audited holdings table is worth more than "
                  "any amount of inference. It found one real instance of the instrument"},
     {"source": "DART 5% filings", "class": "local-leg capacity",
-     "sees": "substantial shareholdings in Korean listed names, including by foreign managers",
-     "blind": "sub-5% positions, and anything held synthetically",
-     "strength": "the highest-yield source not yet pulled — it sees the LOCAL leg, which is "
-                 "the hard one and the one no US filing reaches. Needs a free API key"},
+     "sees": "substantial shareholdings in Korean listed names, including by foreign managers; "
+             "uniquely, a CONTRACT column that captures contract-based (derivative) holdings, "
+             "and stated reasons that distinguish local shares from depositary receipts",
+     "blind": "sub-5% positions, and every short leg",
+     "strength": "PULLED 2026-08-02, 71 filings across four issuers. It resolved the local-leg "
+                 "capability question and, more importantly, returned the decisive negative — "
+                 "see DART_CONTRACT_COLUMN_NULL below"},
     {"source": "Form ADV Schedule D", "class": "infrastructure",
      "sees": "regulatory AUM and prime-broker relationships per adviser",
      "blind": "positions of any kind",
@@ -324,8 +327,58 @@ VISIBILITY: tuple[dict, ...] = (
 )
 
 
+#: The 2026-08-02 DART pull, as an aggregate. No holder is named: this module states what the
+#: DISCLOSURE REGIME can and cannot see, which is a fact about the regime, not about anyone.
+DART_PULL_2026_08_02: dict = {
+    "issuers": 4,                    # SK hynix, KT, SK Telecom, Samsung Electronics
+    "filings": 71,
+    "distinct_reporters": 8,
+    "foreign_managers": 5,           # non-domestic institutions holding ≥5% of a KRX line
+    "filings_citing_depositary_receipts": 6,
+    "reporters_citing_depositary_receipts": 1,
+    "reporters_using_the_contract_column": 1,       # a strategic affiliate, not a manager
+    "foreign_managers_using_the_contract_column": 0,
+    "snapshot": "data/raw/d8_dart/2026-08-02/",
+}
+
+#: THE RESULT THAT MATTERS, and it is a negative.
+DART_CONTRACT_COLUMN_NULL = (
+    "Korea's 5% substantial-shareholding regime has a CONTRACT column (`ctr_stkqy`/`ctr_stkrt`) "
+    "that captures contract-based holdings — precisely where swap and derivative exposure would "
+    "surface. The column is demonstrably live: one strategic affiliate populates it in all 40 of "
+    "its filings, and the contract portion moves visibly across two years. Zero foreign managers "
+    "populate it, in any of the four issuers pulled.\n\n"
+    "So the swap-financed structure is invisible EVEN IN THE ONE REGIME THAT HAS A FIELD BUILT "
+    "TO SEE IT. The earlier version of this argument inferred invisibility from the absence of "
+    "US filings, which is weak: absence in a regime that never asks the question proves nothing. "
+    "This is the stronger form — a regime that does ask, asked, and got nothing back.\n\n"
+    "That single fact carries both halves of the commercial case. A trade a regulator's "
+    "purpose-built field cannot see is a trade a competitor cannot reverse-engineer from paper; "
+    "it is also a trade whose buyers cannot be found from paper. The moat and the research "
+    "obstacle are the same property, observed from opposite sides."
+)
+
+#: A second, weaker aggregate finding, recorded because it is testable rather than because it
+#: is conclusive.
+DART_FORMAT_SWITCHING = (
+    "Six of the 71 filings state a reason that mentions depositary receipts (`증권예탁증권`) "
+    "alongside local common — and all six fall on the two pairs this repository classifies as "
+    "one-way-constrained by Company consent. One of them reports a local sale on-exchange and a "
+    "DR purchase off-exchange in the same filing: a format switch between the two legs.\n\n"
+    "Read conservatively. Korea's regime aggregates DRs with the underlying shares into a "
+    "SINGLE stake, because a DR represents deposited local shares — so dual-format presentation "
+    "is what an ordinary long looks like when it sits in both formats, not a long/short. Every "
+    "one of these filings is also a simplified report declaring passive investment intent, which "
+    "cuts against an arbitrage reading. What the filings establish is CAPABILITY — that managers "
+    "operate both formats on the constrained pairs, off-exchange — not that the pair trade is "
+    "being run."
+)
+
+
 def visibility_note() -> str:
     """The one-sentence version, for a caption."""
-    return ("A swap-financed pair leaves no public trace: 13F sees US-listed longs only, and "
-            "Korean preference lines are not SEC-registered so no beneficial-ownership regime "
-            "reaches them. The trade is unobservable to a competitor and to us alike.")
+    return ("A swap-financed pair leaves no public trace: 13F sees US-listed longs only, Korean "
+            "lines are not SEC-registered so no beneficial-ownership regime reaches them, and "
+            "Korea's own 5% regime — which HAS a contract column for derivative exposure — was "
+            "pulled and returned zero foreign managers using it. The trade is unobservable to a "
+            "competitor and to us alike, and that is one property, not two.")
