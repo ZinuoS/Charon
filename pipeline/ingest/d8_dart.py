@@ -21,9 +21,9 @@ the meaning attached.
 from __future__ import annotations
 
 import json
-import urllib.parse
-import urllib.request
 from pathlib import Path
+
+from ._http import DEFAULT_CLIENT
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 BASE = "https://opendart.fss.or.kr/api"
@@ -75,12 +75,16 @@ def _key() -> str:
 
 
 def _get(endpoint: str, **params) -> dict:
-    """One DART call, with its in-body status decoded into an exception or a payload."""
-    q = urllib.parse.urlencode({"crtfc_key": _key(), **params})
-    req = urllib.request.Request(f"{BASE}/{endpoint}?{q}",
-                                 headers={"User-Agent": "charon-research"})
-    with urllib.request.urlopen(req, timeout=45) as r:
-        payload = json.loads(r.read().decode("utf-8"))
+    """One DART call, with its in-body status decoded into an exception or a payload.
+
+    Transport is the repository's shared client, not raw urllib. That is not a formality:
+    `_http.py` owns the retry policy, the inter-request spacing, the response cache and the
+    404-vs-429 doctrine, and `tests/test_no_network_in_analysis.py` asserts it is the ONLY
+    module that opens a socket. The first draft of this file called urllib directly and the
+    test caught it — while the docstring above was explaining the very doctrine it broke.
+    """
+    raw = DEFAULT_CLIENT.get(f"{BASE}/{endpoint}", params={"crtfc_key": _key(), **params})
+    payload = json.loads(raw)
     status = str(payload.get("status", "900"))
     if status != "000":
         raise DartError(status, payload.get("message", ""))
