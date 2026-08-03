@@ -237,6 +237,55 @@ listed-vehicle strategies are cited as history; nothing is named as a counterpar
 inference about any specific current relationship appears anywhere in this repository.
 """)
 
+# ---------------------------------------------------------------- §1d segmentation method
+md("## 1d. Which regime sees which buyer — and why capability is not appetite")
+
+code(r"""Markdown(f'''
+{CLI.THREE_LAYER_METHOD}
+''')""")
+
+code('fig, _ = figures.g34r_evidence_availability(CLI.VISIBILITY, CLI.FUNNEL_GATES)\nfig;')
+
+md(r"""
+**Read the empty column, not the full ones.** 13F carries no cell at all. It is the source most
+often reached for when someone asks who trades a thing — and for this trade it is worth exactly
+nothing, because it reports US-listed longs and this pair is a short plus a foreign line. The
+chart's usefulness is that it says so in a form that survives being disagreed with.
+""")
+
+code(r"""Markdown(f'''
+### The test that upgrades the argument
+
+{CLI.DART_CONTRACT_COLUMN_NULL}
+''')""")
+
+md(r"""
+**Why this is worth a section rather than a footnote.** The weak version of "our trade is
+invisible" rests on absence in regimes that never ask the question, and absence like that proves
+nothing whatsoever. The strong version needs a regulator who *did* build a field for the thing,
+and Korea did: its 5% regime carries a contract column for derivative exposure. Pulling it
+answers a question instead of failing to.
+
+**The inversion is the part that would be got wrong by default.** A capability screen normally
+reads as a buyer list — the more capable the manager, the better the prospect. Here it runs the
+other way. Evidence that a manager already executes the Korean local leg is evidence that they
+do not need the largest component of what is being sold. That does not make them worthless as a
+counterparty; it makes them a different, smaller sale, and mistaking the two would put the wrong
+pitch in front of the most sophisticated name on the list.
+""")
+
+code(r"""Markdown(f'''
+{CLI.DART_FORMAT_SWITCHING}
+''')""")
+
+md(r"""
+**What is deliberately absent from this section.** No manager is named, here or anywhere in this
+repository. Counts describe what a disclosure regime can and cannot see, which is a fact about
+the regime; naming who appeared in it would be a claim about people, and a different kind of
+document. The booking-chain criterion stays empty for the same reason it was empty before: Form
+ADV Schedule D would fill it, and every automated route to that data refuses a compliant client.
+""")
+
 # ---------------------------------------------------------------- §2 durability
 md(r"""
 ## 2. Why the premium exists
@@ -489,6 +538,7 @@ REQUIRED_SECTIONS = (
     "## 1. The pitch",
     "## 1b. Which version of this is yours",
     "## 1c. Who has done this trade, and who survives our own filters",
+    "## 1d. Which regime sees which buyer — and why capability is not appetite",
     "## 2. Why the premium exists",
     "## 6. P&L scenarios",
     "## 7b. Execution reality — four objections, answered",

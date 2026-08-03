@@ -120,6 +120,14 @@ def cache_write(url: str, params: dict | None, payload: bytes) -> None:
 # --------------------------------------------------------------------------------
 
 
+def _sec_user_agent() -> str:
+    """The declarative User-Agent the SEC asks automated clients to send."""
+    import os
+
+    return os.environ.get("SEC_USER_AGENT",
+                          "charon-research (+https://github.com/ZinuoS/Charon)")
+
+
 @dataclass
 class FragileHttpClient:
     """HTTP client that assumes the provider will throttle it, because it will.
@@ -133,12 +141,43 @@ class FragileHttpClient:
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
     )
+    #: Hosts that require identifying yourself rather than imitating a browser.
+    #:
+    #: The SEC's Internet Security Policy asks automated clients to send a DECLARATIVE
+    #: User-Agent naming the requester and a contact. Sending the Chrome string above earns a
+    #: flat 403 from `www.sec.gov` -- discovered 2026-08-03, when a Form ADV pull failed on
+    #: every path including nonexistent ones, which is the signature of a host-level refusal
+    #: rather than a bad URL. `data.sec.gov` happens to tolerate the browser string, so the
+    #: repository's existing EDGAR calls worked and the defect stayed hidden.
+    #:
+    #: Worth being precise about what this is: NOT a workaround for a bot challenge. It is the
+    #: opposite. The provider documents programmatic access as permitted on condition that you
+    #: say who you are; the browser string was the non-compliant setting, and this fixes it.
+    #: `docs/data_sources.md` D5-d already recorded the condition -- "programmatic access
+    #: explicitly permitted with a User-Agent header" -- and the client simply never met it.
+    #:
+    #: A public repository URL is used as the contact rather than a personal email, which
+    #: would be PII in a public repo. Override with SEC_USER_AGENT to supply an address.
+    host_user_agents: dict = field(default_factory=lambda: {
+        "sec.gov": _sec_user_agent(),
+    })
     min_interval: float = DEFAULT_MIN_INTERVAL
     max_attempts: int = DEFAULT_MAX_ATTEMPTS
     base_backoff: float = DEFAULT_BASE_BACKOFF
     use_cache: bool = True
     rng: random.Random = field(default_factory=lambda: random.Random(20260728))
     _sleep: Any = time.sleep  # injectable for tests
+
+    def user_agent_for(self, host: str) -> str:
+        """The UA for ``host``: a declarative one where the provider requires it.
+
+        Matched on domain suffix so every subdomain inherits it — `www.sec.gov`,
+        `data.sec.gov` and `reports.adviserinfo.sec.gov` are one policy, not three.
+        """
+        for domain, agent in self.host_user_agents.items():
+            if host == domain or host.endswith("." + domain):
+                return agent
+        return self.user_agent
 
     def get(self, url: str, params: dict | None = None, timeout: int = 30,
             json_body: dict | None = None) -> bytes:
@@ -165,7 +204,8 @@ class FragileHttpClient:
                 return cached
 
         host = urlparse(url).netloc
-        headers = {"User-Agent": self.user_agent, "Accept": "application/json, */*"}
+        headers = {"User-Agent": self.user_agent_for(host),
+                   "Accept": "application/json, */*"}
         last_error: Exception | None = None
 
         with _lock_for(host):
