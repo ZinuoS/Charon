@@ -21,8 +21,12 @@ says so — a filter that looks empirical but is not is worse than an admitted h
 
 from __future__ import annotations
 
-#: RATIFICATION STATUS. The gates and their thresholds are the author's to sign.
-FUNNEL_RATIFIED: str | None = None
+#: RATIFICATION STATUS: RATIFIED 2026-08-03 by the author, all six gates and their
+#: thresholds. What was signed is the PLACEMENT, not the evidence: four gates cite
+#: measurements this repository produced and those stand on their own, and two are desk
+#: conventions that stand on the author's judgement. Signing does not convert the second kind
+#: into the first, and the figure keeps drawing them apart.
+FUNNEL_RATIFIED: str | None = "2026-08-03"
 
 
 #: The documented record. `confidence` is one of: canonical | documented | thin.
@@ -237,10 +241,21 @@ PLAYBOOK: tuple[dict, ...] = (
 
 def funnel_note() -> str:
     if FUNNEL_RATIFIED:
-        return f"Funnel gates ratified {FUNNEL_RATIFIED}."
+        return ratification_note()
     return ("Funnel gates PROVISIONAL — four of six rest on measurements in this repository, "
             "two are desk conventions and say so, and where to set each threshold is the "
             "author's judgement to sign.")
+
+
+def ratification_note() -> str:
+    """What the signature covers, which is narrower than what the funnel asserts."""
+    if not FUNNEL_RATIFIED:
+        return funnel_note()
+    n_meas = sum(1 for g in FUNNEL_GATES if g["basis"].startswith("measured"))
+    return (f"Gates ratified {FUNNEL_RATIFIED}. The signature covers the PLACEMENT of the "
+            f"thresholds. {n_meas} of {len(FUNNEL_GATES)} gates rest on measurements that "
+            f"stand without it; {len(FUNNEL_GATES) - n_meas} are desk conventions that rest "
+            f"on it. Ratifying a convention does not make it a measurement.")
 
 
 def survivors() -> list[str]:
