@@ -100,6 +100,7 @@ VOLS   = FIN.vol_context()
 STR_SK = FIN.stress_liquidity("skhy"); STR_TS = FIN.stress_liquidity("tsmc")
 VARSH  = float(_cp().set_index("pair").loc["tsmc", "share_pi"])
 TIERS  = FIN.segmentation()
+from pipeline.package import clientele as CLI
 IND    = FIN.indicated_tier()
 WINS   = {b: float(EO.loc[b, "frac_beats_carry"]) for b in ("low", "mid", "high")}
 _k = VOLS[VOLS.leg.str.startswith("KOSPI")]; _v = VOLS[VOLS.leg.str.contains("VIX")]

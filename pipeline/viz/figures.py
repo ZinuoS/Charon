@@ -2806,3 +2806,114 @@ def g34_breakeven_boundary(hl, carry_of, critical_of, borrow_bracket, cutoffs):
                  "critical_point": critical_of(hl.point) / 12,
                  "critical_slow": critical_of(hl.upper) / 12,
                  "high_borrow_fails_at_slow_end": bool(carry_hi > slow_c)}
+
+
+def g35_capacity_funnel(gates, clientele, survivors_n: int, note: str):
+    """G35 — why most inquirers leave, drawn as structure rather than as salesmanship.
+
+    Six gates, each labelled with the finding it rests on and whether that finding is a
+    MEASUREMENT or a desk CONVENTION. The distinction is the point: a filter that looks
+    empirical but is not is worse than an admitted heuristic, because it borrows credibility
+    it did not earn.
+    """
+    fig, ax = theme.figure(shape_name="tall")
+    EM, CON, FUN, CX, BA, WA = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["constrained"],
+                                theme.SEMANTIC["fungible"], theme.SEMANTIC["context"],
+                                theme.SEMANTIC["barrier"], theme.SEMANTIC["warning"])
+    ax.set_xlim(-2, 150); ax.set_ylim(0, 100); ax.axis("off")
+
+    n = len(gates)
+    top_w, bot_w = 92.0, 58.0
+    y = 95.0
+    step = (y - 12.0) / n
+    for i, g in enumerate(gates):
+        w0 = top_w - (top_w - bot_w) * (i / n)
+        w1 = top_w - (top_w - bot_w) * ((i + 1) / n)
+        y0, y1 = y - i * step, y - (i + 1) * step
+        measured = g["basis"].startswith("measured")
+        col = FUN if measured else CX
+        ax.add_patch(mpatches.Polygon(
+            [(50 - w0 / 2, y0), (50 + w0 / 2, y0), (50 + w1 / 2, y1), (50 - w1 / 2, y1)],
+            closed=True, facecolor=col, alpha=0.26 if measured else 0.10,
+            hatch=None if measured else "///", edgecolor=col, lw=1.3, zorder=2))
+        ax.text(50, y0 - step * 0.30, g["gate"].upper(), ha="center",
+                fontsize=theme.LABEL_SIZE, color=col, weight="medium",
+                fontfamily=theme.SERIF_STACK)
+        ax.text(50, y0 - step * 0.58, g["test"], ha="center", fontsize=theme.NOTE_SIZE,
+                color=theme.TEXT, fontfamily=theme.SERIF_STACK)
+        ax.text(50, y0 - step * 0.80, "MEASURED" if measured else "CONVENTION",
+                ha="center", fontsize=theme.NOTE_SIZE,
+                color=col if measured else WA, fontfamily=theme.SERIF_STACK)
+        ax.text(50 + top_w / 2 + 3.0, y0 - step * 0.50, f"drops:\n{g['drops']}", ha="left",
+                va="center", fontsize=theme.NOTE_SIZE, color=WA,
+                fontfamily=theme.SERIF_STACK, linespacing=1.5)
+
+    ax.text(50, 8.0, f"{survivors_n} archetypes clear all six",
+            ha="center", fontsize=theme.SUBTITLE_SIZE, color=EM,
+            fontfamily=theme.SERIF_STACK)
+
+    n_meas = sum(1 for g in gates if g["basis"].startswith("measured"))
+    theme.finalize(
+        fig, kicker="the capacity filter",
+        headline="Many enquire, most leave, and the reason is structural rather than "
+                 "commercial",
+        subtitle="Six gates. Each names the finding it rests on, and whether that finding is "
+                 "a measurement in this repository or a desk convention.",
+        stats=[(f"{len(gates)}", "gates"),
+               (f"{n_meas}/{len(gates)}", "resting on a\nmeasurement"),
+               (f"{survivors_n}", "archetypes that\nclear all six"),
+               (f"{len(clientele)}", "archetypes in the\nhistorical record")],
+        source="Repo-computed and cited. pipeline.package.clientele; the measured gates cite "
+               "jorda, lab.tsmc, financing and capacity.",
+        footnote=note + " Two gates are conventions and are drawn in grey for that reason: a "
+                 "filter that looks empirical but is not borrows credibility it did not earn. "
+                 "ARCHETYPES ONLY — no live fund appears here as a counterparty, and the "
+                 "historical record cites documented cases as history rather than as clients.")
+    return fig, {"n_gates": len(gates), "n_measured": n_meas, "survivors": survivors_n}
+
+
+def g36_sales_map(playbook):
+    """G36 — archetype to expression to first conversation. The segmentation, re-cut to sell.
+
+    G33 answers "which version of this trade fits which borrow". This answers "who is on the
+    other side of the phone, and what do they ask in the first ninety seconds". Same
+    segmentation, different question, so it is a separate render rather than a variant.
+    """
+    fig, ax = theme.figure(shape_name="large")
+    EM, CON, FUN, CX, BA = (theme.SEMANTIC["emphasis"], theme.SEMANTIC["constrained"],
+                            theme.SEMANTIC["fungible"], theme.SEMANTIC["context"],
+                            theme.SEMANTIC["barrier"])
+    cols = [FUN, EM, CON]
+    ax.set_xlim(0, 100); ax.set_ylim(2, 96); ax.axis("off")
+
+    y = 92.0
+    for p, col in zip(playbook, cols):
+        ax.add_patch(mpatches.FancyBboxPatch((1.0, y - 27.5), 98.0, 27.0,
+                     boxstyle="round,pad=0.4", facecolor=theme.PAPER, edgecolor=col, lw=1.6))
+        ax.text(3.0, y - 4.0, p["archetype"].upper(), fontsize=theme.SUBTITLE_SIZE,
+                color=col, weight="medium", fontfamily=theme.SERIF_STACK)
+        ax.text(97.0, y - 4.0, f"LEAD WITH:  {p['lead_with']}", fontsize=theme.NOTE_SIZE,
+                color=col, ha="right", fontfamily=theme.SERIF_STACK)
+        ax.text(3.0, y - 9.0, p["why_them"], fontsize=theme.NOTE_SIZE, color=CX,
+                style="italic", fontfamily=theme.SERIF_STACK)
+        for k, q in enumerate(p["first_questions"]):
+            ax.text(4.5, y - 14.0 - k * 3.9, f"{k + 1}.  {q}", fontsize=theme.NOTE_SIZE,
+                    color=theme.TEXT, fontfamily=theme.SERIF_STACK)
+        ax.text(3.0, y - 25.6, f"DESK EARNS:  {p['desk_earns']}", fontsize=theme.NOTE_SIZE,
+                color=col, style="italic", fontfamily=theme.SERIF_STACK)
+        y -= 29.5
+
+    theme.finalize(
+        fig, kicker="the playbook",
+        headline="Three archetypes clear the filter, and each opens on a different expression",
+        subtitle="The same segmentation as the borrow map, asked from the other end: who is on "
+                 "the phone, and what do they ask in the first ninety seconds.",
+        stats=[(f"{len(playbook)}", "surviving\narchetypes"),
+               ("3", "questions each,\nprepared"),
+               ("0", "named as\na client")],
+        source="Repo-computed. pipeline.package.clientele.PLAYBOOK; expressions from the "
+               "ratified segmentation.",
+        footnote="ARCHETYPES ONLY. Nothing here identifies a counterparty, and the questions "
+                 "are the ones any buyer of this shape asks — borrow stability, margin "
+                 "stability, unwind support — not the ones a particular one has asked.")
+    return fig, {"n_survivors": len(playbook)}

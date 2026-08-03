@@ -299,7 +299,19 @@ def extra_panels() -> list[tuple[str, callable]]:
             lambda h: BE.critical_carry_bp(half_life_days=h),
             FIN.ADR_BORROW_BRACKET_BP, FIN.BORROW_CUTOFF_BP)
 
-    return [("S01a_anchor", s01a), ("S03a_macro_map", s03a), ("S04a_identity", s04a),
+    def s01c():
+        """The capacity funnel — why most enquirers leave."""
+        from pipeline.package import clientele as CLI
+        return figures.g35_capacity_funnel(CLI.FUNNEL_GATES, CLI.CLIENTELE,
+                                           len(CLI.PLAYBOOK), CLI.funnel_note())
+
+    def s01d():
+        """The sales map — archetype to expression to first conversation."""
+        from pipeline.package import clientele as CLI
+        return figures.g36_sales_map(CLI.PLAYBOOK)
+
+    return [("S01c_funnel", s01c), ("S01d_salesmap", s01d),
+            ("S01a_anchor", s01a), ("S03a_macro_map", s03a), ("S04a_identity", s04a),
             ("S05a_catalysts", s05a), ("S07a_breakeven", s07a), ("S0A6_financing", s0a6),
             ("S0A6b_structure", s0a6b)]
 
