@@ -50,8 +50,13 @@ def notebook():
         notebook, because one anchor had drifted and nothing checked. A manifest turns that
         into a loud failure at build time instead of a reader noticing months later.
         """
-        src = "".join("".join(c["source"]) for c in nb.cells)
-        missing = [h for h in require if h not in src]
+        # LINE-EXACT, not substring. Substring containment catches an absent section, which
+        # is the failure this was written for, but it does NOT catch a RENAMED one: the
+        # manifest entry "## 1. The structure" is still contained in "## 1. The structure
+        # BROKEN". Matching whole lines catches both, and a renamed heading is exactly as
+        # broken as a missing one from a cross-reference's point of view.
+        lines = {ln.strip() for c in nb.cells for ln in "".join(c["source"]).splitlines()}
+        missing = [h for h in require if h.strip() not in lines]
         assert not missing, f"sections missing from the built notebook: {missing}"
         nbf.validate(nb)                 # loud here, not later inside nbconvert
         nbf.write(nb, str(path))

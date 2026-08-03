@@ -248,5 +248,15 @@ is stated rather than smoothed.
 """)
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
-n = write(OUT)
-print(f"wrote {OUT.relative_to(ROOT)} ({n} cells)")
+REQUIRED_SECTIONS = (
+    '## H5 — barrier-state monitor (Class C, **registered**)',
+    '## H4 — realized variance decomposition (Class X, exploratory)',
+    '## M3 — convergence dynamics per regime class (PROVISIONAL)',
+    '## The taxonomy, ratified',
+    '## H1, H2, H3 — status (all Class X, exploratory; data-blocked)',
+    '## What this notebook does not claim',
+)
+
+n = write(OUT, require=REQUIRED_SECTIONS)
+print(f"wrote {OUT.relative_to(ROOT)} ({n} cells, "
+      f"{len(REQUIRED_SECTIONS)} sections verified)")

@@ -255,5 +255,15 @@ fraction-beats-carry from a revolving facility as the probability an SKHY entry 
 substitutes the easier trade for the real one.
 """)
 
-n = write(OUT)
-print(f"wrote {OUT.relative_to(ROOT)} ({n} cells)")
+REQUIRED_SECTIONS = (
+    '## 1. The structural audit — similarities justify the lab, differences bound it',
+    '## 2. Episode census (G25) — how often, how big, how long, and which leg closes it',
+    "## 3. Entry outcomes against the breakeven (G26) — the lab's headline",
+    '## 4. What it costs you en route (G26b) — the case for sizing over stopping',
+    '## 5. The FX case (G27)',
+    '## 6. What the lab changes',
+)
+
+n = write(OUT, require=REQUIRED_SECTIONS)
+print(f"wrote {OUT.relative_to(ROOT)} ({n} cells, "
+      f"{len(REQUIRED_SECTIONS)} sections verified)")

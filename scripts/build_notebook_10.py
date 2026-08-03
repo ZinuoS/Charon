@@ -129,5 +129,13 @@ is a bracketed assumption pending a desk quote; the cross-currency basis is unme
 financing levels are the desk's to quote.
 """)
 
-n = write(OUT)
-print(f"wrote {OUT.relative_to(ROOT)} ({n} cells)")
+REQUIRED_SECTIONS = (
+    '## 1. The structure',
+    '## 2. The carry, by component',
+    '## 3. Fed sensitivity',
+    '## 4. The probe: can the cross-currency basis be measured?',
+)
+
+n = write(OUT, require=REQUIRED_SECTIONS)
+print(f"wrote {OUT.relative_to(ROOT)} ({n} cells, "
+      f"{len(REQUIRED_SECTIONS)} sections verified)")

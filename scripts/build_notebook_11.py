@@ -483,9 +483,17 @@ comparable pair is characterisation of a regime family, not a forecast of this o
 
 # Every str.replace in this file is a silent no-op if its anchor drifts, and that is exactly
 # how §1c shipped as a commit with no section in the notebook. The manifest makes it loud.
-REQUIRED_SECTIONS = ("## 1. The pitch", "## 1b. Which version of this is yours",
-                     "## 1c. Who has done this trade", "## 2. Why the premium exists",
-                     "## 6. P&L scenarios", "## 7b. Execution reality", "## 8. Monitoring")
+# FULL headings, not prefixes. Under the old substring check these entries were truncated and
+# still passed; line-exact matching caught that immediately, which is the point of it.
+REQUIRED_SECTIONS = (
+    "## 1. The pitch",
+    "## 1b. Which version of this is yours",
+    "## 1c. Who has done this trade, and who survives our own filters",
+    "## 2. Why the premium exists",
+    "## 6. P&L scenarios",
+    "## 7b. Execution reality — four objections, answered",
+    "## 8. Monitoring, and the ask",
+)
 
 n = write(OUT, require=REQUIRED_SECTIONS)
 print(f"wrote {OUT.relative_to(ROOT)} ({n} cells, {len(REQUIRED_SECTIONS)} sections verified)")

@@ -162,5 +162,12 @@ was shut. Losing 4% of sessions is the cheaper error, and it is the one this rep
   fit — and a structural guard, not a convention, keeps it that way.
 """)
 
-n = write(OUT)
-print(f"wrote {OUT.relative_to(ROOT)} ({n} cells)")
+REQUIRED_SECTIONS = (
+    '## 1. Three regimes, and a fourth category that is not a regime',
+    '## 2. Corporate-action QA — every exclusion is declared, with its cause',
+    '## 3. Calendar policy — what it costs to join three legs',
+)
+
+n = write(OUT, require=REQUIRED_SECTIONS)
+print(f"wrote {OUT.relative_to(ROOT)} ({n} cells, "
+      f"{len(REQUIRED_SECTIONS)} sections verified)")

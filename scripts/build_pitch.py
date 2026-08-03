@@ -511,5 +511,24 @@ resolve whatever is frozen on its stated date.
 """)
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
-n = write(OUT)
-print(f"wrote {OUT.relative_to(ROOT)} ({n} cells)")
+REQUIRED_SECTIONS = (
+    '## The finding this document is organised around',
+    '## 1.1 The deal [P]',
+    '## 1.2 The mechanism',
+    '## 1.3 The TSMC precedent — corrected, and it cuts both ways',
+    '## 1.4 How much of a quoted premium is definitional',
+    '## 2.1 Can it be arbitraged by converting? The documented answer: no.',
+    '## 2.2 Long one, short the other?',
+    '## 2.3 The five research channels',
+    '## 2.4 What the barrier-state observable actually observes',
+    '## 2.5 What the variance decomposition says about the mechanism',
+    '## 2.6 The barrier-state observable, live',
+    '## How the framing changed — the best story in this log',
+    '## Research process',
+    '## Provenance and reproducibility',
+    '## What this document does not do',
+)
+
+n = write(OUT, require=REQUIRED_SECTIONS)
+print(f"wrote {OUT.relative_to(ROOT)} ({n} cells, "
+      f"{len(REQUIRED_SECTIONS)} sections verified)")

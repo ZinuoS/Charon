@@ -130,7 +130,7 @@ j[["c","shrinkage","hit_rate_real","hit_rate_placebo","r2_real","r2_placebo"]].r
 ''')
 
 md(r"""
-## 5. What this result does and does not invalidate
+## 4. What this result does and does not invalidate
 
 The firewall, because a public artifact containing a strategy Sharpe invites exactly one
 misreading — that the project's case rests on it. It does not.
@@ -158,7 +158,7 @@ md(r"""
 **One sentence a salesperson can repeat:** *the reason to do this trade is that the plumbing is
 one-way and the financing is hard, not that we think we can time it.*
 
-## 6. G14 — where the difference actually comes from
+## 5. G14 — where the difference actually comes from
 """)
 
 code(r'''
@@ -173,7 +173,7 @@ At the same N, the two tracks have **near-identical overall hit rates** (62.1% v
 Sharpe gap is built entirely in the top magnitude decile — 60.6% against 52.6% — and that decile
 carries most of the P&L. Being right about small moves is cheap.
 
-## 7. The ledger
+## 6. The ledger
 """)
 
 code(r'''
@@ -207,7 +207,7 @@ md(r"""
 auditable rather than quietly absorbed; **5.32 is the number to quote.** The same audit was
 applied to both Sharpe standard errors.
 
-## 8. The ending the numbers support — and a correction
+## 7. The ending the numbers support — and a correction
 
 **This notebook previously reported the opposite conclusion, and the hardening pass caught it.**
 `strategy_diagnostics` computed `pnl = -sign(forecast) × Δπ` — a strategy that *faded its own
@@ -238,5 +238,16 @@ DEV-004 expires here: the exception was granted to test whether complexity wins,
 published counter-argument, adjudicated on identical folds, and held.
 """)
 
-n = write(OUT)
-print(f"wrote {OUT.relative_to(ROOT)} ({n} cells)")
+REQUIRED_SECTIONS = (
+    '## 1. Track A — the parsimony anchor, on the tradeable target',
+    '## 2. Track B — the complexity grid',
+    '## 3. The critique diagnostics',
+    '## 4. What this result does and does not invalidate',
+    '## 5. G14 — where the difference actually comes from',
+    '## 6. The ledger',
+    '## 7. The ending the numbers support — and a correction',
+)
+
+n = write(OUT, require=REQUIRED_SECTIONS)
+print(f"wrote {OUT.relative_to(ROOT)} ({n} cells, "
+      f"{len(REQUIRED_SECTIONS)} sections verified)")

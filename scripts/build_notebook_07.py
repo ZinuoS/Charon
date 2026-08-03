@@ -223,5 +223,15 @@ What the macro layer does **not** entitle anyone to say is that the won's curren
 argues for the trade. It was tested. It did not clear.
 """)
 
-n = write(OUT)
-print(f"wrote {OUT.relative_to(ROOT)} ({n} cells)")
+REQUIRED_SECTIONS = (
+    '## 1. The bid — demand meets a supply that cannot answer',
+    '## 2. The Fed path — the cost leg, and it points the unintuitive way',
+    '## 3. The won — a real link, correctly signed, and small',
+    '## 4. The won and the resolution channel — registered, tested, NULL',
+    '## 5. The feasibility layer — three dated facts that make the trade possible at all',
+    '## 6. The currents, and the one thing this layer still cannot show',
+)
+
+n = write(OUT, require=REQUIRED_SECTIONS)
+print(f"wrote {OUT.relative_to(ROOT)} ({n} cells, "
+      f"{len(REQUIRED_SECTIONS)} sections verified)")

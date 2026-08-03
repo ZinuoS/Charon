@@ -158,5 +158,15 @@ components are bracketed assumptions; margining is illustrative; the desk quotes
 H5 is a registered call resolving 2026-10-31 and is not resolved here.
 """)
 
-n = write(OUT)
-print(f"wrote {OUT.relative_to(ROOT)} ({n} cells)")
+REQUIRED_SECTIONS = (
+    '## Where the assignment is answered',
+    '## 2. Scenario P&L — in return-on-margin, because that is how a book is run',
+    '## 3. The hedge menu',
+    '## 4. Exit discipline',
+    '## 5. The P&L identity — the premium-decay question, settled',
+    '## 6. Two registers, one analysis',
+)
+
+n = write(OUT, require=REQUIRED_SECTIONS)
+print(f"wrote {OUT.relative_to(ROOT)} ({n} cells, "
+      f"{len(REQUIRED_SECTIONS)} sections verified)")

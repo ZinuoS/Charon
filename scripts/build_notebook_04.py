@@ -162,5 +162,13 @@ Regenerate everything here with `just s4`. Research programme:
 **[02 anatomy](02_premium_anatomy.ipynb)** · **[05 engines](05_hypothesis_engines.ipynb)**.
 """)
 
-n = write(OUT)
-print(f"wrote {OUT.relative_to(ROOT)} ({n} cells)")
+REQUIRED_SECTIONS = (
+    '## The table',
+    '## Ablations — both feature families are cut',
+    '## Variance shares — and why they do not separate the classes',
+    '## What this unlocks, and what it does not',
+)
+
+n = write(OUT, require=REQUIRED_SECTIONS)
+print(f"wrote {OUT.relative_to(ROOT)} ({n} cells, "
+      f"{len(REQUIRED_SECTIONS)} sections verified)")

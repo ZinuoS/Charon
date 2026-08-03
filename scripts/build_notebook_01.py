@@ -569,5 +569,15 @@ print("is NOT endorsed or certified by the Federal Reserve Bank of St. Louis.")
 
 # ==============================================================================
 OUT.parent.mkdir(parents=True, exist_ok=True)
-n = write(OUT)
+REQUIRED_SECTIONS = (
+    '## 1. Motivation and framing',
+    '## 2. Data provenance',
+    '## 3. Formulas',
+    '## 4. Research process log',
+    '## 5. Figures',
+    '## 6. What this sets up',
+    '## 7. Reproducibility',
+)
+
+n = write(OUT, require=REQUIRED_SECTIONS)
 print(f"wrote {OUT.relative_to(REPO_ROOT)}  ({n} cells)")
