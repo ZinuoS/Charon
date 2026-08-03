@@ -101,7 +101,10 @@ STR_SK = FIN.stress_liquidity("skhy"); STR_TS = FIN.stress_liquidity("tsmc")
 VARSH  = float(_cp().set_index("pair").loc["tsmc", "share_pi"])
 TIERS  = FIN.segmentation()
 from pipeline.package import clientele as CLI
-from pipeline.package import clientele as CLI
+from pipeline.package import pricing_pack as PP
+_w = PP.carry_waterfall(0.0, 0.0).set_index("component").bp_per_year
+RATES_PLUS_CARD = float(_w["USD rate earned"] + _w["KRW funding paid"] + _w["house card"])
+NON_BORROW_YR   = PP.non_borrow_subtotal_bp_month() * 12.0
 IND    = FIN.indicated_tier()
 WINS   = {b: float(EO.loc[b, "frac_beats_carry"]) for b in ("low", "mid", "high")}
 _k = VOLS[VOLS.leg.str.startswith("KOSPI")]; _v = VOLS[VOLS.leg.str.contains("VIX")]
@@ -136,9 +139,13 @@ gap to close, and the mechanism section explains why we say so.
 {D1BN:.1f}-session exit. Getting out is easy; borrowing the shares to get in is the constraint.
 
 **The economics.** All-in carry is **{ECON} against an {BE_MO:.0f}bp/mo breakeven** — a modest
-hurdle across the entire borrow range, because the funding leg is a
-{abs(CARRY["funding_differential_bp"]):.0f}bp/yr **tailwind** rather than a cost. Return on
-margin is quoted against illustrative 20% initial margin.
+hurdle across the entire borrow range. The rate differential is a
+{abs(CARRY["funding_differential_bp"]):.0f}bp/yr **tailwind**, but the house rate card
+({PP.HOUSE_CARD_BPS_YR["fin_spread_bps"]}bp financing spread +
+{PP.HOUSE_CARD_BPS_YR["rebate_haircut_bps"]}bp rebate haircut) more than consumes it: net of
+the card the funding block is a **{RATES_PLUS_CARD:+.0f}bp/yr cost**, and everything before the
+name special comes to **{NON_BORROW_YR:+.0f}bp/yr**. §9 D1.1 shows the split. Return on margin
+is quoted against illustrative 20% initial margin.
 
 **What we charge**
 
@@ -452,9 +459,11 @@ code(r"""Markdown(f'''
 history. US demand meets a supply that cannot answer it. The twelve-session caveat travels with
 that number and is printed on the capacity table.
 
-**(ii) The cost, and it points the friendly way.** The carry decomposes into a measured
-funding differential of **{CARRY["funding_differential_bp"]:+.0f}bp/yr** — a credit, not a
-charge — plus the ADR borrow spread, which is the desk quote, plus documented fees. A 25bp
+**(ii) The cost, and the rate leg points the friendly way.** The carry decomposes into a
+measured funding differential of **{CARRY["funding_differential_bp"]:+.0f}bp/yr** — a credit on
+the rate leg alone — plus the house rate card, which is documented and larger than that credit,
+plus the ADR name special, which is the desk quote. Net of the card the funding block costs
+**{RATES_PLUS_CARD:+.0f}bp/yr**; the credit is real but it does not survive the card. A 25bp
 **hike makes this {FED["bp_per_month_per_25bp"]:.1f}bp per month cheaper** to hold, not dearer.
 The funding leg is long the front end, so it hedges rather than compounds the macro.
 
@@ -559,8 +568,9 @@ md("## 7b. Execution reality — four objections, answered")
 
 code(r"""Markdown(f'''
 **"Passive waiting is not viable without a strong view."** The hurdle is
-{LO:.0f}–{HI:.0f}bp/mo against an {BE_MO:.0f}bp/mo breakeven, because the funding leg is a
-{abs(CARRY["funding_differential_bp"]):.0f}bp/yr tailwind rather than a cost. At low borrow the
+{LO:.0f}–{HI:.0f}bp/mo against an {BE_MO:.0f}bp/mo breakeven. The rate differential is a
+{abs(CARRY["funding_differential_bp"]):.0f}bp/yr tailwind and the card consumes it, leaving
+{NON_BORROW_YR:+.0f}bp/yr before the name is priced. At low borrow the
 wait is cheap, and what it asks of you is a view on the LEVEL, not on the timing — we tested
 the timing and the shallow model won, so there is no timing signal in this product to disagree
 with. What you are choosing to hold is the premium's own volatility: on 6,771 comparator
@@ -772,6 +782,39 @@ code(r"""Markdown(
     "\n".join(f"{i}. {q}" for i, q in enumerate(PP.ratification_owed(), 1))
 )""")
 
+md("### 9b. What D1.1/D2.1 supersede in the earlier pages")
+
+code(r"""Markdown(f'''
+| claim | status | today's number |
+|---|---|---|
+| "the funding leg is a {abs(CARRY["funding_differential_bp"]):.0f}bp/yr tailwind rather than a cost" | **GROSS-ONLY, superseded** | true of the rate legs alone; net of the {sum(PP.HOUSE_CARD_BPS_YR.values()):.0f}bp card the funding block is **{RATES_PLUS_CARD:+.0f}bp/yr** |
+| the un-split carry waterfall | **superseded by D1.1** | borrow was one bar; card and name special are different kinds of number |
+| the single-contour breakeven curve | **superseded by D2.1** | one contour per stress state, plus the locked overlay |
+| everything before the name special | restated | **{NON_BORROW_YR:+.0f}bp/yr** ({NON_BORROW_YR/12:+.1f}bp/mo) |
+''')""")
+
+md(r"""
+**The correction belongs in the pitch, not in a footnote.** The rate differential genuinely is a
+credit — that part was never wrong. What was wrong was stopping there: the house card is
+documented, larger than the credit, and payable by the same client, so quoting the tailwind
+without it describes a trade nobody is offered. The three pages that said "tailwind rather than
+a cost" now say what the card does to it.
+
+**What did NOT change, and is worth having ready for a client who saw the earlier version.** The
+thresholds still sit above the quoted special bracket at today's entry — 1077bp base, 990
+squeeze, 902 crisis, against a bracket topping out at 900. The trade's economics are still not
+decided by borrow within the range the desk expects to quote. The correction moves the numbers,
+not the conclusion.
+
+**One reconciliation, stated because both ladders will be in circulation.** An earlier draft of
+this amendment quoted slow-end thresholds of ~869 / ~744 / ~569 and concluded the losing corner
+sat *inside* the quoted bracket. Those are computed at the repository's legacy 22.6% reference
+premium; at today's 31.44% entry the same calculation gives 1077 / 990 / 902 and the losing
+corner sits *outside* it. Both are arithmetically correct and they answer different questions.
+These pages render at today's entry, so if a client produces the older numbers the difference is
+the entry premium and nothing else.
+""")
+
 md(r"""
 **Still owed by the desk**, and every artifact above says so on its face: a live borrow quote, a
 cross-currency basis (which needs a forward curve this repository does not have), and the real
@@ -792,6 +835,7 @@ REQUIRED_SECTIONS = (
     "## 7b. Execution reality — four objections, answered",
     "## 8. Monitoring, and the ask",
     "## 9. Pricing pack — the objects a PM interrogates",
+    "### 9b. What D1.1/D2.1 supersede in the earlier pages",
 )
 
 n = write(OUT, require=REQUIRED_SECTIONS)

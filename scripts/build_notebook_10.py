@@ -123,6 +123,14 @@ as a named gap with its sign risk stated: a negative KRW basis — the usual sig
 funding currency — makes swapping into KRW more expensive than parity and eats directly into
 the tailwind above.
 
+**And the tailwind is a statement about the RATE LEGS, not about what a client pays.** The house
+rate card — financing spread plus rebate haircut — sits on top of the differential, is
+documented rather than bracketed, and is larger than the credit. Net of it the funding block is
+a cost, not a credit. This chapter is about the mechanism, so the differential is the right
+object here; the client-facing arithmetic is in the pitch book at §9 D1.1, which draws the card
+and the name special as separate bars for exactly this reason. Quoting the differential alone
+describes a trade nobody is offered.
+
 ---
 **Informational only.** Not advice, not a recommendation, not a solicitation. The borrow spread
 is a bracketed assumption pending a desk quote; the cross-currency basis is unmeasured. Real
