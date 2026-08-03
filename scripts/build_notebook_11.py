@@ -717,7 +717,7 @@ one thing the research does not have.
 code("fig, _ = figures.g44_exit_tree(PP)\nfig;")
 
 md(r"""
-**D6 — the exit tree, with its thresholds openly unratified.** The structure follows from the
+**D6 — the exit tree, thresholds signed 2026-08-03.** The structure follows from the
 research: margin overrides borrow, borrow overrides premium, and a recall **converts** rather
 than unwinds because the long-local TRS survives an event that removes the short leg. Collapsing
 those two leaves would force a full exit on a *financing* event rather than an investment one.
@@ -726,8 +726,10 @@ those two leaves would force a full exit on a *financing* event rather than an i
 this conservative will exit trades that would have worked. It is listed among the decisions
 below rather than defended.
 
-**Five threshold decisions are owed before this page can be shown to a client**, and every one
-of them is desk policy rather than a measurement:
+**The three threshold groups are ratified; two structural decisions are not.** Signing changed
+the numbers from proposals into desk policy with an owner — which is not the same as making them
+measurements, and the chart says so. What remains open is not a threshold, which is exactly why
+signing the values did not clear it:
 """)
 
 code(r"""Markdown(

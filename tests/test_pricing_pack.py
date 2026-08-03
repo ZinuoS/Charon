@@ -135,7 +135,31 @@ class TestScenarioGridAndExitTree:
             "borrow_state == 'recalled' and margin_headroom != 'critical'")
         assert (recalled.action == "convert to long-local TRS only").all()
 
-    def test_every_exit_threshold_is_flagged_unratified(self):
-        for group in PP.EXIT_THRESHOLDS.values():
-            assert "TODO(ash: ratify)" in group["basis"]
-        assert PP.ratification_owed(), "the owed-decisions list must not be empty while unratified"
+    def test_every_exit_threshold_states_its_ratification_status(self):
+        """A threshold must always say whether it is signed. Never silently either way.
+
+        This test previously asserted the OPPOSITE — that every basis carried
+        TODO(ash: ratify). The author signed the thresholds on 2026-08-03, so the assertion is
+        inverted rather than deleted: the guard is not "these are unratified", it is "these
+        never lose their provenance", and that holds in both directions.
+        """
+        marker = "RATIFIED" if PP.EXIT_THRESHOLDS_RATIFIED else "TODO(ash: ratify)"
+        for name, group in PP.EXIT_THRESHOLDS.items():
+            assert marker in group["basis"], (
+                f"{name} does not state its ratification status; a threshold whose provenance "
+                f"is unreadable is worse than one that is openly unsigned")
+
+    def test_signing_the_thresholds_did_not_clear_the_structural_decisions(self):
+        """Signing NUMBERS must not silently mark an ORDERING as agreed.
+
+        The override order and the leaf set are not thresholds. If ratifying the numbers ever
+        empties this list, the tree would present an unagreed override order as settled policy.
+        """
+        owed = PP.ratification_owed()
+        assert owed, "structural decisions cannot be cleared by signing threshold values"
+        joined = " ".join(owed).lower()
+        assert "override order" in joined and "leaf set" in joined
+
+    def test_ratified_thresholds_propagate_to_every_tree_row(self):
+        if PP.EXIT_THRESHOLDS_RATIFIED:
+            assert set(PP.exit_tree().status) == {"RATIFIED"}

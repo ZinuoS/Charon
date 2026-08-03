@@ -3479,7 +3479,7 @@ def g43_scenario_rom(pack) -> tuple:
 
 
 def g44_exit_tree(pack) -> tuple:
-    """D6 — the exit tree as a decision grid. Thresholds unratified, and shown as such."""
+    """D6 — the exit tree as a decision grid, with its ratification status on its face."""
     tree = pack.exit_tree()
     actions = list(pack.EXIT_ACTIONS)
     COLS = {"hold": theme.SEMANTIC["fungible"],
@@ -3522,24 +3522,31 @@ def g44_exit_tree(pack) -> tuple:
 
     counts = tree.action.value_counts()
     theme.finalize(
-        fig, kicker="D6 · exit tree — THRESHOLDS UNRATIFIED",
+        fig, kicker=("D6 · exit tree — THRESHOLDS RATIFIED "
+                     f"{pack.EXIT_THRESHOLDS_RATIFIED}" if pack.EXIT_THRESHOLDS_RATIFIED
+                     else "D6 · exit tree — THRESHOLDS UNRATIFIED"),
         headline="A recall removes the ability to express the thesis, not the thesis — so "
                  "'convert' is a leaf and not a synonym for 'unwind'",
         subtitle=pack.freshness_line(),
         stats=[(f"{int(counts.get('hold', 0))}/27", "cells where the\nagreed action is HOLD"),
                (f"{int(counts.get('convert to long-local TRS only', 0))}", "cells that convert\n"
                 "rather than unwind"),
-               (f"{len(pack.ratification_owed())}", "threshold decisions\nowed by the author"),
+               (f"{len(pack.ratification_owed())}", "STRUCTURAL decisions\nstill open"),
                ("0", "thresholds here that\nare measured")],
-        source="Structure follows the repository's findings; every THRESHOLD is an unratified "
-               "desk-policy choice. See pricing_pack.EXIT_THRESHOLDS and ratification_owed().",
+        source="Structure follows the repository's findings; the THRESHOLDS are ratified "
+               "desk policy, not measurements. See pricing_pack.EXIT_THRESHOLDS and "
+               "ratification_owed().",
         footnote="READ THE OVERRIDE ORDER FIRST: margin beats borrow, borrow beats premium. "
                  "Below the critical headroom band every cell unwinds, because that is the one "
                  "branch where the decision is taken for you if you do not take it first. A "
                  "recall converts rather than unwinds because the long-local TRS survives it — "
                  "collapsing those two would force a full exit on a FINANCING event rather than "
                  "an investment one. Only two of twenty-seven cells hold, which is a deliberate "
-                 "bias and one of the five decisions listed for ratification: a tree this "
-                 "conservative will exit trades that would have worked.")
+                 "bias with a real cost: a tree this conservative will exit trades that "
+                 "would have worked. THE THRESHOLDS ARE NOW SIGNED, WHICH DOES NOT MAKE THEM "
+                 "MEASUREMENTS — a ratified threshold is an authored decision with an owner, "
+                 "and that is a different and more useful thing than an estimate. Two "
+                 "structural choices remain open and are not thresholds: the override order "
+                 "itself, and whether the desk will really quote a long-local TRS on a recall.")
     return fig, {"cells": len(tree), "hold_cells": int(counts.get("hold", 0)),
                  "owed": len(pack.ratification_owed())}

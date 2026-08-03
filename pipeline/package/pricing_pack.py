@@ -383,12 +383,19 @@ def scenario_rom(delta_pi_pp=SCENARIO_DELTA_PI_PP, borrow_grid=(150, 400, 900),
 # ----------------------------------------------------------------------------------
 # D6 — the exit tree.
 #
-# EVERY THRESHOLD BELOW IS MINE, NOT MEASURED, AND NONE IS RATIFIED. They are the choices the
-# brief asked me to make and then hand back. The tree's STRUCTURE follows from the repository's
-# own findings — borrow is the only component that can force an exit, and the local leg survives
-# a recall the pair does not — but the numbers that cut each branch are desk policy.
-# TODO(ash: ratify) every value in EXIT_THRESHOLDS.
+# THE THRESHOLDS ARE RATIFIED; TWO STRUCTURAL CHOICES ARE NOT. Signing changed the status of the
+# NUMBERS that cut each branch — the premium bands, the borrow brackets, the headroom bands —
+# from proposals to desk policy. It did not convert them into measurements, and nothing here
+# pretends otherwise: a ratified threshold is an authored decision with an owner, which is a
+# different and more useful thing than an estimate.
+#
+# Still open, because neither is a threshold: the OVERRIDE ORDER (margin beats borrow beats
+# premium) and the LEAF SET (whether the desk will really quote a long-local TRS on a recall).
+# Both are listed by ratification_owed().
 # ----------------------------------------------------------------------------------
+
+#: When the author signed the threshold values. Structure and leaf set remain open.
+EXIT_THRESHOLDS_RATIFIED: str | None = "2026-08-03"
 
 EXIT_THRESHOLDS: dict[str, dict] = {
     "premium_band": {
@@ -397,19 +404,19 @@ EXIT_THRESHOLDS: dict[str, dict] = {
         "at_or_below_anchor_pp": 15.0,
         "mid_pp": 25.0,
         "above_entry_pp": 40.0,
-        "basis": "TODO(ash: ratify) — anchored on the comparator mean, not on entry",
+        "basis": "RATIFIED 2026-08-03 — anchored on the comparator mean, not on entry",
     },
     "borrow_state": {
         "stable_max_bp": 400,
         "tightening_max_bp": 900,
         "recalled": "any involuntary buy-in notice, at any rate",
-        "basis": "TODO(ash: ratify) — brackets mirror the quoted low/mid/high",
+        "basis": "RATIFIED 2026-08-03 — brackets mirror the quoted low/mid/high",
     },
     "margin_headroom": {
         "comfortable_pct": 50.0,
         "watch_pct": 25.0,
         "critical_pct": 10.0,
-        "basis": "TODO(ash: ratify) — % of posted collateral still unencumbered",
+        "basis": "RATIFIED 2026-08-03 — % of posted collateral still unencumbered",
     },
 }
 
@@ -462,21 +469,34 @@ def exit_tree() -> pd.DataFrame:
                     why = "thesis intact, financing stable, margin comfortable"
                 rows.append({"premium_band": band, "borrow_state": borrow,
                              "margin_headroom": head, "action": action, "rationale": why,
-                             "status": "TODO(ash: ratify)"})
+                             "status": ("RATIFIED" if EXIT_THRESHOLDS_RATIFIED
+                                        else "TODO(ash: ratify)")})
     return pd.DataFrame(rows)
 
 
 def ratification_owed() -> list[str]:
-    """The decisions D6 is waiting on. Listed rather than buried in a dict."""
-    return [
-        "Premium bands: is 15pp the right 'arrived' level, given the comparator 5-year mean, "
-        "and is 40pp the right 'above entry' cut?",
-        "Borrow states: do 400bp and 900bp separate stable from tightening from unquotable, or "
-        "should the cuts follow the desk's own recall-risk read rather than the price?",
-        "Margin headroom: are 50/25/10% of unencumbered collateral the right three bands, and "
-        "is headroom measured against posted or against the schedule's peak requirement?",
-        "Override order: margin currently overrides borrow, which overrides premium. Confirm — "
-        "it is the one ordering that cannot be inferred from the research.",
-        "Leaf set: four actions. Is 'convert to long-local TRS only' a real product the desk "
-        "will quote on a recall, or should that branch also read 'unwind'?",
+    """What D6 is still waiting on. Empties as decisions are signed; never silently.
+
+    The three THRESHOLD groups were signed 2026-08-03. What remains is not a threshold, which
+    is why signing the numbers did not clear it: one is an ordering and one is a question about
+    what the desk will actually quote.
+    """
+    owed = []
+    if EXIT_THRESHOLDS_RATIFIED is None:
+        owed += [
+            "Premium bands: is 15pp the right 'arrived' level, given the comparator 5-year "
+            "mean, and is 40pp the right 'above entry' cut?",
+            "Borrow states: do 400bp and 900bp separate stable from tightening from "
+            "unquotable, or should the cuts follow the desk's recall-risk read, not the price?",
+            "Margin headroom: are 50/25/10% of unencumbered collateral the right three bands, "
+            "and is headroom measured against posted or against the schedule's peak?",
+        ]
+    owed += [
+        "Override order: margin overrides borrow, which overrides premium. This is the one "
+        "ordering that cannot be inferred from the research, and it is not a threshold — "
+        "signing the numbers did not settle it.",
+        "Leaf set: is 'convert to long-local TRS only' a product the desk will really quote on "
+        "a recall, or should that branch also read 'unwind'? A leaf nobody will honour is worse "
+        "than one fewer leaf.",
     ]
+    return owed
